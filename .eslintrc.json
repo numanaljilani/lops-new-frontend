@@ -1,0 +1,11 @@
+{
+  "extends": ["next/core-web-vitals", "next/typescript"],
+  "rules": {
+    "@typescript-eslint/no-empty-object-type": "off",
+     "jsx-a11y/anchor-is-valid": "off",
+     "react/no-unescaped-entities": "off",
+     "react/display-name": "off",
+     "react/prop-types": "off"
+  }
+
+}
