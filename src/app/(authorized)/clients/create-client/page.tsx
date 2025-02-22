@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateClientMutation } from "@/redux/query/clientsApi";
+import { CircleAlert, LoaderCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -46,15 +47,30 @@ export default function CreateClient() {
     about: "",
   });
 
-  const [createClientApi, { data, isSuccess, error, isError }] =
+  const [createClientApi, { data, isSuccess, error, isError , isLoading }] =
     useCreateClientMutation();
-  const saveEmployeeDetails = async () => {
-    console.log(clientDetails);
+  const saveClientDetails = async () => {
+if( !clientDetails.client_name||
+  !clientDetails.contact_info||
+  !clientDetails.contact_person ||
+  !clientDetails.contact_number ||
+  !clientDetails.aob||
+  !clientDetails.company_name || 
+  !clientDetails.type||
+  !clientDetails.about){
+    toast(`All Fields are required.`, {
+      icon: <CircleAlert color="#E9D502" />,
+      style: {
+        backgroundColor: "#fcebbb",
+      },
+
+    });
+    return
+}
     const res = await createClientApi({
       data: { ...clientDetails },
       token: "",
     });
-    console.log(res, "response from the server");
     router.replace("/clients");
   };
 
@@ -70,18 +86,26 @@ export default function CreateClient() {
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
-        <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
-          <div className="mx-auto grid max-w-[59rem] flex-1 auto-rows-max gap-4">
+        <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 ">
+          <div className="mx-auto grid max-w-[59rem] flex-1 auto-rows-max gap-4  w-full">
             <div className="flex items-center gap-4">
               <h1 className="flex-1 shrink-0 whitespace-nowrap text-xl font-semibold tracking-tight sm:grow-0">
                 Create Clinet
               </h1>
 
               <div className="hidden items-center gap-2 md:ml-auto md:flex">
-                <Button variant="outline" size="sm">
+                {/* <Button variant="outline" size="sm">
                   Discard
-                </Button>
-                <Button size="sm" onClick={saveEmployeeDetails}>
+                </Button> */}
+                <Button size="sm" onClick={saveClientDetails} >
+                {isLoading && (
+                    <LoaderCircle
+                      className="-ms-1 me-2 animate-spin"
+                      size={16}
+                      strokeWidth={2}
+                      aria-hidden="true"
+                    />
+                  )}
                   Save
                 </Button>
               </div>
@@ -279,132 +303,7 @@ export default function CreateClient() {
                   </CardContent>
                 </Card>
 
-                {/* <Card x-chunk="dashboard-07-chunk-1">
-                  <CardHeader>
-                    <CardTitle>Compony Details</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid gap-6 sm:grid-cols-2">
-                      <div className="grid gap-3">
-                        <Label htmlFor="category">Compony</Label>
-                        <Select
-                          onValueChange={(value) =>
-                            setClientDetails({
-                              ...companyDetails,
-                              companyf: value,
-                            })
-                          }
-                        >
-                          <SelectTrigger
-                            id="category"
-                            aria-label="Select Compony"
-                          >
-                            <SelectValue placeholder="Select Compony" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="http://127.0.0.1:8000/api/v1/companies/2/">
-                              LITS
-                            </SelectItem>
-                            <SelectItem value="http://127.0.0.1:8000/api/v1/employees/4/">
-                              LECS
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="grid gap-3">
-                        <Label htmlFor="subcategory">Designation</Label>
-                        <Select
-                          onValueChange={(value) =>
-                            setClientDetails({
-                              ...companyDetails,
-                              position: value,
-                            })
-                          }
-                        >
-                          <SelectTrigger
-                            id="subcategory"
-                            aria-label="Select Designation"
-                          >
-                            <SelectValue placeholder="Select subcategory" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Sales Member">
-                              Sales Member
-                            </SelectItem>
-                            <SelectItem value="Team Leads">
-                              Team Leads
-                            </SelectItem>
-                            <SelectItem value="Team Members">
-                              Team Members
-                            </SelectItem>
-                            <SelectItem value="Sub-Contractors">
-                              Sub-Contractors
-                            </SelectItem>
-                            <SelectItem value="Accountant Members">
-                              Accountant Members
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="grid gap-3">
-                        <Label htmlFor="Salary">Salary (AED)</Label>
-                        <Input
-                          id="Salary"
-                          type="number"
-                          className="w-full"
-                          placeholder="5000 AED"
-                          onChange={(e) => {
-                            e.preventDefault();
-                            setClientDetails({
-                              ...companyDetails,
-                              salary: Number(e.target.value),
-                            });
-                          }}
-                        />
-                      </div>
-                      <div className="grid gap-3">
-                        <Label htmlFor="subcategory">Currency</Label>
-                        <Select
-                          onValueChange={(value) =>
-                            setClientDetails({
-                              ...companyDetails,
-                              Currency: value,
-                            })
-                          }
-                        >
-                          <SelectTrigger
-                            id="subcategory"
-                            aria-label="Select Currency"
-                          >
-                            <SelectValue placeholder="Select Currency" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="AED">AED</SelectItem>
-                            <SelectItem value="USD">USD</SelectItem>
-                            <SelectItem value="INR">INR</SelectItem>
-                            <SelectItem value="SAR">SAR</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="grid gap-3">
-                        <Label htmlFor="Hourly">Hourly Rate (AED)</Label>
-                        <Input
-                          id="Hourly"
-                          type="number"
-                          className="w-full"
-                          placeholder="20 AED"
-                          onChange={(e) => {
-                            e.preventDefault();
-                            setClientDetails({
-                              ...companyDetails,
-                              hourly: Number(e.target.value),
-                            });
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card> */}
+               
               </div>
               <div className="grid auto-rows-max items-start gap-4 lg:gap-8">
                 <Card x-chunk="dashboard-07-chunk-3">
@@ -437,20 +336,6 @@ export default function CreateClient() {
                   </CardContent>
                 </Card>
 
-                <Card x-chunk="dashboard-07-chunk-5">
-                  <CardHeader>
-                    <CardTitle>Archive Product</CardTitle>
-                    <CardDescription>
-                      Lipsum dolor sit amet, consectetur adipiscing elit.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div></div>
-                    <Button size="sm" variant="secondary">
-                      Archive Product
-                    </Button>
-                  </CardContent>
-                </Card>
               </div>
             </div>
             <div className="flex items-center justify-center gap-2 md:hidden">

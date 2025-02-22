@@ -88,6 +88,7 @@ function ProjectDetails() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [paymentBallId , setPaymentBallId] = useState<number | undefined>()
   const [jobDetailsApi, { data, isSuccess, error, isError }] =
     useJobDetailsMutation();
   const [
@@ -117,8 +118,6 @@ function ProjectDetails() {
 
   const getPaymentBals = async () => {
     const res = await paymentApi({ id: path?.split("/")?.reverse()[0] });
-
-    // console.log(res, " payment balls>>>>>>");
   };
 
   let sum = paymentBalls?.reduce(
@@ -130,7 +129,7 @@ function ProjectDetails() {
   const getTasks = async (id: number) => {
     const res = await taskApi({ id });
     setPaymentBallTask([...res.data]);
-    console.log(res, id, "Response");
+    console.log(res, id, "Response >>>>");
   };
 
   useEffect(() => {
@@ -203,13 +202,13 @@ function ProjectDetails() {
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
           <div className="">
-            <Button
+            {/* <Button
               className="text-sm gap-3 ml-5 tracking-wide float-right"
               onClick={() => setIsPaymentDialogOpen(true)}
             >
               <ClipboardCheck />
               Payment Ball
-            </Button>
+            </Button> */}
             <Button
               className="text-sm gap-3 tracking-wide float-right"
               onClick={() => setIsTaskDialogOpen(true)}
@@ -235,7 +234,17 @@ function ProjectDetails() {
               btn={true}
             />
             <Bubble
-              color={ sum >0 && sum < 20 ? "#c7c4bf" : sum <20 && sum < 40 ? "#7CB9E8" :sum >40 && sum < 60 ? "#7F00FF":sum > 60 && sum < 80 ?"#FF69B4" :  "#32de84"}
+              color={
+                sum > 0 && sum < 20
+                  ? "#c7c4bf"
+                  : sum < 20 && sum < 40
+                  ? "#7CB9E8"
+                  : sum > 40 && sum < 60
+                  ? "#7F00FF"
+                  : sum > 60 && sum < 80
+                  ? "#FF69B4"
+                  : "#32de84"
+              }
               title={"Payment"}
               value={`${sum || 0}%`}
               setTab={setTab}
@@ -344,10 +353,18 @@ function ProjectDetails() {
                 ) : tab == "Payment" ? (
                   <>
                     <Card x-chunk="dashboard-07-chunk-0" className="min-h-64">
-                      <CardHeader>
-                        <CardTitle>Payemts</CardTitle>
+                      <CardHeader className="flex-">
+                        <CardTitle>Payments</CardTitle>
                         <CardDescription>
-                          {/* Enter the employee details and thier performance */}
+                          <Button
+                            className="text-sm gap-3 ml-5 tracking-wide float-right"
+                            onClick={() => {setIsPaymentDialogOpen(true)
+                          
+                            }}
+                          >
+                            <ClipboardCheck />
+                            Payment Ball
+                          </Button>
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="flex  items-center">
@@ -355,6 +372,7 @@ function ProjectDetails() {
                           {/* {paymentBalls?.map((data, index) => ( */}
 
                           {paymentBalls?.map((ballData: any, index: number) => {
+                            // console.log(ballData , "BALL DATA")
                             return (
                               <div
                                 key={index}
@@ -410,7 +428,7 @@ function ProjectDetails() {
                         </div>
                       </CardContent>
                     </Card>
-                    {payemetBallTask.length > 0 && (
+                    { (
                       <Card
                         x-chunk="dashboard-07-chunk-0"
                         className="min-h-64 mt-5"
@@ -474,7 +492,7 @@ function ProjectDetails() {
                                         {data?.completion_percentage}%
                                       </div>
                                       <div className="text-xs font-light text-gray-600 text-center">
-                                        {data?.remarks}
+                                        {data?.remarks?.length < 30 ? data?.remarks : `${data?.remarks?.substring(0,40)} ...` }
                                       </div>
                                     </CardContent>
                                   </div>
@@ -524,7 +542,7 @@ function ProjectDetails() {
                                 </div>
                                 <div>
                                   <span className="font-thin">Remark</span> :{" "}
-                                  {taskDetails?.remarks}
+                                  {/* {taskDetails?.remarks} */}
                                 </div>
                                 <div>
                                   <span className="font-thin">Task Id</span> :{" "}
@@ -541,7 +559,7 @@ function ProjectDetails() {
                       </Card>
                     )}
                   </>
-                ) : tab=="Expenses" ? (
+                ) : tab == "Expenses" ? (
                   <Card x-chunk="dashboard-07-chunk-0" className="min-h-64">
                     <CardHeader>
                       <CardTitle>Expenses</CardTitle>
@@ -594,7 +612,7 @@ function ProjectDetails() {
                       </div> */}
                     </CardContent>
                   </Card>
-                ) :  (
+                ) : (
                   <Card x-chunk="dashboard-07-chunk-0" className="min-h-64">
                     <CardHeader>
                       <CardTitle>Working Empolyees</CardTitle>

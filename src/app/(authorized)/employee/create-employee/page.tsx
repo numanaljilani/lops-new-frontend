@@ -27,6 +27,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import ErrorMessage from "@/components/errors/ErrorMessage";
+import { CircleAlert, LoaderCircle } from "lucide-react";
 
 export default function CreateEmployee() {
   const employeeSchema = z.object({
@@ -51,24 +52,26 @@ export default function CreateEmployee() {
     formState: { errors, isSubmitting },
   } = useForm({ resolver: zodResolver(employeeSchema) });
 
-  const [createEmployeeApi, { data, isSuccess, error, isError }] =
+  const [createEmployeeApi, { data, isSuccess, error, isError , isLoading }] =
     useCreateEmployeeMutation();
-  const saveEmployeeDetails = async () => {
-    const res = await createEmployeeApi({ ...register, hourly_rate });
-    console.log(res, "response from the server");
-  };
 
   useEffect(() => {
+    console.log(errors);
+    toast(`Error.`, {
+      description: `All fields are required.`,
+      icon: <CircleAlert color="#E9D502" />,
+      style: {
+        backgroundColor: "#fcebbb",
+      },
+    });
+  }, [errors]);
+  useEffect(() => {
     if (isSuccess) {
-      console.log(data, "response from the server");
       toast(`User has been created.`, {
         description: `New  has been joint as ${watch("position")} in ${watch(
           "company"
         )}`,
-        // action: {
-        //   label: "Undo",
-        //   onClick: () => console.log("Undo"),
-        // },
+        
       });
       router.replace("/employee");
     }
@@ -86,7 +89,7 @@ export default function CreateEmployee() {
   ] = useComponiesMutation();
 
   const getCompanies = async () => {
-    const res = await companiesApi({});
+     await companiesApi({});
   };
 
   useEffect(() => {
@@ -95,17 +98,15 @@ export default function CreateEmployee() {
 
   useEffect(() => {
     if (companiesIsSuccess) {
-      console.log(comapniesData, "response from server");
       if (comapniesData) {
         setCompanies(comapniesData);
       }
     }
   }, [companiesIsSuccess]);
 
-  
   async function onSubmit(data: any) {
-    const res = await createEmployeeApi({ ...data, hourly_rate });
-    console.log(res);
+    await createEmployeeApi({ ...data, hourly_rate });
+ 
   }
 
   const salary = watch("salary", "");
@@ -122,10 +123,18 @@ export default function CreateEmployee() {
                 </h1>
 
                 <div className="hidden items-center gap-2 md:ml-auto md:flex">
-                  <Button variant="outline" size="sm">
+                  {/* <Button variant="outline" size="sm">
                     Discard
-                  </Button>
+                  </Button> */}
                   <Button size="sm" type="submit">
+                  {isLoading && (
+                    <LoaderCircle
+                      className="-ms-1 me-2 animate-spin"
+                      size={16}
+                      strokeWidth={2}
+                      aria-hidden="true"
+                    />
+                  )}
                     Save Employee
                   </Button>
                 </div>
@@ -227,8 +236,8 @@ export default function CreateEmployee() {
                             defaultValue=""
                             render={({ field }) => (
                               <Select
-                              onValueChange={(value) => field.onChange(value)}
-                              value={field.value}
+                                onValueChange={(value) => field.onChange(value)}
+                                value={field.value}
                               >
                                 <SelectTrigger
                                   id="category"
@@ -243,11 +252,15 @@ export default function CreateEmployee() {
                                       index
                                     ) => {
                                       // console.log(data?.url.split('/').reverse()[1])
-                                      return(
-                                      <SelectItem key={index} value={data?.url}>
-                                        {data?.name}
-                                      </SelectItem>
-                                    )}
+                                      return (
+                                        <SelectItem
+                                          key={index}
+                                          value={data?.url}
+                                        >
+                                          {data?.name}
+                                        </SelectItem>
+                                      );
+                                    }
                                   )}
                                 </SelectContent>
                               </Select>
@@ -367,21 +380,6 @@ export default function CreateEmployee() {
                           </Select>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card x-chunk="dashboard-07-chunk-5">
-                    <CardHeader>
-                      <CardTitle>Archive</CardTitle>
-                      <CardDescription>
-                        Lipsum dolor sit amet, consectetur adipiscing elit.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div></div>
-                      <Button size="sm" variant="secondary">
-                        Archive
-                      </Button>
                     </CardContent>
                   </Card>
                 </div>

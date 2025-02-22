@@ -83,6 +83,7 @@ function CreateTask({
     formState: { errors, isSubmitting },
   } = useForm({ resolver: zodResolver(TaskSchema) });
 
+  console.log(ball?.payment_id , "BALL")
   const now = today(getLocalTimeZone());
 
   // console.log(errors, "ERRORS");
@@ -111,7 +112,7 @@ function CreateTask({
 
   async function onSubmit(data: any) {
     console.log(data, "ONSUBMIT");
-    const res = await createTaskApi({data : { ...data , payment_ball : params?.id , due_date : '2025-04-20'} });
+    const res = await createTaskApi({data : { ...data , payment_ball : ball?.payment_id , due_date : '2025-04-20'} });
     console.log(res);
     if(res?.data){
       setIsDialogOpen(false)
