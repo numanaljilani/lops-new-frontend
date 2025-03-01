@@ -63,7 +63,7 @@ function CreatePaymentBall({
 }) {
 
   const {id} = useParams()
-  console.log(id , "ID")
+ 
   const PaymentBallSchema = z.object({
     project_percentage: z.string(),
     project_status: z.string(),
@@ -84,7 +84,7 @@ function CreatePaymentBall({
   const now = today(getLocalTimeZone());
 
   async function onSubmit(data: any) {
-    console.log(data , "DATA")
+  
     const res = await createPaymentBallApi({ data : {...data , job_card :id ,color_status :"gray"   }});
 setIsDialogOpen(false)
   }

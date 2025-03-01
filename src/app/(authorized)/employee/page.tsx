@@ -72,7 +72,7 @@ function Employee() {
     if (isSuccess) {
       console.log(data, "response from server");
       if (data) {
-        setEmployee(data);
+        setEmployee(data.results);
       }
     }
   }, [isSuccess]);
@@ -201,7 +201,7 @@ function Employee() {
                           index
                         ) => {
                           return (
-                            <TableRow key={index}>
+                            <TableRow key={index} onClick={()=> router.push(`/employee/${data?.url?.split("/")[6]}`)} className="cursor-pointer">
                               <TableCell className="hidden sm:table-cell">
                                 <Image
                                   alt="Employee Image"

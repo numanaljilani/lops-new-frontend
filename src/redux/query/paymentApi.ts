@@ -29,6 +29,19 @@ export const paymentApi = createApi({
         };
       },
     }),
+    updateTtasks: builder.mutation({
+      query: ({data , id }) => {
+        console.log(data , "API")
+        return {
+          url: `tasks/${id}/`,
+          method: "PUT",
+          body : data ,
+          headers: {
+            "Content-type": "application/json; charset=UTF-8",
+          },
+        };
+      },
+    }),
     createBall: builder.mutation({
       query: (data) => {
         console.log(data , "API")
@@ -105,5 +118,6 @@ export const {
   useCreateTaskMutation,
   useDeleteClientMutation,
   usePatchClientMutation,
-  useCreateBallMutation
+  useCreateBallMutation,
+  useUpdateTtasksMutation
 } = paymentApi;

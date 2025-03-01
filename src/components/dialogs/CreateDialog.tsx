@@ -53,7 +53,7 @@ function CreateDialog({
     if (isSuccess) {
       console.log(data, "response from server");
       if (data) {
-        setClients(data);
+        setClients(data.results);
       }
     }
   }, [isSuccess]);

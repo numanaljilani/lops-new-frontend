@@ -71,7 +71,7 @@ function Companies() {
     if (isSuccess) {
       console.log(data, "response from server");
       if (data) {
-        setCompanies(data);
+        setCompanies(data.results);
       }
     }
   }, [isSuccess]);
@@ -183,7 +183,7 @@ function Companies() {
                     <TableBody>
                       {companies?.map((data : {name : string , added_date : string , location : string , type : string , active : boolean , url : string}, index : number) => {
                         return (
-                          <TableRow key={index}>
+                          <TableRow key={index} onClick={()=> update(data.url)} className="cursor-pointer">
                             <TableCell className="hidden sm:table-cell">
                               <Image
                                 alt="Employee Image"

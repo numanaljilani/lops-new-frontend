@@ -1,11 +1,13 @@
 "use client";
 import Bubble from "@/components/Bubbles/Bubble";
 import AlertDialogAlert from "@/components/dialogs/AlertDialog";
+import ApproveProjectDilog from "@/components/dialogs/ApproveProjectDilog";
 import CreateExpense from "@/components/dialogs/CreateExpenses";
 import CreatePaymentBall from "@/components/dialogs/CreatePaymentBall";
 import CreateQuotation from "@/components/dialogs/CreateQuotation";
 import CreateTask from "@/components/dialogs/CreateTask";
-import { Button } from "@/components/ui/button";
+import More from "@/components/dialogs/More";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -48,9 +50,9 @@ import { toast, Toaster } from "sonner";
 function ProjectDetails() {
   const path = usePathname();
 
-  const [tab, setTab] = useState("progress");
+  const [tab, setTab] = useState("Progress");
   const [updateView, setUpdateView] = useState(false);
-  const [quotation, setQuotationAlert] = useState(false);
+  const [approve, setApprove] = useState(false);
   const [paymentBalls, setPaymentBalls] = useState<any>();
   const [paymentBallsDetails, setPaymentBallsDetails] = useState<any>();
   const [taskDetails, setTaskDetails] = useState<any>(undefined);
@@ -88,7 +90,8 @@ function ProjectDetails() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  const [paymentBallId , setPaymentBallId] = useState<number | undefined>()
+  const [more, setMore] = useState(false);
+  const [paymentBallId, setPaymentBallId] = useState<number | undefined>();
   const [jobDetailsApi, { data, isSuccess, error, isError }] =
     useJobDetailsMutation();
   const [
@@ -128,13 +131,14 @@ function ProjectDetails() {
 
   const getTasks = async (id: number) => {
     const res = await taskApi({ id });
-    setPaymentBallTask([...res.data]);
+
     console.log(res, id, "Response >>>>");
+    setPaymentBallTask([...res.data.results]);
   };
 
   useEffect(() => {
     if (paymentIsSuccess) {
-      setPaymentBalls(payementData);
+      setPaymentBalls(payementData?.results);
     }
   }, [paymentIsSuccess]);
 
@@ -209,6 +213,13 @@ function ProjectDetails() {
               <ClipboardCheck />
               Payment Ball
             </Button> */}
+            <Button
+              className="text-sm gap-3 tracking-wide float-right mx-4"
+              onClick={() => setApprove(true)}
+            >
+              <ClipboardCheck />
+              Approve
+            </Button>
             <Button
               className="text-sm gap-3 tracking-wide float-right"
               onClick={() => setIsTaskDialogOpen(true)}
@@ -358,8 +369,8 @@ function ProjectDetails() {
                         <CardDescription>
                           <Button
                             className="text-sm gap-3 ml-5 tracking-wide float-right"
-                            onClick={() => {setIsPaymentDialogOpen(true)
-                          
+                            onClick={() => {
+                              setIsPaymentDialogOpen(true);
                             }}
                           >
                             <ClipboardCheck />
@@ -428,7 +439,7 @@ function ProjectDetails() {
                         </div>
                       </CardContent>
                     </Card>
-                    { (
+                    {
                       <Card
                         x-chunk="dashboard-07-chunk-0"
                         className="min-h-64 mt-5"
@@ -448,7 +459,7 @@ function ProjectDetails() {
                             {/* Enter the employee details and thier performance */}
                           </CardDescription>
                         </CardHeader>
-                        <CardContent className="flex  items-center">
+                        <CardContent className="flex  items-center ">
                           {payemetBallTask.map((data: any, index: number) => {
                             return (
                               <div
@@ -457,6 +468,7 @@ function ProjectDetails() {
                                 onClick={() => {
                                   // getTasks(paymentBalls.job_card);
                                   setTaskDetails(data);
+                                  setMore(true);
                                 }}
                               >
                                 <Wave
@@ -489,10 +501,18 @@ function ProjectDetails() {
                                     </CardHeader>
                                     <CardContent>
                                       <div className="text-xl font-bold text-center">
-                                        {data?.completion_percentage}%
+                                        {data?.weightage}%
+                                      </div>
+                                      <div className="text-sm font-medium text-center">
+                                        {data?.status}
                                       </div>
                                       <div className="text-xs font-light text-gray-600 text-center">
-                                        {data?.remarks?.length < 30 ? data?.remarks : `${data?.remarks?.substring(0,40)} ...` }
+                                        {data?.remarks?.length < 30
+                                          ? data?.remarks
+                                          : `${data?.remarks?.substring(
+                                              0,
+                                              40
+                                            )} ...`}
                                       </div>
                                     </CardContent>
                                   </div>
@@ -502,62 +522,8 @@ function ProjectDetails() {
                           })}
                         </CardContent>
                       </Card>
-                    )}
+                    }
 
-                    {taskDetails && (
-                      <Card
-                        x-chunk="dashboard-07-chunk-0"
-                        className="min-h-64 mt-5"
-                      >
-                        <CardHeader>
-                          <CardTitle>
-                            {taskDetails?.assignee_name}
-                            {/* <Button
-                            className="text-sm gap-3 tracking-wide float-right"
-                            onClick={() => setIsTaskDialogOpen(true)}
-                          >
-                            <ClipboardCheck />
-                            Task
-                          </Button> */}
-                          </CardTitle>
-                          <CardDescription>
-                            {/* Enter the employee details and thier performance */}
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className="flex  items-center">
-                          <Card
-                            x-chunk="dashboard-01-chunk-0"
-                            className=" size-64 flex justify-center items-center "
-                          >
-                            <div className="z-30">
-                              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-md text-center font-medium">
-                                  {/* {taskDetails?.assignee_name} */}
-                                </CardTitle>
-                              </CardHeader>
-                              <CardContent className="text-lg font-semibold tracking-wide gap-4">
-                                <div>
-                                  <span className="font-thin">Due Date</span> :{" "}
-                                  {taskDetails?.due_date}
-                                </div>
-                                <div>
-                                  <span className="font-thin">Remark</span> :{" "}
-                                  {/* {taskDetails?.remarks} */}
-                                </div>
-                                <div>
-                                  <span className="font-thin">Task Id</span> :{" "}
-                                  {taskDetails?.task_id}
-                                </div>
-                                <div>
-                                  <span className="font-thin">Task Brief</span>{" "}
-                                  : {taskDetails?.task_brief}
-                                </div>
-                              </CardContent>
-                            </div>
-                          </Card>
-                        </CardContent>
-                      </Card>
-                    )}
                   </>
                 ) : tab == "Expenses" ? (
                   <Card x-chunk="dashboard-07-chunk-0" className="min-h-64">
@@ -568,48 +534,7 @@ function ProjectDetails() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="flex  items-center">
-                      {/* <div className="flex gap-5">
-                        <Bubble
-                          color={"#f87171"}
-                          title={"Ahmed"}
-                          value={"34%"}
-                          setTab={setTab}
-                          btn={true}
-                          desc={"worked 4hrs on the given task"}
-                        />
-                        <Bubble
-                          color={"#f87171"}
-                          title={"Khaled"}
-                          value={"34%"}
-                          setTab={setTab}
-                          btn={true}
-                          desc={"worked 4hrs on the given task"}
-                        />
-                        <Bubble
-                          color={"#f87171"}
-                          title={"Sameer"}
-                          value={"34%"}
-                          setTab={setTab}
-                          btn={true}
-                          desc={"worked 4hrs on the given task"}
-                        />
-                        <Bubble
-                          color={"#f87171"}
-                          title={"Numan"}
-                          value={"34%"}
-                          setTab={setTab}
-                          btn={true}
-                          desc={"worked 4hrs on the given task"}
-                        />
-                        <Bubble
-                          color={"#f87171"}
-                          title={"progress"}
-                          value={"34%"}
-                          setTab={setTab}
-                          btn={true}
-                          desc={"worked 4hrs on the given task"}
-                        />
-                      </div> */}
+                   
                     </CardContent>
                   </Card>
                 ) : (
@@ -622,46 +547,11 @@ function ProjectDetails() {
                     </CardHeader>
                     <CardContent className="flex  items-center">
                       <div className="flex gap-5">
-                        <Bubble
-                          color={"#f87171"}
-                          title={"Ahmed"}
-                          value={"34%"}
-                          setTab={setTab}
-                          btn={true}
-                          desc={"worked 4hrs on the given task"}
-                        />
-                        <Bubble
-                          color={"#f87171"}
-                          title={"Khaled"}
-                          value={"34%"}
-                          setTab={setTab}
-                          btn={true}
-                          desc={"worked 4hrs on the given task"}
-                        />
-                        <Bubble
-                          color={"#f87171"}
-                          title={"Sameer"}
-                          value={"34%"}
-                          setTab={setTab}
-                          btn={true}
-                          desc={"worked 4hrs on the given task"}
-                        />
-                        <Bubble
-                          color={"#f87171"}
-                          title={"Numan"}
-                          value={"34%"}
-                          setTab={setTab}
-                          btn={true}
-                          desc={"worked 4hrs on the given task"}
-                        />
-                        <Bubble
-                          color={"#f87171"}
-                          title={"progress"}
-                          value={"34%"}
-                          setTab={setTab}
-                          btn={true}
-                          desc={"worked 4hrs on the given task"}
-                        />
+                       
+                       
+                       
+                        
+                       
                       </div>
                     </CardContent>
                   </Card>
@@ -692,6 +582,15 @@ function ProjectDetails() {
           setIsDialogOpen={setIsCreateExpensesDialogOpen}
           isDialogOpen={isCreateExpensesDialogOpen}
           data={{}}
+        />
+        <ApproveProjectDilog
+                setIsDialogOpen={setApprove}
+                isDialogOpen={approve}
+        />
+        <More
+        setIsDialogOpen={setMore}
+        isDialogOpen={more}
+        data={taskDetails}
         />
       </div>
     </div>

@@ -16,6 +16,7 @@ import {RFQSApi} from './query/rfqsApi';
 import {jobApi} from './query/jobApi';
 import {paymentApi} from './query/paymentApi';
 import {expensesApi} from './query/expensesApi';
+import {accountsApi} from './query/accountsApi';
 
 // const persistConfig = {
 //   key: "root",
@@ -40,6 +41,8 @@ export const store = configureStore({
     [jobApi.reducerPath]: jobApi.reducer,
     [paymentApi.reducerPath]: paymentApi.reducer,
     [expensesApi.reducerPath]: expensesApi.reducer,
+    [accountsApi.reducerPath]: accountsApi.reducer,
+   
   },
   // Adding the api middleware enables caching, invalidation, polling,
   // and other useful features of `rtk-query`.
@@ -54,6 +57,7 @@ export const store = configureStore({
       jobApi.middleware,
       paymentApi.middleware,
       expensesApi.middleware,
+      accountsApi.middleware,
     ),
 });
 

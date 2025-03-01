@@ -91,7 +91,7 @@ function CreateExpense({
     setIsDialogOpen(false);
   }
 
-  console.log(errors, ">>>>");
+  
   return (
     <Dialog open={isDialogOpen} onOpenChange={() => setIsDialogOpen(false)}>
       <DialogContent className=" overflow-x-scroll no-scrollbar border border-black rounded-lg w-[90%] max-h-[90%]  scroll-smooth lg:w-[1200px] md:w-[1200px]">

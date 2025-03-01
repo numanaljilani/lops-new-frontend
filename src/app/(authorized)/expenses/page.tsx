@@ -86,7 +86,7 @@ function Expenses() {
     if (isSuccess) {
       console.log(data, "expenses response from server");
       if (data) {
-        setExpenses(data);
+        setExpenses(data.results);
       }
     }
   }, [isSuccess]);
@@ -253,7 +253,7 @@ function Expenses() {
                                     <DropdownMenuLabel>
                                       Actions
                                     </DropdownMenuLabel>
-                                    <DropdownMenuItem
+                                    {/* <DropdownMenuItem
                                       onClick={() =>
                                         router.push(
                                           `/employee/${
@@ -263,7 +263,7 @@ function Expenses() {
                                       }
                                     >
                                       Edit
-                                    </DropdownMenuItem>
+                                    </DropdownMenuItem> */}
                                     <DropdownMenuItem
                                       onClick={() => {
                                         setIsDialogOpen(true);

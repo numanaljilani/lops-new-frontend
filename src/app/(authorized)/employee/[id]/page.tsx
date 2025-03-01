@@ -132,7 +132,7 @@ function Employee() {
     if (companiesIsSuccess) {
       console.log(comapniesData, "response from server");
       if (comapniesData) {
-        setCompanies(comapniesData);
+        setCompanies(comapniesData.results);
       }
     }
   }, [companiesIsSuccess]);

@@ -75,7 +75,7 @@ function Clients() {
     if (isSuccess) {
       console.log(data, "response from server");
       if (data) {
-        setCompanies(data);
+        setCompanies(data.results);
       }
     }
   }, [isSuccess]);
@@ -208,7 +208,7 @@ function Clients() {
                           index: number
                         ) => {
                           return (
-                            <TableRow key={index}>
+                            <TableRow key={index} onClick={() => update(data.client_id)} className="cursor-pointer">
                               <TableCell className="hidden sm:table-cell">
                                {index + 1}
                               </TableCell>

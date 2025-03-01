@@ -67,7 +67,7 @@ function TimeSheet() {
     if (isSuccess) {
       console.log(data, "response from server");
       if (data) {
-        setTimeSheet(data);
+        setTimeSheet(data.results);
       }
     }
   }, [isSuccess]);

@@ -83,7 +83,6 @@ function CreateTask({
     formState: { errors, isSubmitting },
   } = useForm({ resolver: zodResolver(TaskSchema) });
 
-  console.log(ball?.payment_id , "BALL")
   const now = today(getLocalTimeZone());
 
   // console.log(errors, "ERRORS");
@@ -105,22 +104,22 @@ function CreateTask({
     if (isSuccess) {
       console.log(data, "response from server");
       if (data) {
-        setEmployee(data);
+        setEmployee(data?.results);
       }
     }
   }, [isSuccess]);
 
   async function onSubmit(data: any) {
     console.log(data, "ONSUBMIT");
-    const res = await createTaskApi({data : { ...data , payment_ball : ball?.payment_id , due_date : '2025-04-20'} });
-    console.log(res);
-    if(res?.data){
-      setIsDialogOpen(false)
-      toast("Success", {
-        description: "Task has created",
+    // const res = await createTaskApi({data : { ...data , payment_ball : ball?.payment_id , due_date : '2025-04-20'} });
+    // console.log(res);
+    // if(res?.data){
+    //   setIsDialogOpen(false)
+    //   toast("Success", {
+    //     description: "Task has created",
         
-      })
-    }
+    //   })
+    // }
   }
   return (
     <Dialog open={isDialogOpen} onOpenChange={() => setIsDialogOpen(false)}>
@@ -237,7 +236,7 @@ function CreateTask({
                       {employee.map((data: any, index) => 
 
                       {
-                        console.log(data.url , "DATA")
+                     
                         return (
                           <SelectItem key={index} value={data.url}>
                             {data.name}

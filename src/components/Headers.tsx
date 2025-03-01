@@ -59,14 +59,14 @@ function Headers() {
         Projects
       </Link>
       <Link
-        href="/projects"
-        className={`${path.split("/")[1] != "projects" ?"text-muted-foreground" : "text-foreground"} transition-colors hover:text-foreground`}
+        href="/accounts"
+        className={`${path.split("/")[1] != "accounts" ?"text-muted-foreground" : "text-foreground"} transition-colors hover:text-foreground`}
       >
         Accounts
       </Link>
       <Link
         href="/expenses"
-        className={`${path.split("/")[1] != "projects" ?"text-muted-foreground" : "text-foreground"} transition-colors hover:text-foreground`}
+        className={`${path.split("/")[1] != "expenses" ?"text-muted-foreground" : "text-foreground"} transition-colors hover:text-foreground`}
       >
         Expenses
       </Link>

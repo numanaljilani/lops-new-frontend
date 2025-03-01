@@ -107,7 +107,7 @@ function Projects() {
     if (isSuccess) {
       console.log(data, "response from server");
       if (data) {
-        setJobs(data);
+        setJobs(data.results);
       }
     }
   }, [isSuccess]);
@@ -221,11 +221,14 @@ function Projects() {
                             scope_of_work: string;
                             active: boolean;
                             delivery_timelines: string;
+                            completion_percentage: string;
                           },
                           index: number
                         ) => {
                           return (
-                            <TableRow key={index}>
+                            <TableRow key={index} className="cursor-pointer"    onClick={() =>
+                              router.push(`/projects/${data.job_id}`)
+                            }>
                               <TableCell className="hidden sm:table-cell">
                                 {data?.job_id}
                               </TableCell>
@@ -236,7 +239,7 @@ function Projects() {
                                 {data?.scope_of_work}
                               </TableCell>
                               <TableCell>
-                                <Badge variant="outline">{"20%"}</Badge>
+                                <Badge variant="outline">{data?.completion_percentage}%</Badge>
                               </TableCell>
                               {/* <TableCell>{data?.company_name}</TableCell> */}
                               <TableCell className="hidden md:table-cell">

@@ -123,7 +123,7 @@ function RFQs() {
     if (isSuccess) {
       console.log(data, "response from server");
       if (data) {
-        setRFQs(data);
+        setRFQs(data.results);
       }
     }
   }, [isSuccess]);
