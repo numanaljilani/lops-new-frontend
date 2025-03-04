@@ -5,15 +5,17 @@ import Wave from "react-wavify";
 
 function Bubble({color , title , value , setTab , btn , desc , callFunction , callFunc } : any) {
   return (
-    <div className={`border cursor-pointer  size-40 hover:scale-105 duration-200 shadow-lg hover:shadow-slate-400 rounded-full overflow-hidden relative flex justify-center items-center`} onClick={callFunc ? callFunction  :()=>btn ?   setTab(title) :  console.log("no")}>
+    <div className={`border  cursor-pointer  size-40 hover:scale-105 duration-200 shadow-lg hover:shadow-slate-400 rounded-full overflow-hidden relative flex justify-center items-center`} onClick={callFunc ? callFunction  :()=>btn ?   setTab(title) :  console.log("no")}>
       <Wave
         // fill="#60a5fa"
         fill={color}
         paused={true}
-        style={{ display: "flex", position: "absolute", bottom: 0 }}
+
+        style={{ display: "flex", position: "absolute", bottom: 0 , flex : 1 , height : '100%'}}
         
         options={{
-          height: 0,
+          height: -20,
+
 
           amplitude: 2,
           // speed: 0.15,

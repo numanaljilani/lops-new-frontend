@@ -694,7 +694,7 @@ category_name
         <CreateExpense
           setIsDialogOpen={setIsCreateExpensesDialogOpen}
           isDialogOpen={isCreateExpensesDialogOpen}
-          data={{}}
+          data={data}
         />
         <ApproveProjectDilog
                 setIsDialogOpen={setApprove}

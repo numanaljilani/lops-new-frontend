@@ -37,18 +37,19 @@ function CreateExpense({
   isDialogOpen,
   setIsDialogOpen,
 
-  data: rfq_info,
+  data: jobData,
 }: {
   isDialogOpen: boolean;
   setIsDialogOpen: (value: boolean) => void;
 
   data: any;
 }) {
+  console.log(jobData, "INFO");
   const [categories, setCategories] = useState([]);
   const LPOSchema = z.object({
     amount: z.string(),
     date: z.string(),
-    job_card: z.string(),
+    // job_card: z.string(),
     category: z.string(),
     expense_type: z.string(),
     description: z.string(),
@@ -81,9 +82,11 @@ function CreateExpense({
   } = useForm({ resolver: zodResolver(LPOSchema) });
 
   async function onSubmit(data: any) {
+    console.log(data, "EXPENSES");
     const response = await createExpense({
       data: {
         ...data,
+        job_card: jobData.job_id,
       },
     });
 
@@ -91,7 +94,6 @@ function CreateExpense({
     setIsDialogOpen(false);
   }
 
-  
   return (
     <Dialog open={isDialogOpen} onOpenChange={() => setIsDialogOpen(false)}>
       <DialogContent className=" overflow-x-scroll no-scrollbar border border-black rounded-lg w-[90%] max-h-[90%]  scroll-smooth lg:w-[1200px] md:w-[1200px]">
@@ -105,7 +107,7 @@ function CreateExpense({
         {/* <form className=" px-3 "> */}
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-4 border p-5 rounded-lg shadow-lg">
-            <div>
+            {/* <div>
               <Label htmlFor="job_card">Job Number</Label>
               <Input
                 id="job_card"
@@ -113,7 +115,7 @@ function CreateExpense({
                 // value={formData.password} onChange={handleInputChange}
                 {...register("job_card")}
               />
-            </div>
+            </div> */}
             <div>
               <Label htmlFor="amount">Amount</Label>
               <Input
@@ -140,6 +142,7 @@ function CreateExpense({
                 name="category"
                 control={control}
                 defaultValue="Material"
+                
                 render={({ field }) => (
                   <Select
                     onValueChange={(value) => field.onChange(value)}
