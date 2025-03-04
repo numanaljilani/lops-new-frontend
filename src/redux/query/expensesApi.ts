@@ -21,8 +21,9 @@ export const expensesApi = createApi({
       }),
     expenses: builder.mutation({
         query: (data) => {
+          console.log(data , "API")
           return {
-            url: "expenses",
+            url: `expenses/?job_card=${data.job_card}`,
             method: "GET",
             headers: {
               "Content-type": "application/json; charset=UTF-8",

@@ -28,6 +28,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { date, formatDate } from "@/lib/dateFormat";
 import { useComponiesMutation } from "@/redux/query/componiesApi";
 import { usePatchEmployeeMutation } from "@/redux/query/employee";
+import { useExpensesMutation } from "@/redux/query/expensesApi";
 import { useJobDetailsMutation } from "@/redux/query/jobApi";
 import {
   usePaymentsMutation,
@@ -57,6 +58,7 @@ function ProjectDetails() {
   const [paymentBallsDetails, setPaymentBallsDetails] = useState<any>();
   const [taskDetails, setTaskDetails] = useState<any>(undefined);
   const [payemetBallTask, setPaymentBallTask] = useState<any>([]);
+  const [expenses, setExpenses] = useState([]);
   const [isCreateExpensesDialogOpen, setIsCreateExpensesDialogOpen] =
     useState(false);
 
@@ -160,6 +162,12 @@ function ProjectDetails() {
     }
   }, [isSuccess]);
 
+
+  useEffect(()=>{
+    if(!isTaskDialogOpen){
+
+    }
+  },[isTaskDialogOpen])
   // const [
   //   patchEmployeApi,
   //   {
@@ -201,6 +209,38 @@ function ProjectDetails() {
     setPaymentBallsDetails(payload);
   };
 
+
+    const [expenseApi, { data : expensesData, isSuccess : isExpenseSuccess, error : expenseError, isError : isExpenseError }] =
+      useExpensesMutation();
+  
+
+  
+    const getExpenses = async () => {
+      const res = await expenseApi({ job_card : path?.split("/")?.reverse()[0]});
+      console.log(res, "expense res");
+      // console.log(res, "response");
+    };
+  
+    useEffect(() => {
+      if (!isCreateExpensesDialogOpen) {
+        getExpenses();
+      }
+    }, [isCreateExpensesDialogOpen]);
+  
+
+    let totalAmount = 0;
+    
+    useEffect(() => {
+      if (isExpenseSuccess) {
+        console.log(expensesData, "expenses response from server");
+        if (expensesData) {
+  
+          setExpenses(expensesData.results);
+      
+        }
+      }
+    }, [isExpenseSuccess]);
+
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
@@ -238,9 +278,19 @@ function ProjectDetails() {
           </div>
           <div className="grid bg-pur gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-5  p-4 bg-white rounded-lg shadow-md">
             <Bubble
-              color={"#60a5fa"}
+                color={
+                  sum > 0 && sum < 20
+                    ? "#c7c4bf"
+                    : sum < 20 && sum < 40
+                    ? "#7CB9E8"
+                    : sum > 40 && sum < 60
+                    ? "#7F00FF"
+                    : sum > 60 && sum < 80
+                    ? "#FF69B4"
+                    : "#32de84"
+                }
               title={"Progress"}
-              value={"20%"}
+              value={`${sum || 0}%`}
               setTab={setTab}
               btn={true}
             />
@@ -271,7 +321,7 @@ function ProjectDetails() {
             <Bubble
               color={"#c084fc"}
               title={"Expenses"}
-              value={"34%"}
+              value={  expenses?.reduce((sum:any, item : any) => Number(sum) + Number(item.amount), 0) || 0}
               setTab={setTab}
               btn={true}
             />
@@ -531,6 +581,71 @@ function ProjectDetails() {
                       <CardTitle>Expenses</CardTitle>
                       <CardDescription>
                         {/* Enter the employee details and thier performance */}
+                        {
+                          expenses?.map((data: any, index: number)=>{
+                            console.log(data , "EXP")
+                            return (
+                              <div
+                              key={index}
+                              className={`border cursor-pointer  size-40 hover:scale-105 duration-200 shadow-lg hover:shadow-slate-400 rounded-full overflow-hidden relative flex justify-center items-center`}
+                              onClick={() => {
+                                // getTasks(paymentBalls.job_card);
+                                setTaskDetails(data);
+                                setMore(true);
+                              }}
+                            >
+                              <Wave
+                                // fill="#60a5fa"
+                                fill={"#4ade80"}
+                                paused={true}
+                                style={{
+                                  display: "flex",
+                                  position: "absolute",
+                                  bottom: 0,
+                                }}
+                                options={{
+                                  height: 50,
+
+                                  amplitude: 2,
+                                  // speed: 0.15,
+                                  // points: 3,
+                                }}
+                              ></Wave>
+
+                              <Card
+                                x-chunk="dashboard-01-chunk-0"
+                                className="rounded-full size-64 flex justify-center items-center "
+                              >
+                                <div className="z-30">
+                                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-md text-center font-medium">
+                                      {data?.assignee_name}
+                                    </CardTitle>
+                                  </CardHeader>
+                                  <CardContent>
+                                    <div className="text-xl font-bold text-center">
+                                      {data?.amount} AED
+                                    </div>
+                                    <div className="text-sm font-medium text-center">
+                                      {data?.
+category_name
+}
+                                    </div>
+                                    <div className="text-xs font-light text-gray-600 text-center">
+                                      {data?.expense_type?.length < 30
+                                        ? data?.expense_type
+                                        : `${data?.expense_type?.substring(
+                                            0,
+                                            40
+                                          )} ...`}
+                                    </div>
+                                  </CardContent>
+                                </div>
+                              </Card>
+                            </div>
+                            )
+                          })
+                        }
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="flex  items-center">
@@ -547,10 +662,7 @@ function ProjectDetails() {
                     </CardHeader>
                     <CardContent className="flex  items-center">
                       <div className="flex gap-5">
-                       
-                       
-                       
-                        
+  
                        
                       </div>
                     </CardContent>
@@ -571,6 +683,7 @@ function ProjectDetails() {
           setIsDialogOpen={setIsTaskDialogOpen}
           details={job}
           ball={paymentBallsDetails}
+          getTasks={getTasks}
         />
         <CreatePaymentBall
           isDialogOpen={isPaymentDialogOpen}
@@ -591,6 +704,7 @@ function ProjectDetails() {
         setIsDialogOpen={setMore}
         isDialogOpen={more}
         data={taskDetails}
+        getTasks={getTasks}
         />
       </div>
     </div>

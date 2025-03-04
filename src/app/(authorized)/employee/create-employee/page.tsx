@@ -99,7 +99,7 @@ export default function CreateEmployee() {
   useEffect(() => {
     if (companiesIsSuccess) {
       if (comapniesData) {
-        setCompanies(comapniesData);
+        setCompanies(comapniesData.results);
       }
     }
   }, [companiesIsSuccess]);

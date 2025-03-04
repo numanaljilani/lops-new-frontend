@@ -56,11 +56,13 @@ function CreateTask({
   setIsDialogOpen,
   details,
   ball,
+  getTasks
 }: {
   isDialogOpen: boolean;
   setIsDialogOpen: (value: boolean) => void;
   details: any;
   ball: any;
+  getTasks:any
 }) {
   const params = useParams();
   // console.log(params.id , ">>>>>>>>>>")
@@ -111,15 +113,16 @@ function CreateTask({
 
   async function onSubmit(data: any) {
     console.log(data, "ONSUBMIT");
-    // const res = await createTaskApi({data : { ...data , payment_ball : ball?.payment_id , due_date : '2025-04-20'} });
-    // console.log(res);
-    // if(res?.data){
-    //   setIsDialogOpen(false)
-    //   toast("Success", {
-    //     description: "Task has created",
+    const res = await createTaskApi({data : { ...data , payment_ball : ball?.payment_id , due_date : '2025-04-20'} });
+    console.log(res);
+    if(res?.data){
+      setIsDialogOpen(false)
+      toast("Success", {
+        description: "Task has created",
         
-    //   })
-    // }
+      })
+    }
+    getTasks( ball?.payment_id)
   }
   return (
     <Dialog open={isDialogOpen} onOpenChange={() => setIsDialogOpen(false)}>

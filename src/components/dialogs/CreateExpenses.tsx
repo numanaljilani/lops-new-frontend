@@ -63,7 +63,7 @@ function CreateExpense({
   const getExpCategories = async () => {
     const res = await expensesCategories({});
     if (res.data) {
-      setCategories(res.data);
+      setCategories(res.data.results);
     }
     console.log(res.data, "CATE");
   };

@@ -33,11 +33,13 @@ import { useUpdateTtasksMutation } from "@/redux/query/paymentApi";
 function More({
   isDialogOpen,
   setIsDialogOpen,
-  data : cardData,
+  data: cardData,
+  getTasks,
 }: {
   isDialogOpen: boolean;
   setIsDialogOpen: (value: boolean) => void;
   data: any;
+  getTasks: any;
 }) {
   const completeStatusSchema = z.object({
     status: z.string().default("Pending"),
@@ -54,17 +56,20 @@ function More({
 
   const [updateTaskStatus, { data: taskResponse, isSuccess, error, isError }] =
     useUpdateTtasksMutation();
-    // console.log(data, "ONSUBMIT");
+  // console.log(data, "ONSUBMIT");
   async function onSubmit(data: any) {
     const res = await updateTaskStatus({
-      data: { ...data , due_date : cardData?.due_date , task_brief : cardData?.task_brief,
-        weightage : cardData?.weightage , 
-        payment_ball : cardData?.payment_ball
-
+      data: {
+        ...data,
+        due_date: cardData?.due_date,
+        task_brief: cardData?.task_brief,
+        weightage: cardData?.weightage,
+        payment_ball: cardData?.payment_ball,
       },
       id: cardData?.task_id,
     });
     console.log(res, "res");
+    getTasks(cardData?.payment_ball)
     setIsDialogOpen(false);
   }
 
@@ -94,7 +99,8 @@ function More({
                 {cardData?.weightage}%
               </div>
               <div>
-                <span className="font-thin">Due Date</span> : {cardData?.due_date}
+                <span className="font-thin">Due Date</span> :{" "}
+                {cardData?.due_date}
               </div>
               <div>
                 <span className="font-thin">Status</span> : {cardData?.status}
@@ -107,7 +113,9 @@ function More({
 
             <div>
               <span className="font-semibold">Remark : </span>
-              <AlertDialogDescription>{cardData?.remarks}</AlertDialogDescription>
+              <AlertDialogDescription>
+                {cardData?.remarks}
+              </AlertDialogDescription>
             </div>
 
             <div className="grid gap-3">
@@ -134,7 +142,6 @@ function More({
             </div>
           </div>
           <AlertDialogFooter className="py-6">
-            
             <Button size="lg" type="submit" className="py-4">
               Mark
             </Button>
