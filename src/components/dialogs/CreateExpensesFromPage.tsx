@@ -1,7 +1,5 @@
 "use client";
 import React, { useEffect, useState } from "react";
-// import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '';
-
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Button } from "../ui/button";
@@ -21,19 +19,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
-import { useClientsMutation } from "@/redux/query/clientsApi";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
-import ErrorMessage from "@/components/errors/ErrorMessage";
-import { useCreateJobMutation } from "@/redux/query/jobApi";
 import {
   useCreateExpenseMutation,
   useExpensescategoriesMutation,
 } from "@/redux/query/expensesApi";
-import { log } from "console";
+import { useJobsMutation } from "@/redux/query/jobApi";
+import { toast } from "sonner";
 
-function CreateExpense({
+function CreateExpenseFromPage({
   isDialogOpen,
   setIsDialogOpen,
 
@@ -44,12 +40,13 @@ function CreateExpense({
 
   data: any;
 }) {
-  // console.log(jobData, "INFO");
   const [categories, setCategories] = useState([]);
   const LPOSchema = z.object({
     amount: z.string(),
+    net_amount: z.string(),
     date: z.string(),
-    // job_card: z.string(),
+    supplier: z.string().default("1"),
+    job_card: z.string(),
     category: z.string(),
     expense_type: z.string(),
     description: z.string(),
@@ -66,7 +63,6 @@ function CreateExpense({
     if (res.data) {
       setCategories(res.data.results);
     }
-    // console.log(res.data, "CATE");
   };
   useEffect(() => {
     getExpCategories();
@@ -82,17 +78,52 @@ function CreateExpense({
   } = useForm({ resolver: zodResolver(LPOSchema) });
 
   async function onSubmit(data: any) {
-    // console.log(data, "EXPENSES");
     const response = await createExpense({
       data: {
         ...data,
-        job_card: jobData.job_id,
+        supplier: 1,
       },
     });
+    console.log(response?.error, "SSSS");
+   
+      toast("Warning", {
+        description:
+          "Due to server issue purches or expenses is in added in the project.",
+      });
+    
 
     // console.log(response, "response from the server");
     setIsDialogOpen(false);
   }
+
+  const [jobs, setJobs] = useState([]);
+  const [jobApi, { data, isSuccess: isJobCardSuccess }] = useJobsMutation();
+
+  const getJobs = async () => {
+    const res = await jobApi({});
+  };
+
+  useEffect(() => {
+    getJobs();
+  }, []);
+
+  useEffect(() => {
+    if (isError) {
+      toast("Warning", {
+        description:
+          "Due to server issue purches or expenses is in added in the project.",
+      });
+    }
+  }, [isError]);
+
+  useEffect(() => {
+    if (isJobCardSuccess) {
+      console.log(data, "response from server");
+      if (data) {
+        setJobs(data.results);
+      }
+    }
+  }, [isJobCardSuccess]);
 
   return (
     <Dialog open={isDialogOpen} onOpenChange={() => setIsDialogOpen(false)}>
@@ -107,17 +138,62 @@ function CreateExpense({
         {/* <form className=" px-3 "> */}
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-4 border p-5 rounded-lg shadow-lg">
-            {/* <div>
-              <Label htmlFor="job_card">Job Number</Label>
+            <div className="grid gap-3">
+              <Label htmlFor="status">Job Id </Label>
+              <Controller
+                name="job_card"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    onValueChange={(value) => {
+                      console.log(value, "Selected Job ID");
+                      field.onChange(value); // keep as string or Number(value) if you want number
+                    }}
+                    value={field.value ?? ""} // ensure value binding
+                  >
+                    <SelectTrigger id="job_card" aria-label="Select Type">
+                      <SelectValue placeholder="Select Job" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {jobs.length > 0 ? (
+                        jobs.map((data: any, index) => (
+                          <SelectItem key={index} value={String(data?.job_id)}>
+                            {" "}
+                            {/* Convert to string */}
+                            {data?.job_number}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="" disabled>
+                          No jobs available
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
+            <div>
+              <Label htmlFor="amount">Supplier</Label>
               <Input
-                id="job_card"
+                id="supplier"
                 type="text"
                 // value={formData.password} onChange={handleInputChange}
-                {...register("job_card")}
+                {...register("supplier")}
               />
-            </div> */}
+            </div>
             <div>
-              <Label htmlFor="amount">Amount</Label>
+              <Label htmlFor="amount">Net value without Tax</Label>
+              <Input
+                id="net_amount"
+                type="text"
+                // value={formData.password} onChange={handleInputChange}
+                {...register("net_amount")}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="amount">VAT</Label>
               <Input
                 id="amount"
                 type="text"
@@ -126,45 +202,16 @@ function CreateExpense({
               />
             </div>
             <div>
-              <Label htmlFor="delivery_timelines">Date</Label>
+              <Label htmlFor="amount">Total Amount</Label>
               <Input
-                id="date"
-                type="date"
+                id="amount"
+                type="text"
                 // value={formData.password} onChange={handleInputChange}
-                {...register("date")}
-              />
-            </div>
-
-            <div className="grid gap-3">
-              <Label htmlFor="status">Category</Label>
-
-              <Controller
-                name="category"
-                control={control}
-                defaultValue="Material"
-                
-                render={({ field }) => (
-                  <Select
-                    onValueChange={(value) => field.onChange(value)}
-                    value={field.value}
-                  >
-                    <SelectTrigger id="category" aria-label="Select Type">
-                      <SelectValue placeholder="Select Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((data: any, index) => (
-                        <SelectItem key={index} value={data.id}>
-                          {data.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
+                {...register("amount")}
               />
             </div>
             <div className="grid gap-3">
               <Label htmlFor="status">Expense Type </Label>
-
               <Controller
                 name="expense_type"
                 control={control}
@@ -192,9 +239,49 @@ function CreateExpense({
                 )}
               />
             </div>
+            <div>
+              <Label htmlFor="delivery_timelines">Date</Label>
+              <Input
+                id="date"
+                type="date"
+                // value={formData.password} onChange={handleInputChange}
+                {...register("date")}
+              />
+            </div>
+
+            <div className="grid gap-3">
+              <Label htmlFor="status">Category</Label>
+
+              <Controller
+                name="category"
+                control={control}
+                defaultValue="Material"
+                render={({ field }) => (
+                  <Select
+                    onValueChange={(value) => field.onChange(value)}
+                    value={field.value}
+                  >
+                    <SelectTrigger id="category" aria-label="Select Type">
+                      <SelectValue placeholder="Select Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((data: any, index) => {
+                        // console.log(data )
+                        return (
+                          <SelectItem key={index} value={data.name}>
+                            {" "}
+                            {data.name}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
+
             <div className="grid gap-3">
               <Label htmlFor="status">Status</Label>
-
               <Controller
                 name="Status"
                 control={control}
@@ -209,8 +296,8 @@ function CreateExpense({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Pending">Pending</SelectItem>
-                      <SelectItem value="Ongoing">Ongoing</SelectItem>
-                      <SelectItem value="Completed">Completed</SelectItem>
+                      <SelectItem value="Approved">Approved</SelectItem>
+                      <SelectItem value="Rejected">Rejected</SelectItem>
                     </SelectContent>
                   </Select>
                 )}
@@ -256,4 +343,4 @@ function CreateExpense({
   );
 }
 
-export default CreateExpense;
+export default CreateExpenseFromPage;

@@ -28,8 +28,20 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import ErrorMessage from "@/components/errors/ErrorMessage";
 import { CircleAlert, LoaderCircle } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox"; // Import the Checkbox component
 
 export default function CreateEmployee() {
+  // Define access levels
+  const accessLevels = [
+    { id: "admin", label: "Admin"  },
+    { id: "team_lead", label: "Team Lead" },
+    { id: "sales", label: "Sales" },
+    { id: "sub-contractor", label: "Sub Contractor" },
+    { id: "accounts", label: "Accounts" },
+    { id: "hr", label: "HR" },
+  ];
+
+  // Update the zod schema to include the access field
   const employeeSchema = z.object({
     name: z.string(),
     email: z.string().email(),
@@ -41,6 +53,7 @@ export default function CreateEmployee() {
     salary: z.string(),
     currency: z.string(),
     status: z.boolean().default(true),
+    access: z.array(z.string()).min(1, "At least one access level is required"), // Add this line
   });
 
   const router = useRouter();
@@ -52,7 +65,7 @@ export default function CreateEmployee() {
     formState: { errors, isSubmitting },
   } = useForm({ resolver: zodResolver(employeeSchema) });
 
-  const [createEmployeeApi, { data, isSuccess, error, isError , isLoading }] =
+  const [createEmployeeApi, { data, isSuccess, error, isError, isLoading }] =
     useCreateEmployeeMutation();
 
   useEffect(() => {
@@ -65,13 +78,13 @@ export default function CreateEmployee() {
       },
     });
   }, [errors]);
+
   useEffect(() => {
     if (isSuccess) {
       toast(`User has been created.`, {
-        description: `New  has been joint as ${watch("position")} in ${watch(
+        description: `New employee has been added as ${watch("position")} in ${watch(
           "company"
         )}`,
-        
       });
       router.replace("/employee");
     }
@@ -89,7 +102,7 @@ export default function CreateEmployee() {
   ] = useComponiesMutation();
 
   const getCompanies = async () => {
-     await companiesApi({});
+    await companiesApi({});
   };
 
   useEffect(() => {
@@ -106,11 +119,11 @@ export default function CreateEmployee() {
 
   async function onSubmit(data: any) {
     await createEmployeeApi({ ...data, hourly_rate });
- 
   }
 
   const salary = watch("salary", "");
   const hourly_rate = (salary / 207).toFixed(2);
+
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
@@ -123,18 +136,15 @@ export default function CreateEmployee() {
                 </h1>
 
                 <div className="hidden items-center gap-2 md:ml-auto md:flex">
-                  {/* <Button variant="outline" size="sm">
-                    Discard
-                  </Button> */}
                   <Button size="sm" type="submit">
-                  {isLoading && (
-                    <LoaderCircle
-                      className="-ms-1 me-2 animate-spin"
-                      size={16}
-                      strokeWidth={2}
-                      aria-hidden="true"
-                    />
-                  )}
+                    {isLoading && (
+                      <LoaderCircle
+                        className="-ms-1 me-2 animate-spin"
+                        size={16}
+                        strokeWidth={2}
+                        aria-hidden="true"
+                      />
+                    )}
                     Save Employee
                   </Button>
                 </div>
@@ -172,6 +182,38 @@ export default function CreateEmployee() {
                           {errors?.email && (
                             <ErrorMessage
                               message={errors?.email?.message?.toString()}
+                            />
+                          )}
+                        </div>
+                        <div className="grid gap-3">
+                          <Label htmlFor="access">Access Levels</Label>
+                          <Controller
+                            name="access"
+                            control={control}
+                            defaultValue={[]}
+                            render={({ field }) => (
+                              <div className="flex flex-col gap-2">
+                                {accessLevels.map((level) => (
+                                  <div key={level.id} className="flex items-center gap-2">
+                                    <Checkbox
+                                      id={level.id}
+                                      checked={field.value?.includes(level.id)}
+                                      onCheckedChange={(checked) => {
+                                        const newAccess = checked
+                                          ? [...(field.value || []), level.id] // Add if checked
+                                          : field.value?.filter((v : any) => v !== level.id); // Remove if unchecked
+                                        field.onChange(newAccess);
+                                      }}
+                                    />
+                                    <Label htmlFor={level.id}>{level.label}</Label>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          />
+                          {errors.access && (
+                            <ErrorMessage
+                              message={errors.access.message?.toString()}
                             />
                           )}
                         </div>
@@ -222,14 +264,15 @@ export default function CreateEmployee() {
                     </CardContent>
                   </Card>
 
+                  {/* Company Details Section (Unchanged) */}
                   <Card x-chunk="dashboard-07-chunk-1">
                     <CardHeader>
-                      <CardTitle>Compony Details</CardTitle>
+                      <CardTitle>Company Details</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="grid gap-6 sm:grid-cols-2">
                         <div className="grid gap-3">
-                          <Label htmlFor="category">Compony</Label>
+                          <Label htmlFor="category">Company</Label>
                           <Controller
                             name="company"
                             control={control}
@@ -241,9 +284,9 @@ export default function CreateEmployee() {
                               >
                                 <SelectTrigger
                                   id="category"
-                                  aria-label="Select Compony"
+                                  aria-label="Select Company"
                                 >
-                                  <SelectValue placeholder="Select Compony" />
+                                  <SelectValue placeholder="Select Company" />
                                 </SelectTrigger>
                                 <SelectContent>
                                   {companies.map(
@@ -251,7 +294,6 @@ export default function CreateEmployee() {
                                       data: { name: string; url: string },
                                       index
                                     ) => {
-                                      // console.log(data?.url.split('/').reverse()[1])
                                       return (
                                         <SelectItem
                                           key={index}
@@ -329,7 +371,6 @@ export default function CreateEmployee() {
                             defaultValue="AED"
                             render={({ field }) => (
                               <Select
-                                // value={employeeDetails.Currency}
                                 {...register("currency")}
                               >
                                 <SelectTrigger
@@ -371,7 +412,6 @@ export default function CreateEmployee() {
                               <SelectValue placeholder="Select status" />
                             </SelectTrigger>
                             <SelectContent>
-                              {/* <SelectItem value="draft">On Leave</SelectItem> */}
                               <SelectItem value={"Active"}>Active</SelectItem>
                               <SelectItem value={"Inactive"}>
                                 Inactive

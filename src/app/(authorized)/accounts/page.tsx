@@ -47,6 +47,7 @@ import {
 import Alert from "@/components/dialogs/Alert";
 import { usePaymentBallsListMutation } from "@/redux/query/accountsApi";
 import AlertAccountStatus from "@/components/dialogs/AlertAccountStatus";
+import Wave from "react-wavify";
 
 function Accounts() {
   const router = useRouter();
@@ -54,7 +55,6 @@ function Accounts() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [paymentBalls, setPaymentBalls] = useState<any>([]);
   const [item, setItem] = useState<any>(null);
-
 
   const update = async (url: string) => {
     router.push(`/accounts`);
@@ -71,8 +71,8 @@ function Accounts() {
   ] = usePaymentBallsListMutation();
 
   const getPaymentBalls = async () => {
-    const res = await paymentApi({});
-    console.log(res, "AALL");
+     await paymentApi({});
+    
   };
 
   useEffect(() => {
@@ -83,8 +83,11 @@ function Accounts() {
   }, [paymentIsSuccess]);
 
   useEffect(() => {
-    getPaymentBalls();
-  }, []);
+    if(!isDialogOpen){
+
+      getPaymentBalls();
+    }
+  }, [isDialogOpen]);
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
@@ -100,7 +103,7 @@ function Accounts() {
               <TabsTrigger value="Accounts">Accounts</TabsTrigger>
             </TabsList> */}
               <div className="ml-auto flex items-center gap-2">
-                <DropdownMenu>
+                {/* <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="h-7 gap-1">
                       <ListFilter className="h-3.5 w-3.5" />
@@ -131,21 +134,21 @@ function Accounts() {
                       Accounts Members
                     </DropdownMenuCheckboxItem>
                   </DropdownMenuContent>
-                </DropdownMenu>
-                <Button size="sm" variant="outline" className="h-7 gap-1">
+                </DropdownMenu> */}
+                {/* <Button size="sm" variant="outline" className="h-7 gap-1">
                   <File className="h-3.5 w-3.5" />
                   <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
                     Export
                   </span>
-                </Button>
-                <Link href="/clients/create-client">
+                </Button> */}
+                {/* <Link href="/clients/create-client">
                   <Button size="sm" className="h-7 gap-1">
                     <PlusCircle className="h-3.5 w-3.5" />
                     <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
                       Accounts
                     </span>
                   </Button>
-                </Link>
+                </Link> */}
               </div>
             </div>
             <TabsContent value="all">
@@ -153,135 +156,97 @@ function Accounts() {
                 <CardHeader>
                   <CardTitle>Accounts</CardTitle>
                   <CardDescription>
-                    Manage and approve the RFQ's and Qoutations and pay the
+                    Manage and approve the Qoutations and pay the
                     bills etc.
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        {/* <TableHead className="hidden w-[100px] sm:table-cell">
-                          <span className="sr-only">Image</span>
-                        </TableHead> */}
-                        <TableHead>Sr. No.</TableHead>
-                        <TableHead>Client Name</TableHead>
-                        <TableHead>Project Status</TableHead>
-                        <TableHead className="hidden md:table-cell">
-                          Project %
-                        </TableHead>
-                        <TableHead className="hidden md:table-cell">
-                          Amount
-                        </TableHead>
-                   
-                        <TableHead className="hidden md:table-cell">
-                          Payment
-                        </TableHead>
-                 
-                        <TableHead>
-                          <span className="sr-only">Actions</span>
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {paymentBalls &&
-                        paymentBalls?.map(
-                          (
-                            data: {
-                              client_name: string;
-                              created_at: string;
-                              amount: string;
-                              contact_info: string;
-                              status: boolean;
-                              project_percentage: string;
-                              company_name: string;
-                              verification_status: string;
-                              contact_number: string;
-                              project_status: string;
-                            },
-                            index: number
-                          ) => {
-                            return (
-                              <TableRow key={index}>
-                                <TableCell className="hidden sm:table-cell">
-                                  {index + 1}
-                                </TableCell>
-                                <TableCell className="font-medium">
-                                  {data?.client_name}
-                                </TableCell>
+                <CardContent className="flex flex-wrap gap-10">
+                  {paymentBalls &&
+                    paymentBalls?.map(
+                      (
+                        data: {
+                          client_name: string;
+                          created_at: string;
+                          amount: string;
+                          contact_info: string;
+                          status: boolean;
+                          company_name: string;
+                          verification_status: string;
+                          contact_number: string;
+                          project_status: string;
+                          project_percentage: string;
+                          completion_percentage: string;
+                        },
+                        index: number
+                      ) => {
+                        return (
+                          <div
+                            key={index}
+                            className={`border  cursor-pointer  size-40 hover:scale-105 duration-200 shadow-lg hover:shadow-slate-400 rounded-full overflow-hidden relative flex justify-center items-center`}
+                            onClick={() => {
+                              // getTasks(paymentBalls.job_card);
+                              setItem(data);
+                              setIsDialogOpen(true);
+                            }}
+                          >
+                            <Wave
+                              // fill="#60a5fa"
+                              fill={
+                                data?.verification_status == "paid" ? "#17B169" : data?.verification_status ==  "invoiced" ?  "#DA498D" : "#662d91"
+                              }
+                              paused={true}
+                              style={{
+                                display: "flex",
+                                position: "absolute",
+                                bottom: 0,
+                                flex: 1,
+                                height: `${100}%`,
+                              }}
+                              options={{
+                                height: -20,
 
-                                <TableCell className="font-medium">
-                                  {data.project_status}
-                                </TableCell>
-                                <TableCell className="hidden md:table-cell">
-                                  {data?.project_percentage + "%" || "-"}
-                                </TableCell>
-                                <TableCell className="font-medium">
-                                  {data?.amount}
-                                </TableCell>
+                                amplitude: 2,
+                                // speed: 0.15,
+                                // points: 3,
+                              }}
+                            ></Wave>
 
-                       
-                                <TableCell className="hidden md:table-cell">
-                                  {data?.verification_status}
-                                </TableCell>
-                             
-                                <TableCell>
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button
-                                        aria-haspopup="true"
-                                        size="icon"
-                                        variant="ghost"
-                                      >
-                                        <MoreHorizontal className="h-4 w-4" />
-                                        <span className="sr-only">
-                                          Toggle menu
-                                        </span>
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      <DropdownMenuLabel>
-                                        Actions
-                                      </DropdownMenuLabel>
-                                      {/* <DropdownMenuItem
-                                        onClick={() => update(data)}
-                                      >
-                                        Edit
-                                      </DropdownMenuItem> */}
-                                      <DropdownMenuItem
-                                        onClick={() => {
-                                    setItem(data)
-                                          setIsDialogOpen(true);
-                                        }}
-                                      >
-                                        Verify
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          }
-                        )}
-                    </TableBody>
-                  </Table>
+                            <Card
+                              x-chunk="dashboard-01-chunk-0"
+                              className="rounded-full size-64 flex justify-center items-center "
+                            >
+                              <div className="z-30">
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                  {/* <CardTitle className="text-md text-center font-medium">
+                                    {data?.assignee_name}
+                                  </CardTitle> */}
+                                </CardHeader>
+                                <CardContent>
+                                  <div className="text-xl font-bold text-center text-white">
+                                    {data?.amount} AED
+                                  </div>
+
+                                  <div className="text-sm tracking-wider font-light text-white text-center">
+                                    {data?.verification_status}
+                                  </div>
+                                </CardContent>
+                              </div>
+                            </Card>
+                          </div>
+                        
+                        );
+                      }
+                    )}
                 </CardContent>
-                <CardFooter>
-                  <div className="text-xs text-muted-foreground">
-                    Showing <strong>1-10</strong> of <strong>{payementData?.count}</strong>{" "}
-                    products
-                  </div>
-                </CardFooter>
               </Card>
             </TabsContent>
           </Tabs>
         </main>
-        
+
         <AlertAccountStatus
           isDialogOpen={isDialogOpen}
           setIsDialogOpen={setIsDialogOpen}
           item={item}
-         
         />
       </div>
     </div>

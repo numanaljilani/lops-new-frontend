@@ -151,7 +151,7 @@ function Employee() {
                 </h1>
 
                 <div className="hidden items-center gap-2 md:ml-auto md:flex">
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={()=>setUpdateView(false)}>
                     Discard
                   </Button>
                   <Button size="sm" onClick={updateEmployee}>

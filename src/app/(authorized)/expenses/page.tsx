@@ -1,16 +1,6 @@
 "use client";
-import {
-  File,
-  ListFilter,
-  MoreHorizontal,
-  PlusCircle,
-  Router,
-} from "lucide-react";
-import Image from "next/image";
-import Link from "next/link";
-
+import { File, ListFilter, MoreHorizontal, PlusCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -38,10 +28,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  useDeleteEmployeeMutation,
-  useEmployeeMutation,
-} from "@/redux/query/employee";
 import { useEffect, useState } from "react";
 import { formatDate } from "@/lib/dateFormat";
 import {
@@ -53,27 +39,43 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useRouter } from "next/navigation";
-import CreateExpense from "@/components/dialogs/CreateExpenses";
+import CreateExpenseFromPage from "@/components/dialogs/CreateExpensesFromPage";
 import { useExpensesMutation } from "@/redux/query/expensesApi";
+import { useJobsMutation } from "@/redux/query/jobApi";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function Expenses() {
   const router = useRouter();
   const [expenses, setExpenses] = useState([]);
+  const [alljobs, setAllJobs] = useState([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCreateExpensesDialogOpen, setIsCreateExpensesDialogOpen] =
     useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [expenseApi, { data, isSuccess, error, isError }] =
     useExpensesMutation();
+  const [jobApi, { data: jobs, isSuccess: jobsIsSuccess }] = useJobsMutation();
 
-  const [deleteEmployeeApi] = useDeleteEmployeeMutation();
+  const getJobs = async () => {
+    const res = await jobApi({});
+  };
+
+  useEffect(() => {
+    getJobs();
+  }, []);
+
+  useEffect(() => {
+    if (jobsIsSuccess) {
+      setAllJobs(jobs.results);
+    }
+  }, [jobsIsSuccess]);
 
   const getExpenses = async () => {
+    setIsLoading(true);
     const res = await expenseApi({});
-    console.log(res, "expense res");
-    // console.log(res, "response");
+    setIsLoading(false);
   };
 
   useEffect(() => {
@@ -84,7 +86,6 @@ function Expenses() {
 
   useEffect(() => {
     if (isSuccess) {
-      console.log(data, "expenses response from server");
       if (data) {
         setExpenses(data.results);
       }
@@ -93,29 +94,17 @@ function Expenses() {
 
   const [itemToDelete, setItemToDelete] = useState<any>(null);
 
-  const deleteEmployee = async (url: string) => {
-    // Add your deletion logic here
-    console.log(`Deleting employee at ${url}`);
-    console.log(url.split("/")[6]);
-    const res = await deleteEmployeeApi({ id: url.split("/")[6] });
-    console.log(res, ">>>>");
-    getExpenses();
-    setItemToDelete(null);
-  };
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
           <Tabs defaultValue="all">
-            <div className="flex items-center">
-              {/* <TabsList>
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="Sales">Sales</TabsTrigger>
-            <TabsTrigger value="Team Leads">Team Leads</TabsTrigger>
-            <TabsTrigger value="Team Members">Team Members</TabsTrigger>
-            <TabsTrigger value="Sub-Contractors">Sub-Contractors</TabsTrigger>
-            <TabsTrigger value="Accounts">Accounts</TabsTrigger>
-          </TabsList> */}
+            <div className="flex items-center justify-between">
+              <TabsList className="hidden sm:flex">
+                <TabsTrigger value="all">All</TabsTrigger>
+                <TabsTrigger value="pending">Pending</TabsTrigger>
+                <TabsTrigger value="completed">Completed</TabsTrigger>
+              </TabsList>
               <div className="ml-auto flex items-center gap-2">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -132,20 +121,9 @@ function Expenses() {
                     <DropdownMenuCheckboxItem checked>
                       All
                     </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem>Pending</DropdownMenuCheckboxItem>
                     <DropdownMenuCheckboxItem>
-                      Sales Member
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem>
-                      Team Leads
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem>
-                      Team Members
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem>
-                      Sub-Contractors
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem>
-                      Accounts Members
+                      Completed
                     </DropdownMenuCheckboxItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -155,7 +133,6 @@ function Expenses() {
                     Export
                   </span>
                 </Button>
-                {/* <Link href="/employee/create-employee"> */}
                 <Button
                   size="sm"
                   className="h-7 gap-1"
@@ -166,11 +143,10 @@ function Expenses() {
                     Add expense
                   </span>
                 </Button>
-                {/* </Link> */}
               </div>
             </div>
             <TabsContent value="all">
-              <Card x-chunk="dashboard-06-chunk-0">
+              <Card className="shadow-sm">
                 <CardHeader>
                   <CardTitle>Expenses</CardTitle>
                   <CardDescription>
@@ -178,62 +154,90 @@ function Expenses() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Expense Id</TableHead>
-                        <TableHead>Project Id</TableHead>
-                        <TableHead> Category</TableHead>
-                        <TableHead>Expenses Type</TableHead>
-                        <TableHead>Amount</TableHead>
-                        <TableHead className="hidden md:table-cell">
-                          Date
-                        </TableHead>
-                        <TableHead className="hidden md:table-cell">
-                          Created at
-                        </TableHead>
-                        <TableHead>
-                          <span className="sr-only">Actions</span>
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {expenses?.map(
-                        (
-                          data: {
-                            expense_id: string;
-                            job_card: string;
-
-                            category_name: string;
-
-                            expense_type: string;
-                            created_at: string;
-                            url: string;
-                            amount: string;
-                            date: string;
-                            status: boolean;
-                          },
-                          index
-                        ) => {
-                          return (
-                            <TableRow key={index}>
-                              <TableCell className="font-medium">
+                  {isLoading ? (
+                    <div className="space-y-4">
+                      {[...Array(5)].map((_, index) => (
+                        <Skeleton key={index} className="h-12 w-full" />
+                      ))}
+                    </div>
+                  ) : expenses.length === 0 ? (
+                    <div className="flex items-center justify-center h-32">
+                      <p className="text-muted-foreground">
+                        No expenses found.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Expense Id</TableHead>
+                            <TableHead>Project Id</TableHead>
+                            <TableHead>Category</TableHead>
+                            <TableHead>Expenses Type</TableHead>
+                            <TableHead>Amount</TableHead>
+                            <TableHead className="hidden md:table-cell">
+                              Date
+                            </TableHead>
+                            <TableHead className="hidden md:table-cell">
+                              Created at
+                            </TableHead>
+                            <TableHead>
+                              <span className="sr-only">Actions</span>
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {expenses?.map((data: any, index) => (
+                            <TableRow
+                              key={index}
+                              className="hover:bg-muted/50 transition-colors"
+                            >
+                              <TableCell
+                                className="font-medium cursor-pointer"
+                                onClick={() =>
+                                  router.push(`/expenses/${data.expense_id}`)
+                                }
+                              >
                                 {data?.expense_id}
                               </TableCell>
-                              <TableCell className="font-medium">
-                                {data?.job_card}
+                              <TableCell
+                              className=" cursor-pointer"
+                                onClick={() =>
+                                  router.push(`/expenses/${data.expense_id}`)
+                                }
+                              >
+                                {data?.job_number}
                               </TableCell>
-                              <TableCell className="font-medium">
+                              <TableCell
+                                onClick={() =>
+                                  router.push(`/expenses/${data.expense_id}`)
+                                }
+                                   className=" cursor-pointer"
+                              >
                                 {data?.category_name}
                               </TableCell>
-                              <TableCell className="font-medium">
+                              <TableCell
+                                onClick={() =>
+                                  router.push(`/expenses/${data.expense_id}`)
+                                }
+                                   className=" cursor-pointer"
+                              >
                                 {data?.expense_type}
                               </TableCell>
-                              <TableCell className="font-medium">
+                              <TableCell
+                                onClick={() =>
+                                  router.push(`/expenses/${data.expense_id}`)
+                                }
+                                   className=" cursor-pointer"
+                              >
                                 {data?.amount}
                               </TableCell>
                               <TableCell className="hidden md:table-cell">
                                 {formatDate(data?.date)}
+                              </TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                {formatDate(data?.created_at)}
                               </TableCell>
                               <TableCell>
                                 <DropdownMenu>
@@ -242,6 +246,7 @@ function Expenses() {
                                       aria-haspopup="true"
                                       size="icon"
                                       variant="ghost"
+                                      className="hover:bg-muted"
                                     >
                                       <MoreHorizontal className="h-4 w-4" />
                                       <span className="sr-only">
@@ -253,17 +258,6 @@ function Expenses() {
                                     <DropdownMenuLabel>
                                       Actions
                                     </DropdownMenuLabel>
-                                    {/* <DropdownMenuItem
-                                      onClick={() =>
-                                        router.push(
-                                          `/employee/${
-                                            data?.url?.split("/")[6]
-                                          }`
-                                        )
-                                      }
-                                    >
-                                      Edit
-                                    </DropdownMenuItem> */}
                                     <DropdownMenuItem
                                       onClick={() => {
                                         setIsDialogOpen(true);
@@ -276,16 +270,16 @@ function Expenses() {
                                 </DropdownMenu>
                               </TableCell>
                             </TableRow>
-                          );
-                        }
-                      )}
-                    </TableBody>
-                  </Table>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
                 </CardContent>
                 <CardFooter>
                   <div className="text-xs text-muted-foreground">
-                    Showing <strong>1-10</strong> of <strong>32</strong>{" "}
-                    products
+                    Showing <strong>1-{expenses.length}</strong> of{" "}
+                    <strong>{expenses.length}</strong> expenses
                   </div>
                 </CardFooter>
               </Card>
@@ -293,19 +287,17 @@ function Expenses() {
           </Tabs>
 
           <AlertDialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <AlertDialogTrigger asChild></AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
                 <AlertDialogDescription>
-                  {`Are you sure you want to delete ${itemToDelete?.name}? This action
-                cannot be undone.`}
+                  {`Are you sure you want to delete this expense? This action cannot be undone.`}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction
-                  onClick={() => deleteEmployee(itemToDelete?.url)}
+                // onClick={() => deleteEmployee(itemToDelete?.url)}
                 >
                   Confirm Delete
                 </AlertDialogAction>
@@ -315,10 +307,10 @@ function Expenses() {
         </main>
 
         {
-          <CreateExpense
+          <CreateExpenseFromPage
             setIsDialogOpen={setIsCreateExpensesDialogOpen}
             isDialogOpen={isCreateExpensesDialogOpen}
-            data={{}}
+            data={alljobs}
           />
         }
       </div>

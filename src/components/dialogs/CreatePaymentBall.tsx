@@ -173,6 +173,7 @@ setIsDialogOpen(false)
                     placeholder="0.00"
                     type="text"
                     {...register("project_percentage")}
+                    max={100}
                   />
                   <span className="-z-10 inline-flex items-center rounded-e-lg border border-input bg-background px-3 text-sm text-muted-foreground">
                     %
@@ -231,7 +232,7 @@ setIsDialogOpen(false)
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Pending">Pending</SelectItem>
-                      <SelectItem value="Ongoing">Ongoing</SelectItem>
+                      <SelectItem value="InProgress">InProgress</SelectItem>
                       <SelectItem value="Completed">Completed</SelectItem>
                     </SelectContent>
                   </Select>

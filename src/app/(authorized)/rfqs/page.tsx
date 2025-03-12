@@ -45,6 +45,7 @@ import Alert from "@/components/dialogs/Alert";
 import {
   useAllRFQsMutation,
   useCreateRFQMutation,
+  useDeleteRfqMutation,
 } from "@/redux/query/rfqsApi";
 import CreateDialog from "@/components/dialogs/CreateDialog";
 import CreateLPO from "@/components/dialogs/CreateLPO";
@@ -99,15 +100,14 @@ function RFQs() {
 
   const handleSubmit = async () => {
     setIsCreateRFQDialogOpen(false);
-    const res = await createRFQApi({ data: { ...rfq, client: 1 }, token: "" });
+    const res = await createRFQApi({ data: { ...rfq }, token: "" });
     console.log(res, "response");
     getRFQs();
   };
-  const [deleteClientApi] = useDeleteClientMutation();
+  const [deleteRFQApi] = useDeleteRfqMutation();
 
   const getRFQs = async () => {
     const res = await rfqsApi({});
-    console.log(res, "response");
   };
 
   useEffect(() => {
@@ -128,13 +128,14 @@ function RFQs() {
     }
   }, [isSuccess]);
 
-  const deleteClient = async () => {
-    // const res = await deleteClientApi({
-    //   id: itemToDelete.client_id,
-    //   token: "",
-    // });
-    // console.log(res, ">>>>");
-    // getRFQs();
+  const deleteRFQ = async () => {
+    console.log(itemToDelete)
+    const res = await deleteRFQApi({
+      id: itemToDelete.rfq_id,
+      token: "",
+    });
+    console.log(res, ">>>>");
+    getRFQs();
   };
 
   const update = async (url: string) => {
@@ -179,12 +180,12 @@ function RFQs() {
                     </DropdownMenuCheckboxItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-                <Button size="sm" variant="outline" className="h-7 gap-1">
+                {/* <Button size="sm" variant="outline" className="h-7 gap-1">
                   <File className="h-3.5 w-3.5" />
                   <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
                     Export
                   </span>
-                </Button>
+                </Button> */}
 
                 <Button
                   size="sm"
@@ -245,38 +246,51 @@ function RFQs() {
                           index: number
                         ) => {
                           return (
-                            <TableRow key={index}>
+                            <TableRow className="cursor-pointer" key={index}>
                               {/* <TableCell className="hidden sm:table-cell">
                                 {data?.rfq_id}
                               </TableCell> */}
-                              <TableCell className="font-medium">
+                              <TableCell
+                                className="font-medium "
+                                onClick={() =>
+                                  router.push(`/rfqs/${data.rfq_id}`)
+                                }
+                              >
                                 {data?.rfq_id}
                               </TableCell>
-                              <TableCell className="font-medium">
-                                {data?.client_name
+                              <TableCell
+                                className="font-medium"
+                                onClick={() =>
+                                  router.push(`/rfqs/${data.rfq_id}`)
                                 }
+                              >
+                                {data?.client_name}
                               </TableCell>
-                              {/* <TableCell>
-                                <Badge variant="outline">
-                                  {data?.status ? "Active" : "Inactive"}
-                                </Badge>
-                              </TableCell> */}
-                              {/* <TableCell>{data?.company_name}</TableCell> */}
-                              <TableCell className="hidden md:table-cell">
+
+                              <TableCell
+                                className="hidden md:table-cell"
+                                onClick={() =>
+                                  router.push(`/rfqs/${data.rfq_id}`)
+                                }
+                              >
                                 {data?.project_type}
                               </TableCell>
-                              <TableCell className="hidden md:table-cell">
-                                {data?.
-scope_of_work}
+                              <TableCell className="hidden md:table-cell" onClick={() =>
+                              router.push(`/rfqs/${data.rfq_id}`)
+                            }>
+                                {data?.scope_of_work}
                               </TableCell>
-                             
-                              <TableCell className="hidden md:table-cell">
+
+                              <TableCell className="hidden md:table-cell " onClick={() =>
+                              router.push(`/rfqs/${data.rfq_id}`)
+                            }>
                                 {data?.quotation_amount}
                               </TableCell>
                               <TableCell className="hidden md:table-cell">
                                 {formatDate(data?.rfq_date)}
                               </TableCell>
-                              <TableCell className=" md:table-cell">
+
+                              <TableCell className=" md:table-cell" >
                                 <Button
                                   size="sm"
                                   className="h-7 gap-1"
@@ -306,13 +320,7 @@ scope_of_work}
                                     <DropdownMenuLabel>
                                       Actions
                                     </DropdownMenuLabel>
-                                    <DropdownMenuItem
-                                      onClick={() =>
-                                        router.push(`/rfqs/${data.rfq_id}`)
-                                      }
-                                    >
-                                      Edit
-                                    </DropdownMenuItem>
+
                                     <DropdownMenuItem
                                       onClick={() => {
                                         setItemToDelete(data);
@@ -350,8 +358,8 @@ scope_of_work}
         <Alert
           isDialogOpen={isDialogOpen}
           setIsDialogOpen={setIsDialogOpen}
-          handleDelete={deleteClient}
-          name={itemToDelete?.client_name}
+          handleDelete={deleteRFQ}
+          name={itemToDelete?.id}
         />
         {
           <CreateDialog
@@ -360,6 +368,7 @@ scope_of_work}
             rfq={rfq}
             setRfq={setRfq}
             handleSubmit={handleSubmit}
+
             // client={path.split("/").reverse()[0]}
           />
         }

@@ -102,14 +102,7 @@ function Employee() {
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
           <Tabs defaultValue="all">
             <div className="flex items-center">
-              {/* <TabsList>
-              <TabsTrigger value="all">All</TabsTrigger>
-              <TabsTrigger value="Sales">Sales</TabsTrigger>
-              <TabsTrigger value="Team Leads">Team Leads</TabsTrigger>
-              <TabsTrigger value="Team Members">Team Members</TabsTrigger>
-              <TabsTrigger value="Sub-Contractors">Sub-Contractors</TabsTrigger>
-              <TabsTrigger value="Accounts">Accounts</TabsTrigger>
-            </TabsList> */}
+           
               <div className="ml-auto flex items-center gap-2">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -219,7 +212,7 @@ function Employee() {
                               </TableCell>
                               <TableCell>{data?.salary}</TableCell>
                               <TableCell className="hidden md:table-cell">
-                                25
+                                0
                               </TableCell>
                               <TableCell className="hidden md:table-cell">
                                 {formatDate(data?.created_at)}

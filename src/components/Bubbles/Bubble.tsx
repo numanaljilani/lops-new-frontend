@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { DollarSign } from "lucide-react";
 import Wave from "react-wavify";
 
-function Bubble({color , title , value , setTab , btn , desc , callFunction , callFunc } : any) {
+function Bubble({color , title , value , setTab , btn , desc , callFunction , callFunc , sum} : any) {
   return (
     <div className={`border  cursor-pointer  size-40 hover:scale-105 duration-200 shadow-lg hover:shadow-slate-400 rounded-full overflow-hidden relative flex justify-center items-center`} onClick={callFunc ? callFunction  :()=>btn ?   setTab(title) :  console.log("no")}>
       <Wave
@@ -11,7 +11,7 @@ function Bubble({color , title , value , setTab , btn , desc , callFunction , ca
         fill={color}
         paused={true}
 
-        style={{ display: "flex", position: "absolute", bottom: 0 , flex : 1 , height : '100%'}}
+        style={{ display: "flex", position: "absolute", bottom: 0 , flex : 1 , height : `${sum ? sum : 100}%`}}
         
         options={{
           height: -20,

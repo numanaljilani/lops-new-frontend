@@ -29,11 +29,11 @@ export const jobApi = createApi({
         };
       },
     }),
-    deleteClient: builder.mutation({
-      query: (data) => {
+    deleteJobCard: builder.mutation({
+      query: ({data , id }) => {
         console.log("delet client ", data);
         return {
-          url: `clients/${data?.id}/`,
+          url: `jobcards/${id}/`,
           method: "DELETE",
           headers: {
             "Content-type": "application/json; charset=UTF-8",
@@ -76,6 +76,6 @@ export const {
   useJobDetailsMutation,
   useJobsMutation,
   useCreateJobMutation,
-  useDeleteClientMutation,
+  useDeleteJobCardMutation,
   usePatchClientMutation,
 } = jobApi;

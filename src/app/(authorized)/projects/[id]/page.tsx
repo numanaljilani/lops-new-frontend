@@ -63,31 +63,7 @@ function ProjectDetails() {
     useState(false);
 
   //   console.log(path.split("/").reverse()[0], "Path name");
-  const [job, setJob] = useState<{
-    job_id: string;
-    rfq_date: string;
-    project_type: string;
-    scope_of_work: string;
-    remarks: string;
-    companyf: string;
-    delivery_timelines: string;
-    salary: number;
-    hourly: number;
-    Currency: string;
-    status: string;
-  }>({
-    job_id: "",
-    rfq_date: "",
-    project_type: "",
-    scope_of_work: "",
-    remarks: "",
-    companyf: "",
-    delivery_timelines: "",
-    salary: 0,
-    hourly: 0,
-    Currency: "",
-    status: "",
-  });
+  const [job, setJob] = useState<any>();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
@@ -116,20 +92,17 @@ function ProjectDetails() {
   ] = usePaymentsMutation();
 
   const getJobDetails = async () => {
-    console.log(job);
+
     const res = await jobDetailsApi({ id: path?.split("/")?.reverse()[0] });
-    console.log(res, "response from the server");
+    console.log(res, ">>>>>>>>>>>>");
   };
 
   const getPaymentBals = async () => {
     const res = await paymentApi({ id: path?.split("/")?.reverse()[0] });
+    console.log(res, "PAYMENTBALLS");
   };
 
-  let sum = paymentBalls?.reduce(
-    (accumulator: any, current: any) =>
-      accumulator + Number(current.project_percentage),
-    0
-  );
+  let sum = Number(job?.completion_percentage || 0)
 
   const getTasks = async (id: number) => {
     const res = await taskApi({ id });
@@ -156,90 +129,55 @@ function ProjectDetails() {
 
   useEffect(() => {
     if (isSuccess) {
-      // console.log(data, "response from the server");
-
       setJob(data);
     }
   }, [isSuccess]);
 
-
-  useEffect(()=>{
-    if(!isTaskDialogOpen){
-
+  useEffect(() => {
+    if (!isTaskDialogOpen) {
     }
-  },[isTaskDialogOpen])
-  // const [
-  //   patchEmployeApi,
-  //   {
-  //     data: patchData,
-  //     isSuccess: patchIsSuccess,
-  //     error: patchError,
-  //     isError: patchIsError,
-  //   },
-  // ] = usePatchEmployeeMutation();
-  // const [companies, setCompanies] = useState<any>([]);
-  // const [
-  //   companiesApi,
-  //   {
-  //     data: comapniesData,
-  //     isSuccess: companiesIsSuccess,
-  //     error: companiesError,
-  //     isError: companiesIsError,
-  //   },
-  // ] = useComponiesMutation();
+  }, [isTaskDialogOpen]);
+ 
 
-  // const getCompanies = async () => {
-  //   const res = await companiesApi({});
-  // };
 
-  // useEffect(() => {
-  //   getCompanies();
-  // }, []);
 
-  // useEffect(() => {
-  //   if (companiesIsSuccess) {
-  //     console.log(comapniesData, "response from server");
-  //     if (comapniesData) {
-  //       setCompanies(comapniesData);
-  //     }
-  //   }
-  // }, [companiesIsSuccess]);
 
-  const pamentBallDetailsFunction = async (payload: any) => {
-    setPaymentBallsDetails(payload);
+
+
+  const [
+    expenseApi,
+    {
+      data: expensesData,
+      isSuccess: isExpenseSuccess,
+      error: expenseError,
+      isError: isExpenseError,
+    },
+  ] = useExpensesMutation();
+
+  const getExpenses = async () => {
+    const res = await expenseApi({ job_card: path?.split("/")?.reverse()[0] });
+    // console.log(res, "expense res");
+    // console.log(res, "response");
   };
 
+  useEffect(() => {
+    if (!isCreateExpensesDialogOpen) {
+      getExpenses();
+    }
+  }, [isCreateExpensesDialogOpen]);
 
-    const [expenseApi, { data : expensesData, isSuccess : isExpenseSuccess, error : expenseError, isError : isExpenseError }] =
-      useExpensesMutation();
-  
+  let totalAmount = 0;
 
-  
-    const getExpenses = async () => {
-      const res = await expenseApi({ job_card : path?.split("/")?.reverse()[0]});
-      console.log(res, "expense res");
-      // console.log(res, "response");
-    };
-  
-    useEffect(() => {
-      if (!isCreateExpensesDialogOpen) {
-        getExpenses();
+  useEffect(() => {
+    if (isExpenseSuccess) {
+      // console.log(expensesData, "expenses response from server");
+      if (expensesData) {
+        setExpenses(expensesData.results);
       }
-    }, [isCreateExpensesDialogOpen]);
-  
+    }
+  }, [isExpenseSuccess]);
 
-    let totalAmount = 0;
-    
-    useEffect(() => {
-      if (isExpenseSuccess) {
-        console.log(expensesData, "expenses response from server");
-        if (expensesData) {
-  
-          setExpenses(expensesData.results);
-      
-        }
-      }
-    }, [isExpenseSuccess]);
+  // console.log(sum , typeof(sum) , ">>>>")
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -267,71 +205,77 @@ function ProjectDetails() {
               <ClipboardCheck />
               Task
             </Button>
-            <Button
+            {/* <Button
               variant={"secondary"}
               className="text-sm gap-3 tracking-wide float-right mr-4"
               onClick={() => setIsCreateExpensesDialogOpen(true)}
             >
               <Blocks />
               Add Expenses
-            </Button>
+            </Button> */}
           </div>
-          <div className="grid bg-pur gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-5  p-4 bg-white rounded-lg shadow-md">
+          <div className="flex justify-between  gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-5  p-4 bg-white rounded-lg shadow-md">
             <Bubble
-                color={
-                  sum > 0 && sum < 20
-                    ? "#c7c4bf"
-                    : sum < 20 && sum < 40
-                    ? "#7CB9E8"
-                    : sum > 40 && sum < 60
-                    ? "#7F00FF"
-                    : sum > 60 && sum < 80
-                    ? "#FF69B4"
-                    : "#32de84"
-                }
+               color={
+                sum < 100
+                  ? "#5D6166"
+                  : "#662d91"
+              }
+              // color={
+              //   sum > 0 && sum < 20
+              //     ? "#c7c4bf"
+              //     : sum < 20 && sum < 40
+              //     ? "#7CB9E8"
+              //     : sum > 40 && sum < 60
+              //     ? "#7F00FF"
+              //     : sum > 60 && sum < 80
+              //     ? "#FF69B4"
+              //     : "#32de84"
+              // }
               title={"Progress"}
               value={`${sum || 0}%`}
               setTab={setTab}
               btn={true}
+              sum={sum}
             />
             <Bubble
-              color={
-                sum > 0 && sum < 20
-                  ? "#c7c4bf"
-                  : sum < 20 && sum < 40
-                  ? "#7CB9E8"
-                  : sum > 40 && sum < 60
-                  ? "#7F00FF"
-                  : sum > 60 && sum < 80
-                  ? "#FF69B4"
-                  : "#32de84"
-              }
+             color={
+              sum < 100
+                ? "#5D6166"
+                : "#662d91"
+            }
               title={"Payment"}
               value={`${sum || 0}%`}
               setTab={setTab}
               btn={true}
+              sum={sum}
             />
             <Bubble
               color={"#f87171"}
               title={"Hours"}
-              value={"20 Hr"}
+              value={"0 Hr"}
               setTab={setTab}
               btn={true}
             />
             <Bubble
               color={"#c084fc"}
               title={"Expenses"}
-              value={  expenses?.reduce((sum:any, item : any) => Number(sum) + Number(item.amount), 0) || 0}
+              value={
+                expenses?.reduce(
+                  (sum: any, item: any) => Number(sum) + Number(item.amount),
+                  0
+                ) || 0
+              }
               setTab={setTab}
               btn={true}
             />
-            <Bubble
+            {/* <Bubble
               color={"#60a5fa"}
               title={"Etc"}
               value={"34%"}
               setTab={setTab}
               btn={true}
-            />
+            /> */}
           </div>
           <div className="mx-auto w-full flex-1 auto-rows-max gap-4">
             <div className="flex items-center gap-4">
@@ -358,14 +302,23 @@ function ProjectDetails() {
                             <Label htmlFor="name">Job Id</Label>
 
                             <h4 className="font-semibold text-lg">
-                              {job.job_id}
+                              {job?.job_number
+                              }
+                            </h4>
+                          </div>
+                          <div className="grid gap-3">
+                            <Label htmlFor="name">LPO Id</Label>
+
+                            <h4 className="font-semibold text-lg">
+                              {job?.lpo_number
+                              }
                             </h4>
                           </div>
                           <div className="grid gap-3">
                             <Label htmlFor="name">Status</Label>
 
                             <h4 className="font-semibold text-lg">
-                              {job.status}
+                              {job?.status}
                             </h4>
                           </div>
                         </div>
@@ -380,23 +333,25 @@ function ProjectDetails() {
                           <Label htmlFor="name">Scop of Work</Label>
 
                           <h4 className="font-semibold text-lg">
-                            {job.scope_of_work}
+                            {job?.scope_of_work}
                           </h4>
                         </div>
-                        <div className="grid gap-3">
+                        {/* <div className="grid gap-3">
                           <Label htmlFor="name">Remark</Label>
 
                           <h4 className="font-semibold text-lg">
-                            {job.remarks}
+                            {job?.remarks}
                           </h4>
-                        </div>
+                        </div> */}
 
-                        {
+                        {/* {
                           <div className="grid gap-3">
                             <Label htmlFor="name">Payment Terms </Label>
 
                             {paymentBalls?.payment_terms?.map(
-                              (data: any, index: any) => (
+                              (data: any, index: any) => {
+                                console.log(data , "....")
+                                return (
                                 <h4
                                   className="font-semibold text-lg"
                                   key={index}
@@ -404,10 +359,10 @@ function ProjectDetails() {
                                   {data?.milestone} - {data.percentage}% -{" "}
                                   {data.description}
                                 </h4>
-                              )
+                              )}
                             )}
                           </div>
-                        }
+                        } */}
                       </div>
                     </CardContent>
                   </Card>
@@ -433,58 +388,55 @@ function ProjectDetails() {
                           {/* {paymentBalls?.map((data, index) => ( */}
 
                           {paymentBalls?.map((ballData: any, index: number) => {
-                            // console.log(ballData , "BALL DATA")
-                            return (
-                              <div
-                                key={index}
-                                className={`border cursor-pointer  size-40 hover:scale-105 duration-200 shadow-lg hover:shadow-slate-400 rounded-full overflow-hidden relative flex justify-center items-center`}
-                                onClick={() => {
-                                  getTasks(ballData?.payment_id);
-                                  setPaymentBallsDetails(ballData);
+                         console.log(ballData , " 11111>>>>>>>>")
+                            return (<div
+                              key={index}
+                              className={`border-2 ${
+                                paymentBallsDetails?.payment_id === ballData?.payment_id
+                                  ? "border-blue-600"
+                                  : ""
+                              } cursor-pointer size-40 hover:scale-105 duration-200 shadow-lg hover:shadow-slate-400 rounded-full overflow-hidden relative flex justify-center items-center`}
+                              onClick={() => {
+                                getTasks(ballData?.payment_id);
+                                setPaymentBallsDetails(ballData);
+                                // console.log("Selected Ball Data:", ballData);
+                              }}
+                            >
+                              <Wave
+                                fill={"#4ade80"}
+                                paused={true}
+                                style={{
+                                  display: "flex",
+                                  position: "absolute",
+                                  bottom: 0,
+                                  height:`${ballData?.project_percentage || 0}%`
                                 }}
+                                options={{
+                                  height: -20,
+                                  amplitude: 2,
+                                }}
+                              ></Wave>
+                              <Card
+                                x-chunk="dashboard-01-chunk-0"
+                                className="rounded-full size-64 flex justify-center items-center"
                               >
-                                <Wave
-                                  // fill="#60a5fa"
-                                  fill={"#4ade80"}
-                                  paused={true}
-                                  style={{
-                                    display: "flex",
-                                    position: "absolute",
-                                    bottom: 0,
-                                  }}
-                                  options={{
-                                    height: 50,
-
-                                    amplitude: 2,
-                                    // speed: 0.15,
-                                    // points: 3,
-                                  }}
-                                ></Wave>
-
-                                <Card
-                                  x-chunk="dashboard-01-chunk-0"
-                                  className="rounded-full size-64 flex justify-center items-center "
-                                >
-                                  <div className="z-30">
-                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                      <CardTitle className="text-md text-center font-medium">
-                                        {ballData?.project_status}
-                                      </CardTitle>
-
-                                      {/* <DollarSign className="h-4 w-4 text-muted-foreground" /> */}
-                                    </CardHeader>
-                                    <CardContent>
-                                      <div className="text-2xl font-bold text-center">
-                                        {ballData?.project_percentage}
-                                      </div>
-                                      <div className="text-xs font-light text-gray-600 text-center">
-                                        {ballData?.notes}
-                                      </div>
-                                    </CardContent>
-                                  </div>
-                                </Card>
-                              </div>
-                            );
+                                <div className="z-30">
+                                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-md text-center font-medium">
+                                      {ballData?.project_status}
+                                    </CardTitle>
+                                  </CardHeader>
+                                  <CardContent>
+                                    <div className="text-2xl font-bold text-center">
+                                      {ballData?.project_percentage}%
+                                    </div>
+                                    <div className="text-xs font-light text-gray-600 text-center">
+                                      {ballData?.notes}
+                                    </div>
+                                  </CardContent>
+                                </div>
+                              </Card>
+                            </div>);
                           })}
                         </div>
                       </CardContent>
@@ -529,9 +481,11 @@ function ProjectDetails() {
                                     display: "flex",
                                     position: "absolute",
                                     bottom: 0,
+                                    flex: 1,
+                                    height: `${data?.completion_percentage}%`,
                                   }}
                                   options={{
-                                    height: 50,
+                                    height: -20,
 
                                     amplitude: 2,
                                     // speed: 0.15,
@@ -551,7 +505,7 @@ function ProjectDetails() {
                                     </CardHeader>
                                     <CardContent>
                                       <div className="text-xl font-bold text-center">
-                                        {data?.weightage}%
+                                        {data?.completion_percentage}%
                                       </div>
                                       <div className="text-sm font-medium text-center">
                                         {data?.status}
@@ -573,7 +527,6 @@ function ProjectDetails() {
                         </CardContent>
                       </Card>
                     }
-
                   </>
                 ) : tab == "Expenses" ? (
                   <Card x-chunk="dashboard-07-chunk-0" className="min-h-64">
@@ -581,11 +534,10 @@ function ProjectDetails() {
                       <CardTitle>Expenses</CardTitle>
                       <CardDescription>
                         {/* Enter the employee details and thier performance */}
-                        {
-                          expenses?.map((data: any, index: number)=>{
-                            console.log(data , "EXP")
-                            return (
-                              <div
+                        {expenses?.map((data: any, index: number) => {
+                          console.log(data, "EXP");
+                          return (
+                            <div
                               key={index}
                               className={`border cursor-pointer  size-40 hover:scale-105 duration-200 shadow-lg hover:shadow-slate-400 rounded-full overflow-hidden relative flex justify-center items-center`}
                               onClick={() => {
@@ -627,9 +579,7 @@ function ProjectDetails() {
                                       {data?.amount} AED
                                     </div>
                                     <div className="text-sm font-medium text-center">
-                                      {data?.
-category_name
-}
+                                      {data?.category_name}
                                     </div>
                                     <div className="text-xs font-light text-gray-600 text-center">
                                       {data?.expense_type?.length < 30
@@ -643,14 +593,11 @@ category_name
                                 </div>
                               </Card>
                             </div>
-                            )
-                          })
-                        }
+                          );
+                        })}
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className="flex  items-center">
-                   
-                    </CardContent>
+                    <CardContent className="flex  items-center"></CardContent>
                   </Card>
                 ) : (
                   <Card x-chunk="dashboard-07-chunk-0" className="min-h-64">
@@ -661,10 +608,7 @@ category_name
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="flex  items-center">
-                      <div className="flex gap-5">
-  
-                       
-                      </div>
+                      <div className="flex gap-5"></div>
                     </CardContent>
                   </Card>
                 )}
@@ -697,14 +641,14 @@ category_name
           data={data}
         />
         <ApproveProjectDilog
-                setIsDialogOpen={setApprove}
-                isDialogOpen={approve}
+          setIsDialogOpen={setApprove}
+          isDialogOpen={approve}
         />
         <More
-        setIsDialogOpen={setMore}
-        isDialogOpen={more}
-        data={taskDetails}
-        getTasks={getTasks}
+          setIsDialogOpen={setMore}
+          isDialogOpen={more}
+          data={taskDetails}
+          getTasks={getTasks}
         />
       </div>
     </div>

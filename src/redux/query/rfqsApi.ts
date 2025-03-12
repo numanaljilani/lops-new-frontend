@@ -53,11 +53,11 @@ export const RFQSApi = createApi({
           };
         },
       }),
-      deleteClient: builder.mutation({
-        query: (data) => {
+      deleteRfq: builder.mutation({
+        query: ({data , id }) => {
           return {
-            url: `companies/${data?.id}/`,
-            method: "Delete",
+            url: `rfqs/${id}/`,
+            method: "DELETE",
             headers: {
               "Content-type": "application/json; charset=UTF-8",
               authorization: `bearer ${data?.token}`,
@@ -65,14 +65,16 @@ export const RFQSApi = createApi({
           };
         },
       }),
-      clientDetails: builder.mutation({
-        query: (data) => {
+      updateRFQ: builder.mutation({
+        query: ({id , data , token }) => {
+          console.log(data)
           return {
-            url: `clients/${data.id}/`,
-            method: "GET",
+            url: `rfqs/${id}/`,
+            method: "PUT",
+            body : data,
             headers: {
               "Content-type": "application/json; charset=UTF-8",
-              authorization: `bearer ${data.token}`,
+              authorization: `bearer ${token}`,
             },
           };
         },
@@ -99,4 +101,4 @@ export const RFQSApi = createApi({
 
 // Export hooks for usage in functional components, which are
 // auto-generated based on the defined endpoints
-export const { useClientDetailsMutation ,useAllRFQsMutation,useRFQDetailsMutation, useRfqsMutation , useCreateRFQMutation , useDeleteClientMutation , usePatchClientMutation } = RFQSApi
+export const { useUpdateRFQMutation ,useAllRFQsMutation,useRFQDetailsMutation, useRfqsMutation , useCreateRFQMutation , useDeleteRfqMutation , usePatchClientMutation } = RFQSApi

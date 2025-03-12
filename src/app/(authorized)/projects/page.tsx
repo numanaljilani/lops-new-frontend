@@ -47,7 +47,7 @@ import {
   useCreateRFQMutation,
 } from "@/redux/query/rfqsApi";
 import CreateDialog from "@/components/dialogs/CreateDialog";
-import { useJobsMutation } from "@/redux/query/jobApi";
+import { useDeleteJobCardMutation, useJobsMutation } from "@/redux/query/jobApi";
 import CreateTask from "@/components/dialogs/CreateTask";
 import CreateExpense from "@/components/dialogs/CreateExpenses";
 
@@ -78,8 +78,9 @@ function Projects() {
     client: "",
   });
 
-  const [jobApi, { data, isSuccess, error, isError }] = useJobsMutation();
-
+  const [jobApi, { data, isSuccess, error, isError }] = useJobsMutation(); 
+  const [deleteJobCardApi ] = useDeleteJobCardMutation()
+ 
   const [createRFQApi] = useCreateRFQMutation();
 
   const handleSubmit = async () => {
@@ -112,13 +113,13 @@ function Projects() {
     }
   }, [isSuccess]);
 
-  const deleteClient = async () => {
-    // const res = await deleteClientApi({
-    //   id: itemToDelete.client_id,
-    //   token: "",
-    // });
-    // console.log(res, ">>>>");
-    // getJobs();
+  const deleteJobCard = async () => {
+    const res = await deleteJobCardApi({
+      id: itemToDelete.job_id,
+      token: "",
+    });
+    console.log(res, ">>>>");
+    getJobs();
   };
 
   const update = async (url: string) => {
@@ -222,28 +223,37 @@ function Projects() {
                             active: boolean;
                             delivery_timelines: string;
                             completion_percentage: string;
+                            profit: string;
                           },
                           index: number
                         ) => {
                           return (
-                            <TableRow key={index} className="cursor-pointer"    onClick={() =>
+                            <TableRow key={index} className="cursor-pointer"   >
+                              <TableCell className="hidden sm:table-cell"  onClick={() =>
                               router.push(`/projects/${data.job_id}`)
                             }>
-                              <TableCell className="hidden sm:table-cell">
                                 {data?.job_id}
                               </TableCell>
-                              <TableCell className="font-medium">
+                              <TableCell className="font-medium"  onClick={() =>
+                              router.push(`/projects/${data.job_id}`)
+                            }>
                                 {data?.client_name}
                               </TableCell>
-                              <TableCell className="font-medium">
+                              <TableCell className="font-medium"  onClick={() =>
+                              router.push(`/projects/${data.job_id}`)
+                            }>
                                 {data?.scope_of_work}
                               </TableCell>
-                              <TableCell>
+                              <TableCell  onClick={() =>
+                              router.push(`/projects/${data.job_id}`)
+                            }>
                                 <Badge variant="outline">{data?.completion_percentage}%</Badge>
                               </TableCell>
                               {/* <TableCell>{data?.company_name}</TableCell> */}
-                              <TableCell className="hidden md:table-cell">
-                                {2000.0}
+                              <TableCell className="hidden md:table-cell"  onClick={() =>
+                              router.push(`/projects/${data.job_id}`)
+                            }>
+                                {data?.profit}
                               </TableCell>
                               {/* <TableCell className="hidden md:table-cell">
                                 {data?.quotation_amount}
@@ -321,7 +331,7 @@ function Projects() {
         <Alert
           isDialogOpen={isDialogOpen}
           setIsDialogOpen={setIsDialogOpen}
-          handleDelete={deleteClient}
+          handleDelete={deleteJobCard}
           name={itemToDelete?.client_name}
         />
         {

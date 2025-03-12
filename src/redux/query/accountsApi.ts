@@ -11,7 +11,7 @@ export const accountsApi = createApi({
     paymentBallsList: builder.mutation({
         query: (data) => {
           return {
-            url: "accounts/payment-balls/",
+            url: "accounts/payment-balls/?verification_status=&project_status=&project_percentage=100",
             method: "GET",
             headers: {
               "Content-type": "application/json; charset=UTF-8",

@@ -19,7 +19,7 @@ export const paymentApi = createApi({
     }),
     tasks: builder.mutation({
       query: (data) => {
-        console.log(data , "API")
+        // console.log(data , "API")
         return {
           url: `tasks/?payment_ball=${data.id}`,
           method: "GET",
@@ -31,7 +31,7 @@ export const paymentApi = createApi({
     }),
     updateTtasks: builder.mutation({
       query: ({data , id }) => {
-        console.log(data , "API")
+        // console.log(data , "API")
         return {
           url: `tasks/${id}/`,
           method: "PUT",
@@ -44,7 +44,7 @@ export const paymentApi = createApi({
     }),
     createBall: builder.mutation({
       query: (data) => {
-        console.log(data , "API")
+        // console.log(data , "API")
         return {
           url: "paymentballs/",
           method: "POST",
@@ -57,7 +57,7 @@ export const paymentApi = createApi({
     }),
     createTask: builder.mutation({
       query: (data) => {
-        console.log(data , "API")
+        // console.log(data , "API")
         return {
           url: "tasks/",
           method: "POST",
@@ -70,7 +70,7 @@ export const paymentApi = createApi({
     }),
     deleteClient: builder.mutation({
       query: (data) => {
-        console.log("delet client ", data);
+        // console.log("delet client ", data);
         return {
           url: `paymentballs/${data?.id}/`,
           method: "DELETE",

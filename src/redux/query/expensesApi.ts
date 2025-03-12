@@ -23,7 +23,7 @@ export const expensesApi = createApi({
         query: (data) => {
           console.log(data , "API")
           return {
-            url: `expenses/?job_card=${data.job_card}`,
+            url: `expenses/?${data?.job_card && `job_card=`+data?.job_card}`,
             method: "GET",
             headers: {
               "Content-type": "application/json; charset=UTF-8",
@@ -33,6 +33,7 @@ export const expensesApi = createApi({
       }),
     createExpense: builder.mutation({
         query: (data) => {
+          console.log(data ,"API")
           return {
             url: "expenses/",
             method: "POST",
@@ -43,46 +44,23 @@ export const expensesApi = createApi({
           };
         },
       }),
-      deleteCompany: builder.mutation({
-        query: (data) => {
+    getExpenseById: builder.mutation({
+        query: ({data , id }) => {
           return {
-            url: `companies/${data?.id}/`,
-            method: "Delete",
-            headers: {
-              "Content-type": "application/json; charset=UTF-8",
-              authorization: `bearer ${data?.token}`,
-            },
-          };
-        },
-      }),
-      companyDetails: builder.mutation({
-        query: (data) => {
-          return {
-            url: `companies/${data.id}/`,
+            url: `expenses/${id}`,
             method: "GET",
             headers: {
               "Content-type": "application/json; charset=UTF-8",
-              authorization: `bearer ${data.token}`,
             },
           };
         },
       }),
-      patchCompany: builder.mutation({
-        query: (data) => {
-          return {
-            url: `companies/${data.id}/`,
-            method: "PATCH",
-            body : data.details,
-            headers: {
-              "Content-type": "application/json; charset=UTF-8",
-              authorization: `bearer ${data.token}`,
-            },
-          };
-        },
-      }),
+      
+      
+      
   }),
 })
 
 // Export hooks for usage in functional components, which are
 // auto-generated based on the defined endpoints
-export const { useDeleteCompanyMutation,useExpensescategoriesMutation , useExpensesMutation ,useCreateExpenseMutation , useCompanyDetailsMutation , usePatchCompanyMutation} = expensesApi
+export const { useExpensescategoriesMutation , useExpensesMutation ,useCreateExpenseMutation ,useGetExpenseByIdMutation } = expensesApi

@@ -29,6 +29,8 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useUpdateTtasksMutation } from "@/redux/query/paymentApi";
+import { Textarea } from "../ui/textarea";
+import { Input } from "../ui/input";
 
 function More({
   isDialogOpen,
@@ -41,8 +43,15 @@ function More({
   data: any;
   getTasks: any;
 }) {
+  if(cardData){
+    console.log(cardData, "cardData");
+  }
+
   const completeStatusSchema = z.object({
     status: z.string().default("Pending"),
+    remark: z.string().default(cardData?.remarks),
+    completion_percentage : z.string().default(cardData?.completion_percentage)
+
   });
 
   const {
@@ -65,11 +74,12 @@ function More({
         task_brief: cardData?.task_brief,
         weightage: cardData?.weightage,
         payment_ball: cardData?.payment_ball,
+     
       },
       id: cardData?.task_id,
     });
     console.log(res, "res");
-    getTasks(cardData?.payment_ball)
+    getTasks(cardData?.payment_ball);
     setIsDialogOpen(false);
   }
 
@@ -95,8 +105,12 @@ function More({
                 <span className="font-thin">Task Id</span> : {cardData?.task_id}
               </div>
               <div>
+                <span className="font-thin">Payment Percentage</span> :{" "}
+                {cardData?.payment_ball_details?.project_percentage}%
+              </div>
+              <div>
                 <span className="font-thin">Completion</span> :{" "}
-                {cardData?.weightage}%
+                {cardData?.completion_percentage}%
               </div>
               <div>
                 <span className="font-thin">Due Date</span> :{" "}
@@ -112,10 +126,30 @@ function More({
             </div>
 
             <div>
-              <span className="font-semibold">Remark : </span>
-              <AlertDialogDescription>
-                {cardData?.remarks}
-              </AlertDialogDescription>
+              {/* <AlertDialogDescription>
+
+              </AlertDialogDescription> */}
+              <div>
+                  <Label htmlFor="completion_percentage">
+                    Completion Percentage
+                  </Label>
+                  <Input
+                    id="completion_percentage"
+                    type="number"
+                    // value={formData.password} onChange={handleInputChange}
+                    {...register("completion_percentage")}
+                  />
+                </div>
+                              
+                <div className="grid gap-3">
+                  <Label htmlFor="remark">Remark</Label>
+                  <Textarea
+                    id="remark"
+                    defaultValue={cardData?.remarks}
+                    className="min-h-32"
+                    {...register("remark")}
+                  />
+                </div>
             </div>
 
             <div className="grid gap-3">

@@ -53,9 +53,9 @@ function Clients() {
 
   const [itemToDelete, setItemToDelete] = useState<any>(null);
 
+  const [deleteClientApi] = useDeleteClientMutation();
   const [clientsApi, { data, isSuccess, error, isError }] =
     useClientsMutation();
-  const [deleteClientApi] = useDeleteClientMutation();
 
   const getClients = async () => {
     const res = await clientsApi({});

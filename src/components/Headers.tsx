@@ -37,8 +37,8 @@ function Headers() {
     { href: "/clients", label: "Clients" },
     { href: "/employee", label: "Employee" },
     { href: "/companies", label: "Companies" },
-    // { href: "/timesheet", label: "Timecard" },
-    { href: "#", label: "Analytics" },
+    { href: "/timesheet", label: "Timecard" },
+    // { href: "#", label: "Analytics" },
   ];
 
   return (
