@@ -57,7 +57,6 @@ function RFQDetails() {
     client: z
       .string()
       .min(1, "Client ID is required and must be a positive number"),
-    // rfq_date: z.string().date(), // Validates ISO 8601 datetime format
     project_type: z.string().min(1, "Project type is required"),
     scope_of_work: z.string().min(1, "Scope of work is required"),
     quotation_number: z.string().min(1, "Quotation number is required"),
@@ -73,21 +72,21 @@ function RFQDetails() {
     control,
     handleSubmit,
     reset,
-
     formState: { isSubmitting, errors },
   } = useForm<RFQFormData>({
     resolver: zodResolver(rfqSchema),
     defaultValues: {
-      client: rfqData?.client_id,
-      // rfq_date: rfqData?.rfq_date,
+      client: rfqData?.client_id?.toString(), // Ensure client_id is a string
       project_type: rfqData?.project_type,
       scope_of_work: rfqData?.scope_of_work,
       quotation_number: rfqData?.quotation_number,
       quotation_amount: rfqData?.quotation_amount,
       remarks: rfqData?.remarks,
-      status: "Pending",
+      status: rfqData?.status || "Pending", // Default to "Pending" if status is not available
     },
   });
+
+  console.log(rfqData, "rfqData");
 
   const [
     patchRFQApi,
@@ -138,7 +137,10 @@ function RFQDetails() {
 
   useEffect(() => {
     if (rfqIsSuccess && rfqData) {
-      reset(rfqData); // Reset form with fetched RFQ data
+      reset({
+        ...rfqData,
+        client: rfqData.client_id?.toString(), // Ensure client_id is a string
+      }); // Reset form with fetched RFQ data
     }
   }, [rfqIsSuccess, rfqData, reset]);
 
@@ -167,8 +169,7 @@ function RFQDetails() {
     });
   };
 
-
-  if(errors?.client){
+  if (errors?.client) {
     toast.error("Please select the client");
   }
   return (
@@ -216,13 +217,20 @@ function RFQDetails() {
                           <Controller
                             name="client"
                             control={control}
+                            defaultValue={rfqData?.client_id?.toString()} // Ensure default value is set
                             render={({ field }) => (
                               <Select
                                 onValueChange={field.onChange}
-                                value={field?.value}
+                                value={field.value}
                               >
                                 <SelectTrigger>
-                                  <SelectValue placeholder="Select client" />
+                                  <SelectValue
+                                    placeholder={
+                                      rfqData?.client_name
+                                        ? rfqData?.client_name
+                                        : "Select client"
+                                    }
+                                  />
                                 </SelectTrigger>
                                 <SelectContent>
                                   {clients?.map((client) => (
@@ -243,22 +251,6 @@ function RFQDetails() {
                             </p>
                           )}
                         </div>
-{/* 
-                        <div className="grid gap-3">
-                          <Label htmlFor="rfq_date">RFQ Date</Label>
-                          <Controller
-                            name="rfq_date"
-                            control={control}
-                            render={({ field }) => (
-                              <Input {...field} type="date" defaultValue={rfqData.rfq_date}/>
-                            )}
-                          />
-                          {errors.rfq_date && (
-                            <p className="text-red-500">
-                              {errors.rfq_date.message}
-                            </p>
-                          )}
-                        </div> */}
 
                         <div className="grid gap-3">
                           <Label htmlFor="project_type">Project Type</Label>

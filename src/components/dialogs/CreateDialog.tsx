@@ -35,11 +35,11 @@ function CreateDialog({
   handleSubmit: (value: any) => void;
 }) {
   const [clients, setClients] = useState([]);
-  const [clientsApi, { data, isSuccess, error, isError }] = useClientsMutation();
+  const [clientsApi, { data, isSuccess, error, isError }] =
+    useClientsMutation();
 
   const getClients = async () => {
-    const res = await clientsApi({});
-    console.log(res, "response");
+    await clientsApi({});
   };
 
   useEffect(() => {
@@ -69,12 +69,12 @@ function CreateDialog({
           <div className="grid gap-3">
             <Label htmlFor="subcategory">Client</Label>
             <Select
-              onValueChange={(value) =>{
-                console.log(value , "Value")
+              onValueChange={(value) => {
+                console.log(value, "Value");
                 setRfq({
                   ...rfq,
                   client: value,
-                })
+                });
               }}
             >
               <SelectTrigger id="Service" aria-label="Select Service">

@@ -7,6 +7,7 @@ import CreatePaymentBall from "@/components/dialogs/CreatePaymentBall";
 import CreateQuotation from "@/components/dialogs/CreateQuotation";
 import CreateTask from "@/components/dialogs/CreateTask";
 import More from "@/components/dialogs/More";
+import UpdateProject from "@/components/dialogs/UpdateProject";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -25,7 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { date, formatDate } from "@/lib/dateFormat";
+import { date, formatDate, isDateGreaterThanToday } from "@/lib/dateFormat";
 import { useComponiesMutation } from "@/redux/query/componiesApi";
 import { usePatchEmployeeMutation } from "@/redux/query/employee";
 import { useExpensesMutation } from "@/redux/query/expensesApi";
@@ -66,6 +67,7 @@ function ProjectDetails() {
   const [job, setJob] = useState<any>();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [more, setMore] = useState(false);
@@ -92,22 +94,21 @@ function ProjectDetails() {
   ] = usePaymentsMutation();
 
   const getJobDetails = async () => {
-
     const res = await jobDetailsApi({ id: path?.split("/")?.reverse()[0] });
-    console.log(res, ">>>>>>>>>>>>");
+    // console.log(res, ">>>>>>>>>>>>");
   };
 
   const getPaymentBals = async () => {
     const res = await paymentApi({ id: path?.split("/")?.reverse()[0] });
-    console.log(res, "PAYMENTBALLS");
+    // console.log(res, "PAYMENTBALLS");
   };
 
-  let sum = Number(job?.completion_percentage || 0)
+  let sum = Number(job?.completion_percentage || 0);
 
   const getTasks = async (id: number) => {
     const res = await taskApi({ id });
 
-    console.log(res, id, "Response >>>>");
+    // console.log(res, id, "Response >>>>");
     setPaymentBallTask([...res.data.results]);
   };
 
@@ -137,12 +138,6 @@ function ProjectDetails() {
     if (!isTaskDialogOpen) {
     }
   }, [isTaskDialogOpen]);
- 
-
-
-
-
-
 
   const [
     expenseApi,
@@ -177,7 +172,7 @@ function ProjectDetails() {
     }
   }, [isExpenseSuccess]);
 
-  // console.log(sum , typeof(sum) , ">>>>")
+  console.log(job?.payment_terms_display, ">>>>");
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -216,11 +211,7 @@ function ProjectDetails() {
           </div>
           <div className="flex justify-between  gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-5  p-4 bg-white rounded-lg shadow-md">
             <Bubble
-               color={
-                sum < 100
-                  ? "#5D6166"
-                  : "#662d91"
-              }
+              color={isDateGreaterThanToday(job?.delivery_timelines)  ? "#D2122E" : sum < 100 ? "#5D6166" : "#662d91"}
               // color={
               //   sum > 0 && sum < 20
               //     ? "#c7c4bf"
@@ -239,11 +230,7 @@ function ProjectDetails() {
               sum={sum}
             />
             <Bubble
-             color={
-              sum < 100
-                ? "#5D6166"
-                : "#662d91"
-            }
+              color={sum < 100 ? "#5D6166" : "#662d91"}
               title={"Payment"}
               value={`${sum || 0}%`}
               setTab={setTab}
@@ -290,7 +277,17 @@ function ProjectDetails() {
                 {tab == "Progress" ? (
                   <Card x-chunk="dashboard-07-chunk-0">
                     <CardHeader>
+                      <div className="flex  justify-between">
                       <CardTitle>Project Details</CardTitle>
+                      <Button
+                        className="text-sm gap-3 tracking-wide float-right mx-4"
+                      variant={"outline"}
+                        onClick={() => setIsUpdateDialogOpen(true)}
+                      >
+                        <ClipboardCheck />
+                        Update
+                      </Button>
+                      </div>
                       <CardDescription>
                         {/* Enter the employee details and thier performance */}
                       </CardDescription>
@@ -299,23 +296,27 @@ function ProjectDetails() {
                       <div className="grid gap-6">
                         <div className="grid grid-cols-2 gap-3">
                           <div className="grid gap-3">
-                            <Label htmlFor="name">Job Id</Label>
+                            <Label className="underline" htmlFor="name">
+                              Job Id
+                            </Label>
 
                             <h4 className="font-semibold text-lg">
-                              {job?.job_number
-                              }
+                              {job?.job_number}
                             </h4>
                           </div>
                           <div className="grid gap-3">
-                            <Label htmlFor="name">LPO Id</Label>
+                            <Label className="underline" htmlFor="name">
+                              LPO Id
+                            </Label>
 
                             <h4 className="font-semibold text-lg">
-                              {job?.lpo_number
-                              }
+                              {job?.lpo_number}
                             </h4>
                           </div>
                           <div className="grid gap-3">
-                            <Label htmlFor="name">Status</Label>
+                            <Label className="underline" htmlFor="name">
+                              Status
+                            </Label>
 
                             <h4 className="font-semibold text-lg">
                               {job?.status}
@@ -323,14 +324,18 @@ function ProjectDetails() {
                           </div>
                         </div>
                         <div className="grid gap-3">
-                          <Label htmlFor="name">Delivry Timeline</Label>
+                          <Label className="underline" htmlFor="name">
+                            Delivry Timeline
+                          </Label>
 
                           <h4 className="font-semibold text-lg">
                             {date(job?.delivery_timelines)}
                           </h4>
                         </div>
                         <div className="grid gap-3">
-                          <Label htmlFor="name">Scop of Work</Label>
+                          <Label className="underline" htmlFor="name">
+                            Scop of Work
+                          </Label>
 
                           <h4 className="font-semibold text-lg">
                             {job?.scope_of_work}
@@ -344,25 +349,26 @@ function ProjectDetails() {
                           </h4>
                         </div> */}
 
-                        {/* {
+                        {job?.payment_terms_display && (
                           <div className="grid gap-3">
-                            <Label htmlFor="name">Payment Terms </Label>
+                            <Label htmlFor="name" className="underline">
+                              Payment Terms{" "}
+                            </Label>
 
-                            {paymentBalls?.payment_terms?.map(
-                              (data: any, index: any) => {
-                                console.log(data , "....")
+                            {Object.entries(job?.payment_terms_display).map(
+                              ([key, value]: any) => {
+                                console.log(key);
                                 return (
-                                <h4
-                                  className="font-semibold text-lg"
-                                  key={index}
-                                >
-                                  {data?.milestone} - {data.percentage}% -{" "}
-                                  {data.description}
-                                </h4>
-                              )}
+                                  <div key={key}>
+                                    <p>Description: {value.description}</p>
+                                    <p>Milestone: {value.milestone}</p>
+                                    <p>Percentage: {value.percentage}%</p>
+                                  </div>
+                                );
+                              }
                             )}
                           </div>
-                        } */}
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -388,55 +394,62 @@ function ProjectDetails() {
                           {/* {paymentBalls?.map((data, index) => ( */}
 
                           {paymentBalls?.map((ballData: any, index: number) => {
-                         console.log(ballData , " 11111>>>>>>>>")
-                            return (<div
-                              key={index}
-                              className={`border-2 ${
-                                paymentBallsDetails?.payment_id === ballData?.payment_id
-                                  ? "border-blue-600"
-                                  : ""
-                              } cursor-pointer size-40 hover:scale-105 duration-200 shadow-lg hover:shadow-slate-400 rounded-full overflow-hidden relative flex justify-center items-center`}
-                              onClick={() => {
-                                getTasks(ballData?.payment_id);
-                                setPaymentBallsDetails(ballData);
-                                // console.log("Selected Ball Data:", ballData);
-                              }}
-                            >
-                              <Wave
-                                fill={"#4ade80"}
-                                paused={true}
-                                style={{
-                                  display: "flex",
-                                  position: "absolute",
-                                  bottom: 0,
-                                  height:`${ballData?.project_percentage || 0}%`
+                            console.log(isDateGreaterThanToday(ballData?.delivery_timelines), " 11111>>>>>>>>");
+
+                            return (
+                              <div
+                                key={index}
+                                className={`border-2 ${
+                                  
+                                  paymentBallsDetails?.payment_id ===
+                                  ballData?.payment_id
+                                    ? "border-blue-600"
+                                    : ""
+                                } cursor-pointer size-40 hover:scale-105 duration-200 shadow-lg hover:shadow-slate-400 rounded-full overflow-hidden relative flex justify-center items-center`}
+                                onClick={() => {
+                                  getTasks(ballData?.payment_id);
+                                  setPaymentBallsDetails(ballData);
+                                  // console.log("Selected Ball Data:", ballData);
                                 }}
-                                options={{
-                                  height: -20,
-                                  amplitude: 2,
-                                }}
-                              ></Wave>
-                              <Card
-                                x-chunk="dashboard-01-chunk-0"
-                                className="rounded-full size-64 flex justify-center items-center"
                               >
-                                <div className="z-30">
-                                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-md text-center font-medium">
-                                      {ballData?.project_status}
-                                    </CardTitle>
-                                  </CardHeader>
-                                  <CardContent>
-                                    <div className="text-2xl font-bold text-center">
-                                      {ballData?.project_percentage}%
-                                    </div>
-                                    <div className="text-xs font-light text-gray-600 text-center">
-                                      {ballData?.notes}
-                                    </div>
-                                  </CardContent>
-                                </div>
-                              </Card>
-                            </div>);
+                                <Wave
+                                  fill={isDateGreaterThanToday(ballData?.delivery_timelines)  ? "#D2122E" :"#4ade80"}
+                                  paused={true}
+                                  style={{
+                                    display: "flex",
+                                    position: "absolute",
+                                    bottom: 0,
+                                    height: `${
+                                      ballData?.project_percentage || 0
+                                    }%`,
+                                  }}
+                                  options={{
+                                    height: -20,
+                                    amplitude: 2,
+                                  }}
+                                ></Wave>
+                                <Card
+                                  x-chunk="dashboard-01-chunk-0"
+                                  className="rounded-full size-64 flex justify-center items-center"
+                                >
+                                  <div className="z-30">
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                      <CardTitle className="text-md text-center font-medium">
+                                        {ballData?.project_status}
+                                      </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                      <div className="text-2xl font-bold text-center">
+                                        {ballData?.project_percentage}%
+                                      </div>
+                                      <div className="text-xs font-light text-gray-600 text-center">
+                                        {ballData?.notes}
+                                      </div>
+                                    </CardContent>
+                                  </div>
+                                </Card>
+                              </div>
+                            );
                           })}
                         </div>
                       </CardContent>
@@ -621,6 +634,11 @@ function ProjectDetails() {
           isDialogOpen={isDialogOpen}
           setIsDialogOpen={setIsDialogOpen}
           itemToDelete={job}
+        />
+        <UpdateProject
+          isDialogOpen={isUpdateDialogOpen}
+          setIsDialogOpen={setIsUpdateDialogOpen}
+          data ={job}
         />
         <CreateTask
           isDialogOpen={isTaskDialogOpen}

@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useEffect } from "react";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Button } from "../ui/button";
@@ -19,71 +19,104 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
+import { useClientsMutation } from "@/redux/query/clientsApi";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm, useFieldArray } from "react-hook-form";
+import ErrorMessage from "@/components/errors/ErrorMessage";
 import { useCreateJobMutation } from "@/redux/query/jobApi";
 import { LoaderCircle } from "lucide-react";
 
-function CreateLPO({
+function UpdateProject({
   isDialogOpen,
   setIsDialogOpen,
-  data: rfq_info,
+  data: job,
 }: {
   isDialogOpen: boolean;
   setIsDialogOpen: (value: boolean) => void;
   data: any;
 }) {
+  // console.log(job, "Job Data");
+
+  // Zod schema
   const LPOSchema = z.object({
     final_amount: z.string(),
     delivery_timelines: z.string(),
-    payment_terms: z
-      .array(
-        z.object({
-          description: z.string(),
-          milestone: z.string(),
-          percentage: z.number(),
-        })
-      )
-      .transform((arr) => {
-        // Convert the array into an object
-        return arr.reduce((acc, term, index) => {
-          acc[index + 1] = term; // Use index + 1 as the key
-          return acc;
-        }, {} as Record<string, { description: string; milestone: string; percentage: number }>);
-      }),
+    payment_terms: z.array(
+      z.object({
+        description: z.string(),
+        milestone: z.string(),
+        percentage: z.number(),
+      })
+    ),
     scope_of_work: z.string(),
     lpo: z.string().default("1"),
     job_number: z.string(),
     lpo_number: z.string(),
     status: z.string().default("Pending"),
   });
-
   const [createJobApi, { data: res, isSuccess, error, isError, isLoading }] =
     useCreateJobMutation();
+
+// Transform payment_terms_display object into an array for useFieldArray
+const defaultPaymentTerms = job?.payment_terms_display
+  ? Object.entries(job.payment_terms_display).map(([key, value]: any) => ({
+      id: key, // Use the key as the ID
+      ...value,
+    }))
+  : [];
+
+  // console.log(defaultPaymentTerms, "Transformed Payment Terms");
+  
 
   const {
     register,
     handleSubmit,
     control,
+    reset,
     formState: { errors, isSubmitting },
-  } = useForm({ resolver: zodResolver(LPOSchema) });
-
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "payment_terms", // Ensure this matches the field name in your schema
+  } = useForm({
+    resolver: zodResolver(LPOSchema),
+    defaultValues: {
+      ...job,
+      payment_terms: defaultPaymentTerms, // Initialize with existing payment terms
+    },
   });
 
+  console.log(errors )
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "payment_terms", // Name of the field array
+  });
+
+  // console.log(fields, "Fields from useFieldArray");
+
+  // Reset the form when the job data changes
+  useEffect(() => {
+    if (job) {
+      reset({
+        ...job,
+        payment_terms: defaultPaymentTerms, 
+      });
+    }
+  }, [job, reset]);
+
   async function onSubmit(data: any) {
+    // Transform payment_terms array into an object
+    const paymentTermsObject = data.payment_terms.reduce((acc: any, term: any, index: any) => {
+      acc[index + 1] = term; // Use index + 1 as the key
+      return acc;
+    }, {});
+  
+    // Submit the data to the API
     const response = await createJobApi({
       data: {
         ...data,
-
-        rfq: rfq_info.rfq_id,
+        rfq: job.rfq_id,
+        payment_terms: paymentTermsObject, // Send the transformed object
       },
     });
-
-    // console.log(response, "response from the server");
+  
     setIsDialogOpen(false);
   }
 
@@ -99,14 +132,12 @@ function CreateLPO({
         <div className="border p-5 rounded-lg bg-white shadow-lg">
           <span className="text-sm text-gray-600">Name</span>
           <h5 className="font-semibold text-lg">
-            {rfq_info.client_name ? rfq_info.client_name : rfq_info.name}
+            {job?.client_name ? job?.client_name : job?.name}
           </h5>
           <span className="text-sm text-gray-600">RFQ Id</span>
-          <h5 className="font-semibold text-lg">{rfq_info.rfq_id}</h5>
+          <h5 className="font-semibold text-lg">{job?.rfq_id}</h5>
           <span className="text-sm text-gray-600">Quotation Amount</span>
-          <h5 className="font-semibold text-lg">
-            {rfq_info.quotation_amount} AED
-          </h5>
+          <h5 className="font-semibold text-lg">{job?.quotation_amount} AED</h5>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)}>
@@ -117,7 +148,12 @@ function CreateLPO({
             </div>
             <div>
               <Label htmlFor="lpo_number">LPO Number</Label>
-              <Input id="lpo_number" type="text" {...register("lpo_number")} />
+              <Input
+                id="lpo_number"
+                type="text"
+                defaultValue={job?.lpo_number}
+                {...register("lpo_number")}
+              />
             </div>
             <div>
               <Label htmlFor="final_amount">Final Amount</Label>
@@ -132,6 +168,7 @@ function CreateLPO({
               <Input
                 id="delivery_timelines"
                 type="date"
+                defaultValue={job?.delivery_timelines}
                 {...register("delivery_timelines")}
               />
             </div>
@@ -141,7 +178,7 @@ function CreateLPO({
               <Controller
                 name="status"
                 control={control}
-                defaultValue="Pending"
+                defaultValue={job?.status}
                 render={({ field }) => (
                   <Select
                     onValueChange={(value) => field.onChange(value)}
@@ -159,17 +196,32 @@ function CreateLPO({
                 )}
               />
             </div>
+
             <div className="grid gap-3">
               <Label htmlFor="payment_terms">Payment Terms</Label>
-              {fields.map((field, index) => (
-                <div key={field.id} className="space-y-2">
+              {fields?.map((field: any, index) => (
+                <div key={field.id} className="space-y-2 border p-4 rounded-lg">
+                  <div className="flex justify-between">
+                    <div />
+                    <Button
+                      type="button"
+                      variant={"destructive"}
+                      size={"sm"}
+                      className="rounded-full"
+                      onClick={() => remove(index)}
+                    >
+                      X
+                    </Button>
+                  </div>
                   <Input
                     {...register(`payment_terms.${index}.description`)}
                     placeholder="Description"
+                    defaultValue={field?.description} // Set default value
                   />
                   <Input
                     {...register(`payment_terms.${index}.milestone`)}
                     placeholder="Milestone"
+                    defaultValue={field?.milestone} // Set default value
                   />
                   <Input
                     type="number"
@@ -177,19 +229,18 @@ function CreateLPO({
                       valueAsNumber: true,
                     })}
                     placeholder="Percentage"
+                    defaultValue={field?.percentage} // Set default value
                   />
-                  <Button type="button" onClick={() => remove(index)}>
-                    Remove
-                  </Button>
                 </div>
               ))}
               <Button
                 type="button"
+                className="w-20"
                 onClick={() =>
                   append({ description: "", milestone: "", percentage: 0 })
                 }
               >
-                Add Payment Term
+                +
               </Button>
             </div>
 
@@ -198,6 +249,7 @@ function CreateLPO({
               <Textarea
                 id="scope_of_work"
                 className="min-h-32"
+                defaultValue={job?.scope_of_work}
                 {...register("scope_of_work")}
               />
             </div>
@@ -229,4 +281,4 @@ function CreateLPO({
   );
 }
 
-export default CreateLPO;
+export default UpdateProject;

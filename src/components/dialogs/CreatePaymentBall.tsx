@@ -55,17 +55,15 @@ function CreatePaymentBall({
   isDialogOpen,
   setIsDialogOpen,
   details,
-  
 }: {
   isDialogOpen: boolean;
   setIsDialogOpen: (value: boolean) => void;
   details: any;
 }) {
+  const { id } = useParams();
 
-  const {id} = useParams()
- 
   const PaymentBallSchema = z.object({
-    project_percentage: z.string(),
+    project_percentage: z.string().default("0"),
     project_status: z.string(),
     notes: z.string(),
     invoice_number: z.string(),
@@ -84,20 +82,20 @@ function CreatePaymentBall({
   const now = today(getLocalTimeZone());
 
   async function onSubmit(data: any) {
-  
-    const res = await createPaymentBallApi({ data : {...data , job_card :id ,color_status :"gray"   }});
-setIsDialogOpen(false)
+    const res = await createPaymentBallApi({
+      data: { ...data, job_card: id, color_status: "gray" },
+    });
+    console.log(res, "CREATE PAYMENT BAALL");
+    setIsDialogOpen(false);
   }
- 
-  const [createPaymentBallApi, { data, isSuccess, error, isError }] =
-  useCreateBallMutation();
 
+  const [createPaymentBallApi, { data, isSuccess, error, isError }] =
+    useCreateBallMutation();
 
   useEffect(() => {
     if (isSuccess) {
       console.log(data, "response from server");
       if (data) {
-       
       }
     }
   }, [isSuccess]);
@@ -162,7 +160,7 @@ setIsDialogOpen(false)
                 </div>
               </div>
             </div>
-            <div>
+            {/* <div>
               <Label htmlFor="final_amount">Payment Percentage</Label>
 
               <div className="space-y-2">
@@ -180,7 +178,7 @@ setIsDialogOpen(false)
                   </span>
                 </div>
               </div>
-            </div>
+            </div> */}
             <div>
               <Label htmlFor="invoice_number">Invoice Number</Label>
 
@@ -193,7 +191,6 @@ setIsDialogOpen(false)
                     type="text"
                     {...register("invoice_number")}
                   />
-              
                 </div>
               </div>
             </div>
@@ -209,11 +206,9 @@ setIsDialogOpen(false)
                     type="text"
                     {...register("notes")}
                   />
-              
                 </div>
               </div>
             </div>
-
 
             <div className="grid gap-3">
               <Label htmlFor="project_status">Status</Label>

@@ -45,9 +45,9 @@ function CreateExpenseFromPage({
     amount: z.string(),
     net_amount: z.string(),
     date: z.string(),
-    supplier: z.string().default("1"),
+    supplier_name: z.string().default("Numan"),
     job_card: z.string(),
-    category: z.string(),
+    category_name: z.string().default("Materials"),
     expense_type: z.string(),
     description: z.string(),
     status: z.string().default("Pending"),
@@ -81,11 +81,11 @@ function CreateExpenseFromPage({
     const response = await createExpense({
       data: {
         ...data,
-        supplier: 1,
+        supplier_name: "Numan",
+        category_name : "Materials"
       },
     });
-    console.log(response?.error, "SSSS");
-   
+  
       toast("Warning", {
         description:
           "Due to server issue purches or expenses is in added in the project.",

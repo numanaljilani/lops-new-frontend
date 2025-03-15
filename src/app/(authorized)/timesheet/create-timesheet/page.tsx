@@ -19,109 +19,96 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { calculateHours } from "@/lib/calculateHours";
 import { date, formatDate, formatDateForApi } from "@/lib/dateFormat";
-import { useComponiesMutation } from "@/redux/query/componiesApi";
-import { useCreateEmployeeMutation } from "@/redux/query/employee";
+import { useJobsMutation } from "@/redux/query/jobApi";
 import { useCreateTimeSheetMutation } from "@/redux/query/timesheet";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { toast } from "sonner";
+
+// Define the schema using zod
+const timeSheetSchema = z.object({
+  date: z.string().min(1, "Date is required"),
+  startTime: z.string().min(1, "Start time is required"),
+  endTime: z.string().min(1, "End time is required"),
+  remark: z.string().optional(),
+  job_card: z.string(),
+  hours_logged: z.string().min(1, "Hours logged is required"),
+  hourly_rate: z.string().min(1, "Hourly rate is required"),
+  total_amount: z.string().min(1, "Total amount is required"),
+});
+
+type TimeSheetFormValues = z.infer<typeof timeSheetSchema>;
 
 export default function CreateEmployee() {
   const router = useRouter();
-  const [timeSheet, setTimeSheet] = useState<{
-    date: any;
-    startTime: any;
-    endTime: any;
-    remark: string;
-    hours_logged: any;
-    hourly_rate: any;
-    total_amount: any;
-    // hour
-  }>({
-    date: date(Date.now()),
-    startTime: 0,
-    endTime: 0,
-    remark: "",
-    hours_logged: "",
-    hourly_rate: 0,
-    total_amount: 0,
+  const [jobs, setJobs] = useState([{job_id : "!!!!" ,job_number : "___"}]);
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+    setValue,
+    watch,
+  } = useForm<TimeSheetFormValues>({
+    resolver: zodResolver(timeSheetSchema),
+    defaultValues: {
+      date: date(Date.now()),
+      startTime: "",
+      endTime: "",
+      remark: "",
+      hours_logged: "",
+      hourly_rate: "0",
+      total_amount: "0",
+    },
   });
 
   const [createTimeSheetApi, { data, isSuccess, error, isError }] =
     useCreateTimeSheetMutation();
-  const saveEmployeeDetails = async () => {
-    if (!timeSheet.date) {
-      toast(`Date cant be empty.`);
-      return;
-    }
-    if (!timeSheet.startTime) {
-      toast(`startTime cant be empty.`);
-      return;
-    }
-    if (!timeSheet.endTime) {
-      toast(`location cant be empty.`);
-      return;
-    }
-    if (!timeSheet.hours_logged) {
-      toast(`hours_logged cant be empty.`);
-      return;
-    }
 
-    console.log(timeSheet);
+  const onSubmit = async (data: TimeSheetFormValues) => {
     const res = await createTimeSheetApi({
       data: {
-        hours_logged: Number(timeSheet.hours_logged) | 6,
-        hourly_rate: Number(timeSheet.hourly_rate) | 10,
+        hours_logged: Number(data.hours_logged) || 6,
+        hourly_rate: Number(data.hourly_rate) || 10,
         date_logged: formatDateForApi(),
-        remarks: timeSheet.remark,
-        total_amount: Number(timeSheet.total_amount),
+        remarks: data.remark,
+        total_amount: Number(data.total_amount),
       },
     });
     console.log(res, "response from the server");
   };
-  console.log(timeSheet.endTime, timeSheet.startTime);
+
   useEffect(() => {
     if (isSuccess) {
-      console.log(data, "response from the server");
       toast(`You have added your logs.`, {
-        description: `${timeSheet?.date} ,${timeSheet?.endTime} in ${timeSheet?.startTime}`,
-        // action: {
-        //   label: "Undo",
-        //   onClick: () => console.log("Undo"),
-        // },
+        description: `${watch("date")} ,${watch("endTime")} in ${watch(
+          "startTime"
+        )}`,
       });
       router.replace("/timesheet");
     }
   }, [isSuccess]);
 
   const [companies, setCompanies] = useState([]);
-  const [
-    companiesApi,
-    {
-      data: comapniesData,
-      isSuccess: companiesIsSuccess,
-      error: companiesError,
-      isError: companiesIsError,
-    },
-  ] = useComponiesMutation();
 
-  const getCompanies = async () => {
-    const res = await companiesApi({});
-    // console.log(res, "response");
+  const [jobApi, { data: jobCardData, isSuccess: isJobCardSuccess }] =
+    useJobsMutation();
+  const getJobs = async () => {
+    const res = await jobApi({});
+    if (res.data) {
+      setJobs(res?.data?.results);
+    }
+    
   };
 
-  // useEffect(() => {
-  //   getCompanies();
-  // }, []);
-
   useEffect(() => {
-    if (companiesIsSuccess) {
-      console.log(comapniesData, "response from server");
-      if (comapniesData) {
-        setCompanies(comapniesData.result);
-      }
-    }
-  }, [companiesIsSuccess]);
+    getJobs();
+  }, []);
+
+ 
+
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
@@ -131,12 +118,11 @@ export default function CreateEmployee() {
               <h1 className="flex-1 shrink-0 whitespace-nowrap text-xl font-semibold tracking-tight sm:grow-0">
                 Add Time and Logs
               </h1>
-
               <div className="hidden items-center gap-2 md:ml-auto md:flex">
                 <Button variant="outline" size="sm">
                   Discard
                 </Button>
-                <Button size="sm" onClick={saveEmployeeDetails}>
+                <Button size="sm" onClick={handleSubmit(onSubmit)}>
                   Save
                 </Button>
               </div>
@@ -149,89 +135,149 @@ export default function CreateEmployee() {
                     <CardDescription>Enter the Details</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid gap-6">
-                      <div className="grid gap-3">
-                        <Label htmlFor="name">Start Time</Label>
-                        <Input
-                          id="name"
-                          type="time"
-                          className="w-full"
-                          placeholder="Hamdan Al Maktoom"
-                          onChange={(e) => {
-                            e.preventDefault();
-                            setTimeSheet({
-                              ...timeSheet,
-                              startTime: e.target.value,
-                            });
-                          }}
-                        />
+                    <form onSubmit={handleSubmit(onSubmit)}>
+                      <div className="grid gap-6">
+                        <div className="grid gap-3">
+                          <Label htmlFor="job_card">Job Id</Label>
+                          <Controller
+                            name="job_card"
+                            control={control}
+                            render={({ field }) => (
+                              <Select
+                                onValueChange={(value) => {
+                                  field.onChange(value);
+                                }}
+                                value={field.value ?? ""}
+                              >
+                                <SelectTrigger
+                                  id="job_card"
+                                  aria-label="Select Type"
+                                >
+                                  <SelectValue placeholder="Select Job" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {jobs.length > 0 ? (
+                                    jobs.map((data: any, index) => (
+                                      <SelectItem
+                                        key={index}
+                                        value={data?.job_id}
+                                      >
+                                        {data?.job_number}
+                                      </SelectItem>
+                                    ))
+                                  ) : (
+                                    <SelectItem value="" disabled>
+                                      No jobs available
+                                    </SelectItem>
+                                  )}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          />
+                        </div>
+                        <div className="grid gap-3">
+                          <Label htmlFor="startTime">Start Time</Label>
+                          <Controller
+                            name="startTime"
+                            control={control}
+                            render={({ field }) => (
+                              <Input
+                                {...field}
+                                id="startTime"
+                                type="time"
+                                className="w-full"
+                                placeholder="Start Time"
+                              />
+                            )}
+                          />
+                          {errors.startTime && (
+                            <span className="text-red-500">
+                              {errors.startTime.message}
+                            </span>
+                          )}
+                        </div>
+                        <div className="grid gap-3">
+                          <Label htmlFor="endTime">End Time</Label>
+                          <Controller
+                            name="endTime"
+                            control={control}
+                            render={({ field }) => (
+                              <Input
+                                {...field}
+                                id="endTime"
+                                type="time"
+                                className="w-full"
+                                placeholder="End Time"
+                                onChange={(e) => {
+                                  field.onChange(e.target.value);
+                                  setValue(
+                                    "hours_logged",
+                                    calculateHours(
+                                      watch("startTime"),
+                                      e.target.value
+                                    )
+                                  );
+                                }}
+                              />
+                            )}
+                          />
+                          {errors.endTime && (
+                            <span className="text-red-500">
+                              {errors.endTime.message}
+                            </span>
+                          )}
+                        </div>
+                        <Card x-chunk="dashboard-07-chunk-3">
+                          <CardHeader>
+                            <CardTitle>Hours Logged</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="grid gap-6">
+                              <div className="grid gap-3">
+                                <Label htmlFor="hours_logged">
+                                  {calculateHours(
+                                    watch("startTime"),
+                                    watch("endTime")
+                                  )}{" "}
+                                  Hours
+                                </Label>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                        <div className="grid gap-3">
+                          <Label htmlFor="remark">Remark</Label>
+                          <Controller
+                            name="remark"
+                            control={control}
+                            render={({ field }) => (
+                              <Textarea
+                                {...field}
+                                id="remark"
+                                className="min-h-32"
+                                placeholder="Write a remark......"
+                              />
+                            )}
+                          />
+                          {errors.remark && (
+                            <span className="text-red-500">
+                              {errors.remark.message}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div className="grid gap-3">
-                        <Label htmlFor="name">End Time </Label>
-                        <Input
-                          id="end"
-                          type="time"
-                          className="w-full"
-                          onChange={(e) => {
-                            e.preventDefault();
-                            setTimeSheet({
-                              ...timeSheet,
-                              endTime: e.target.value,
-                              hours_logged: calculateHours(
-                                timeSheet.startTime,
-                                timeSheet.endTime
-                              ),
-                            });
-                          }}
-                        />
-                      </div>
-
-                      
-                      <Card x-chunk="dashboard-07-chunk-3">
-                  <CardHeader>
-                    <CardTitle>Houres Logged</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid gap-6">
-                      <div className="grid gap-3">
-                        <Label htmlFor="status">
-                          {calculateHours(
-                            timeSheet.startTime,
-                            timeSheet.endTime
-                          )}{" "}
-                          Hours
-                        </Label>
-                      </div>
-                    </div>
+                    </form>
                   </CardContent>
                 </Card>
-                      <div className="grid gap-3">
-                        <Label htmlFor="description">Remark</Label>
-                        <Textarea
-                          id="description"
-                         className="min-h-32"
-                         placeholder="Write a remark......"
-                          onChange={(e) => {
-                            e.preventDefault();
-                            setTimeSheet({
-                              ...timeSheet,
-                              remark: e.target.value,
-                            });
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
               </div>
-            
             </div>
             <div className="flex items-center justify-center gap-2 md:hidden">
               <Button variant="outline" size="sm">
                 Discard
               </Button>
-              <Button size="sm">Save Product</Button>
+              <Button size="sm" onClick={handleSubmit(onSubmit)}>
+                Save Product
+              </Button>
             </div>
           </div>
         </main>

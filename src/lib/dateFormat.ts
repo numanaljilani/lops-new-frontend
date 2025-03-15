@@ -65,3 +65,24 @@ export function timeFormat(timestamp: string): string {
   }
   return "No date found";
 }
+
+
+export function isDateGreaterThanToday(dateString :string) {
+  // Convert the input date string to a Date object
+  const givenDate = new Date(dateString);
+
+  // Get today's date (without time)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Reset time to 00:00:00 to compare only dates
+
+  // Compare the dates
+  return givenDate > today;
+}
+
+// Example usage
+const dateToCheck = "2024-06-30";
+if (isDateGreaterThanToday(dateToCheck)) {
+  console.log("The given date is greater than today's date.");
+} else {
+  console.log("The given date is not greater than today's date.");
+}

@@ -125,6 +125,18 @@ function Projects() {
   const update = async (url: string) => {
     // router.push(`/clients/${url}`);
   };
+
+
+// LETS-JN-YYMM1001
+
+// {
+//   error : {
+//     status : 400 ,
+//     message : "sdfsd afdf"
+//   }
+// }
+
+
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
@@ -232,12 +244,12 @@ function Projects() {
                               <TableCell className="hidden sm:table-cell"  onClick={() =>
                               router.push(`/projects/${data.job_id}`)
                             }>
-                                {data?.job_id}
+                                {data?.job_number}
                               </TableCell>
                               <TableCell className="font-medium"  onClick={() =>
                               router.push(`/projects/${data.job_id}`)
                             }>
-                                {data?.client_name}
+                                {data?.client_name || "-"}
                               </TableCell>
                               <TableCell className="font-medium"  onClick={() =>
                               router.push(`/projects/${data.job_id}`)
