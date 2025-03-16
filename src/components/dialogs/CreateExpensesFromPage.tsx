@@ -32,20 +32,20 @@ import { toast } from "sonner";
 function CreateExpenseFromPage({
   isDialogOpen,
   setIsDialogOpen,
-
   data: jobData,
 }: {
   isDialogOpen: boolean;
   setIsDialogOpen: (value: boolean) => void;
-
   data: any;
 }) {
   const [categories, setCategories] = useState([]);
   const LPOSchema = z.object({
-    amount: z.string(),
+    // amount: z.string(),
+    VAT: z.string(),
+    total_amount: z.string(),
     net_amount: z.string(),
     date: z.string(),
-    supplier_name: z.string().default("Numan"),
+    supplier_name: z.string().default("-"),
     job_card: z.string(),
     category_name: z.string().default("Materials"),
     expense_type: z.string(),
@@ -74,25 +74,37 @@ function CreateExpenseFromPage({
     watch,
     control,
     getValues,
-    formState: { errors, isSubmitting },
-  } = useForm({ resolver: zodResolver(LPOSchema) });
+    setValue,
+    formState: { errors, isSubmitting } ,
+  } : any = useForm({ resolver: zodResolver(LPOSchema) });
+
+  const netAmount = watch("net_amount");
+  const vat = watch("VAT");
+
+  console.log(errors)
+  useEffect(() => {
+    if (netAmount && vat) {
+      const totalAmount = parseFloat(netAmount) + parseFloat(vat);
+      setValue("total_amount", totalAmount);
+    }
+  }, [netAmount, vat, setValue]);
 
   async function onSubmit(data: any) {
     const response = await createExpense({
       data: {
         ...data,
         supplier_name: "Numan",
-        category_name : "Materials"
+        category_name: "Materials",
       },
     });
-  
-      toast("Warning", {
-        description:
-          "Due to server issue purches or expenses is in added in the project.",
-      });
-    
 
-    // console.log(response, "response from the server");
+    console.log(response , "RESPONSE")
+
+    toast("Warning", {
+      description:
+        "Due to server issue purches or expenses is in added in the project.",
+    });
+
     setIsDialogOpen(false);
   }
 
@@ -135,7 +147,6 @@ function CreateExpenseFromPage({
           </DialogDescription>
         </DialogHeader>
 
-        {/* <form className=" px-3 "> */}
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-4 border p-5 rounded-lg shadow-lg">
             <div className="grid gap-3">
@@ -147,9 +158,9 @@ function CreateExpenseFromPage({
                   <Select
                     onValueChange={(value) => {
                       console.log(value, "Selected Job ID");
-                      field.onChange(value); // keep as string or Number(value) if you want number
+                      field.onChange(value);
                     }}
-                    value={field.value ?? ""} // ensure value binding
+                    value={field.value ?? ""}
                   >
                     <SelectTrigger id="job_card" aria-label="Select Type">
                       <SelectValue placeholder="Select Job" />
@@ -158,8 +169,6 @@ function CreateExpenseFromPage({
                       {jobs.length > 0 ? (
                         jobs.map((data: any, index) => (
                           <SelectItem key={index} value={String(data?.job_id)}>
-                            {" "}
-                            {/* Convert to string */}
                             {data?.job_number}
                           </SelectItem>
                         ))
@@ -172,43 +181,59 @@ function CreateExpenseFromPage({
                   </Select>
                 )}
               />
+              {errors.job_card && (
+                <p className="text-red-500 text-sm">{errors.job_card.message}</p>
+              )}
             </div>
             <div>
               <Label htmlFor="amount">Supplier</Label>
               <Input
                 id="supplier"
                 type="text"
-                // value={formData.password} onChange={handleInputChange}
                 {...register("supplier")}
               />
+              {errors.supplier && (
+                <p className="text-red-500 text-sm">{errors?.supplier?.message}</p>
+              )}
             </div>
             <div>
               <Label htmlFor="amount">Net value without Tax</Label>
               <Input
                 id="net_amount"
                 type="text"
-                // value={formData.password} onChange={handleInputChange}
-                {...register("net_amount")}
+                {...register("net_amount", { required: true })}
               />
+              {errors.net_amount && (
+                <p className="text-red-500 text-sm">
+                  {errors?.net_amount?.message}
+                </p>
+              )}
             </div>
 
             <div>
               <Label htmlFor="amount">VAT</Label>
               <Input
-                id="amount"
+                id="VAT"
                 type="text"
-                // value={formData.password} onChange={handleInputChange}
-                {...register("amount")}
+                {...register("VAT", { required: true })}
               />
+              {errors.VAT && (
+                <p className="text-red-500 text-sm">{errors?.VAT?.message}</p>
+              )}
             </div>
             <div>
-              <Label htmlFor="amount">Total Amount</Label>
+              <Label htmlFor="total_amount">Total Amount</Label>
               <Input
-                id="amount"
+                id="total_amount"
                 type="text"
-                // value={formData.password} onChange={handleInputChange}
-                {...register("amount")}
+                {...register("total_amount", { required: true })}
+                readOnly
               />
+              {errors.total_amount && (
+                <p className="text-red-500 text-sm">
+                  {errors.total_amount.message}
+                </p>
+              )}
             </div>
             <div className="grid gap-3">
               <Label htmlFor="status">Expense Type </Label>
@@ -238,15 +263,22 @@ function CreateExpenseFromPage({
                   </Select>
                 )}
               />
+              {errors.expense_type && (
+                <p className="text-red-500 text-sm">
+                  {errors.expense_type.message}
+                </p>
+              )}
             </div>
             <div>
               <Label htmlFor="delivery_timelines">Date</Label>
               <Input
                 id="date"
                 type="date"
-                // value={formData.password} onChange={handleInputChange}
-                {...register("date")}
+                {...register("date", { required: true })}
               />
+              {errors.date && (
+                <p className="text-red-500 text-sm">{errors.date.message}</p>
+              )}
             </div>
 
             <div className="grid gap-3">
@@ -266,10 +298,8 @@ function CreateExpenseFromPage({
                     </SelectTrigger>
                     <SelectContent>
                       {categories.map((data: any, index) => {
-                        // console.log(data )
                         return (
                           <SelectItem key={index} value={data.name}>
-                            {" "}
                             {data.name}
                           </SelectItem>
                         );
@@ -278,6 +308,9 @@ function CreateExpenseFromPage({
                   </Select>
                 )}
               />
+              {errors.category && (
+                <p className="text-red-500 text-sm">{errors.category.message}</p>
+              )}
             </div>
 
             <div className="grid gap-3">
@@ -302,22 +335,33 @@ function CreateExpenseFromPage({
                   </Select>
                 )}
               />
+              {errors.Status && (
+                <p className="text-red-500 text-sm">{errors.Status.message}</p>
+              )}
             </div>
             <div className="grid gap-3">
               <Label htmlFor="description">Url (documents link)</Label>
               <Textarea
                 id="description"
                 className="min-h-32"
-                {...register("description")}
+                {...register("description", { required: true })}
               />
+              {errors.description && (
+                <p className="text-red-500 text-sm">
+                  {errors.description.message}
+                </p>
+              )}
             </div>
             <div className="grid gap-3">
               <Label htmlFor="payment_terms">Remark</Label>
               <Textarea
                 id="payment_terms"
                 className="min-h-32"
-                {...register("remarks")}
+                {...register("remarks", { required: true })}
               />
+              {errors.remarks && (
+                <p className="text-red-500 text-sm">{errors.remarks.message}</p>
+              )}
             </div>
           </div>
 
@@ -329,15 +373,9 @@ function CreateExpenseFromPage({
               Cancel
             </Button>
 
-            <Button
-              type="submit"
-              // onClick={()=> onSubmit(getValues)}
-            >
-              Create
-            </Button>
+            <Button type="submit">Create</Button>
           </DialogFooter>
         </form>
-        {/* </form> */}
       </DialogContent>
     </Dialog>
   );
