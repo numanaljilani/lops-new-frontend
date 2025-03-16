@@ -79,10 +79,3 @@ export function isDateGreaterThanToday(dateString :string) {
   return givenDate > today;
 }
 
-// Example usage
-const dateToCheck = "2024-06-30";
-if (isDateGreaterThanToday(dateToCheck)) {
-  console.log("The given date is greater than today's date.");
-} else {
-  console.log("The given date is not greater than today's date.");
-}

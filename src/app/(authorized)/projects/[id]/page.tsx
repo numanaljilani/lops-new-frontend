@@ -95,12 +95,12 @@ function ProjectDetails() {
 
   const getJobDetails = async () => {
     const res = await jobDetailsApi({ id: path?.split("/")?.reverse()[0] });
-    // console.log(res, ">>>>>>>>>>>>");
+    console.log(res, ">>>>>>>>>>>>");
   };
 
   const getPaymentBals = async () => {
     const res = await paymentApi({ id: path?.split("/")?.reverse()[0] });
-    // console.log(res, "PAYMENTBALLS");
+    console.log(res, "PAYMENTBALLS");
   };
 
   let sum = Number(job?.completion_percentage || 0);
@@ -151,8 +151,7 @@ function ProjectDetails() {
 
   const getExpenses = async () => {
     const res = await expenseApi({ job_card: path?.split("/")?.reverse()[0] });
-    // console.log(res, "expense res");
-    // console.log(res, "response");
+
   };
 
   useEffect(() => {
@@ -172,7 +171,7 @@ function ProjectDetails() {
     }
   }, [isExpenseSuccess]);
 
-  console.log(job?.payment_terms_display, ">>>>");
+  // console.log(job?.payment_terms_display, ">>>>");
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -211,7 +210,7 @@ function ProjectDetails() {
           </div>
           <div className="flex justify-between  gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-5  p-4 bg-white rounded-lg shadow-md">
             <Bubble
-              color={isDateGreaterThanToday(job?.delivery_timelines)  ? "#D2122E" : sum < 100 ? "#5D6166" : "#662d91"}
+              color={!isDateGreaterThanToday(job?.delivery_timelines)  ? "#D2122E" : sum < 100 ? "#5D6166" : "#662d91"}
               // color={
               //   sum > 0 && sum < 20
               //     ? "#c7c4bf"

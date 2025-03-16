@@ -53,8 +53,7 @@ function CreateLPO({
         }, {} as Record<string, { description: string; milestone: string; percentage: number }>);
       }),
     scope_of_work: z.string(),
-    lpo: z.string().default("1"),
-    job_number: z.string(),
+    // lpo: z.string().default("1"),
     lpo_number: z.string(),
     status: z.string().default("Pending"),
   });
@@ -83,7 +82,7 @@ function CreateLPO({
       },
     });
 
-    // console.log(response, "response from the server");
+    console.log(response, "response from the server");
     setIsDialogOpen(false);
   }
 
@@ -111,10 +110,10 @@ function CreateLPO({
 
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-4 border p-5 rounded-lg shadow-lg">
-            <div>
+            {/* <div>
               <Label htmlFor="job_number">Job Number</Label>
               <Input id="job_number" type="text" {...register("job_number")} />
-            </div>
+            </div> */}
             <div>
               <Label htmlFor="lpo_number">LPO Number</Label>
               <Input id="lpo_number" type="text" {...register("lpo_number")} />

@@ -48,7 +48,7 @@ function CreateDialog({
 
   useEffect(() => {
     if (isSuccess) {
-      console.log(data, "response from server");
+     
       if (data) {
         setClients(data.results);
       }
@@ -115,7 +115,7 @@ function CreateDialog({
               required
             />
           </div>
-          <div className="grid gap-3">
+          {/* <div className="grid gap-3">
             <Label htmlFor="status">Quotation Number</Label>
             <Input
               id="quotation"
@@ -127,7 +127,7 @@ function CreateDialog({
               }}
               required
             />
-          </div>
+          </div> */}
           <div className="grid gap-3">
             <Label htmlFor="status">Quotation Amount</Label>
             <Input

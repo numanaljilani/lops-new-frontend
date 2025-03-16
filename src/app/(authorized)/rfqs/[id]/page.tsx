@@ -59,7 +59,7 @@ function RFQDetails() {
       .min(1, "Client ID is required and must be a positive number"),
     project_type: z.string().min(1, "Project type is required"),
     scope_of_work: z.string().min(1, "Scope of work is required"),
-    quotation_number: z.string().min(1, "Quotation number is required"),
+
     quotation_amount: z.string().min(1, "Quotation amount is required"), // Use string for currency formatting
     remarks: z.string().min(1, "Remarks are required"),
     status: z.enum(["Pending", "Ongoing", "Completed"], {
@@ -79,7 +79,7 @@ function RFQDetails() {
       client: rfqData?.client_id?.toString(), // Ensure client_id is a string
       project_type: rfqData?.project_type,
       scope_of_work: rfqData?.scope_of_work,
-      quotation_number: rfqData?.quotation_number,
+   
       quotation_amount: rfqData?.quotation_amount,
       remarks: rfqData?.remarks,
       status: rfqData?.status || "Pending", // Default to "Pending" if status is not available
@@ -280,21 +280,7 @@ function RFQDetails() {
                           )}
                         </div>
 
-                        <div className="grid gap-3">
-                          <Label htmlFor="quotation_number">
-                            Quotation Number
-                          </Label>
-                          <Controller
-                            name="quotation_number"
-                            control={control}
-                            render={({ field }) => <Input {...field} />}
-                          />
-                          {errors.quotation_number && (
-                            <p className="text-red-500">
-                              {errors.quotation_number.message}
-                            </p>
-                          )}
-                        </div>
+                        
 
                         <div className="grid gap-3">
                           <Label htmlFor="quotation_amount">
@@ -302,6 +288,7 @@ function RFQDetails() {
                           </Label>
                           <Controller
                             name="quotation_amount"
+                            defaultValue={rfqData?.quotation_amount     }
                             control={control}
                             render={({ field }) => <Input {...field} />}
                           />

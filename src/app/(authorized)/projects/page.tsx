@@ -1,10 +1,15 @@
 "use client";
-import { File, ListFilter, MoreHorizontal, PlusCircle } from "lucide-react";
+import {
+  File,
+  ListFilter,
+  MoreHorizontal,
+  PlusCircle,
+  Search,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
-
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -47,40 +52,31 @@ import {
   useCreateRFQMutation,
 } from "@/redux/query/rfqsApi";
 import CreateDialog from "@/components/dialogs/CreateDialog";
-import { useDeleteJobCardMutation, useJobsMutation } from "@/redux/query/jobApi";
+import {
+  useDeleteJobCardMutation,
+  useJobsMutation,
+} from "@/redux/query/jobApi";
 import CreateTask from "@/components/dialogs/CreateTask";
 import CreateExpense from "@/components/dialogs/CreateExpenses";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton component
+import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"; // Import Pagination components
 
 function Projects() {
   const router = useRouter();
   const [jobs, setJobs] = useState([]);
   const [projectDetails, setProjectDetails] = useState<any>();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [rfq , setRfq] = useState<any>()
   const [isCreateRFQDialogOpen, setIsCreateRFQDialogOpen] = useState(false);
-
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<any>(null);
-  const [rfq, setRfq] = useState<{
-    project_type: string;
-    scope_of_work: string;
-    quotation_number: string;
-    quotation_amount: string;
-    status: string;
-    remarks: string;
-    client: string;
-  }>({
-    project_type: "",
-    scope_of_work: "",
-    quotation_number: "",
-    quotation_amount: "",
-    status: "",
-    remarks: "",
-    client: "",
-  });
+  const [loading, setLoading] = useState(true); // Loading state
+  const [currentPage, setCurrentPage] = useState(1); // Pagination state
+  const itemsPerPage = 5; // Number of items per page
 
-  const [jobApi, { data, isSuccess, error, isError }] = useJobsMutation(); 
-  const [deleteJobCardApi ] = useDeleteJobCardMutation()
- 
+  const [jobApi, { data, isSuccess, error, isError }] = useJobsMutation();
+  const [deleteJobCardApi] = useDeleteJobCardMutation();
   const [createRFQApi] = useCreateRFQMutation();
 
   const handleSubmit = async () => {
@@ -91,6 +87,7 @@ function Projects() {
   };
 
   const getJobs = async () => {
+    setLoading(true); // Set loading to true before fetching data
     const res = await jobApi({});
     console.log(res, "response");
   };
@@ -98,6 +95,7 @@ function Projects() {
   useEffect(() => {
     getJobs();
   }, []);
+
   useEffect(() => {
     if (isDialogOpen) {
       getJobs();
@@ -109,6 +107,7 @@ function Projects() {
       console.log(data, "response from server");
       if (data) {
         setJobs(data.results);
+        setLoading(false); // Set loading to false after data is fetched
       }
     }
   }, [isSuccess]);
@@ -122,20 +121,12 @@ function Projects() {
     getJobs();
   };
 
-  const update = async (url: string) => {
-    // router.push(`/clients/${url}`);
-  };
+  // Pagination logic
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = jobs.slice(indexOfFirstItem, indexOfLastItem);
 
-
-// LETS-JN-YYMM1001
-
-// {
-//   error : {
-//     status : 400 ,
-//     message : "sdfsd afdf"
-//   }
-// }
-
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -144,44 +135,16 @@ function Projects() {
           <Tabs defaultValue="all">
             <div className="flex items-center">
               <div className="ml-auto flex items-center gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-7 gap-1">
-                      <ListFilter className="h-3.5 w-3.5" />
-                      <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                        Filter
-                      </span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Filter by</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuCheckboxItem checked>
-                      All
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem>
-                      Sales Member
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem>
-                      Team Leads
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem>
-                      Team Members
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem>
-                      Sub-Contractors
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem>
-                      Accounts Members
-                    </DropdownMenuCheckboxItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <Button size="sm" variant="outline" className="h-7 gap-1">
-                  <File className="h-3.5 w-3.5" />
-                  <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                    Export
-                  </span>
-                </Button>
+                <div className="relative flex-1">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="search"
+                    placeholder="Search by RFQ ID..."
+                    className="w-full rounded-lg bg-background pl-8"
+                    // value={searchQuery}
+                    // onChange={(e) => handleSearch(e.target.value)}
+                  />
+                </div>
 
                 <Button
                   size="sm"
@@ -214,8 +177,6 @@ function Projects() {
                         <TableHead>Brief of scope</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Profit</TableHead>
-                        {/* <TableHead>Qoutation Amount</TableHead> */}
-
                         <TableHead className="hidden md:table-cell">
                           Deadline at
                         </TableHead>
@@ -223,123 +184,157 @@ function Projects() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {jobs?.map(
-                        (
-                          data: {
-                            job_id: string;
-                            job_number: string;
-                            status: string;
-                            quotation_amount: string;
-                            client_name: string;
-                            scope_of_work: string;
-                            active: boolean;
-                            delivery_timelines: string;
-                            completion_percentage: string;
-                            profit: string;
-                          },
-                          index: number
-                        ) => {
-                          return (
-                            <TableRow key={index} className="cursor-pointer"   >
-                              <TableCell className="hidden sm:table-cell"  onClick={() =>
-                              router.push(`/projects/${data.job_id}`)
-                            }>
-                                {data?.job_number}
-                              </TableCell>
-                              <TableCell className="font-medium"  onClick={() =>
-                              router.push(`/projects/${data.job_id}`)
-                            }>
-                                {data?.client_name || "-"}
-                              </TableCell>
-                              <TableCell className="font-medium"  onClick={() =>
-                              router.push(`/projects/${data.job_id}`)
-                            }>
-                                {data?.scope_of_work}
-                              </TableCell>
-                              <TableCell  onClick={() =>
-                              router.push(`/projects/${data.job_id}`)
-                            }>
-                                <Badge variant="outline">{data?.completion_percentage}%</Badge>
-                              </TableCell>
-                              {/* <TableCell>{data?.company_name}</TableCell> */}
-                              <TableCell className="hidden md:table-cell"  onClick={() =>
-                              router.push(`/projects/${data.job_id}`)
-                            }>
-                                {data?.profit}
-                              </TableCell>
-                              {/* <TableCell className="hidden md:table-cell">
-                                {data?.quotation_amount}
-                              </TableCell> */}
-                              <TableCell className="hidden md:table-cell">
-                                {formatDate(data?.delivery_timelines)}
-                              </TableCell>
-                              <TableCell>
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button
-                                      aria-haspopup="true"
-                                      size="icon"
-                                      variant="ghost"
-                                    >
-                                      <MoreHorizontal className="h-4 w-4" />
-                                      <span className="sr-only">
-                                        Toggle menu
-                                      </span>
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuLabel>
-                                      Actions
-                                    </DropdownMenuLabel>
-                                    <DropdownMenuItem
-                                      onClick={() => {
-                                        setIsTaskDialogOpen(true);
-                                        setProjectDetails(data);
-                                      }}
-                                    >
-                                      Task
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      onClick={() =>
-                                        router.push(`/projects/${data.job_id}`)
-                                      }
-                                    >
-                                      Edit
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      onClick={() => {
-                                        setItemToDelete(data);
-                                        setIsDialogOpen(true);
-                                      }}
-                                    >
-                                      Delete
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        }
+                      {loading ? (
+                        // Skeleton loading UI
+                        Array.from({ length: itemsPerPage }).map((_, index) => (
+                          <TableRow key={index}>
+                            <TableCell>
+                              <Skeleton className="h-4 w-full" />
+                            </TableCell>
+                            <TableCell>
+                              <Skeleton className="h-4 w-full" />
+                            </TableCell>
+                            <TableCell>
+                              <Skeleton className="h-4 w-full" />
+                            </TableCell>
+                            <TableCell>
+                              <Skeleton className="h-4 w-full" />
+                            </TableCell>
+                            <TableCell>
+                              <Skeleton className="h-4 w-full" />
+                            </TableCell>
+                            <TableCell>
+                              <Skeleton className="h-4 w-full" />
+                            </TableCell>
+                            <TableCell>
+                              <Skeleton className="h-4 w-full" />
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : currentItems.length === 0 ? (
+                        // No data message
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-10">
+                            <p className="text-muted-foreground">No data available.</p>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        // Display data
+                        currentItems.map((data: any, index: number) => (
+                          <TableRow key={index} className="cursor-pointer">
+                            <TableCell
+                              className="hidden sm:table-cell"
+                              onClick={() =>
+                                router.push(`/projects/${data.job_id}`)
+                              }
+                            >
+                              {data?.job_number}
+                            </TableCell>
+                            <TableCell
+                              className="font-medium"
+                              onClick={() =>
+                                router.push(`/projects/${data.job_id}`)
+                              }
+                            >
+                              {data?.client_name || "-"}
+                            </TableCell>
+                            <TableCell
+                              className="font-medium"
+                              onClick={() =>
+                                router.push(`/projects/${data.job_id}`)
+                              }
+                            >
+                              {data?.scope_of_work}
+                            </TableCell>
+                            <TableCell
+                              onClick={() =>
+                                router.push(`/projects/${data.job_id}`)
+                              }
+                            >
+                              <Badge variant="outline">
+                                {data?.completion_percentage}%
+                              </Badge>
+                            </TableCell>
+                            <TableCell
+                              className="hidden md:table-cell"
+                              onClick={() =>
+                                router.push(`/projects/${data.job_id}`)
+                              }
+                            >
+                              {data?.profit}
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              {formatDate(data?.delivery_timelines)}
+                            </TableCell>
+                            <TableCell>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    aria-haspopup="true"
+                                    size="icon"
+                                    variant="ghost"
+                                  >
+                                    <MoreHorizontal className="h-4 w-4" />
+                                    <span className="sr-only">Toggle menu</span>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setIsTaskDialogOpen(true);
+                                      setProjectDetails(data);
+                                    }}
+                                  >
+                                    Task
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      router.push(`/projects/${data.job_id}`)
+                                    }
+                                  >
+                                    Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setItemToDelete(data);
+                                      setIsDialogOpen(true);
+                                    }}
+                                  >
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))
                       )}
                     </TableBody>
                   </Table>
                 </CardContent>
-                <CardFooter>
-                  <div className="text-xs text-muted-foreground">
-                    Showing <strong>1-10</strong> of <strong>32</strong>{" "}
-                    products
-                  </div>
+                {/* Pagination */}
+                <CardFooter className="flex justify-center">
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          onClick={() => paginate(currentPage - 1)}
+                          // disabled={currentPage === 1}
+                        />
+                      </PaginationItem>
+                      <PaginationItem>
+                        <PaginationNext
+                          onClick={() => paginate(currentPage + 1)}
+                          // disabled={indexOfLastItem >= jobs.length}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
                 </CardFooter>
               </Card>
             </TabsContent>
           </Tabs>
         </main>
-        {/* <AlertDialogAlert
-          isDialogOpen={isDialogOpen}
-          setIsDialogOpen={setIsDialogOpen}
-          itemToDelete={itemToDelete}
-          deleteCompany={true}
-        /> */}
         <Alert
           isDialogOpen={isDialogOpen}
           setIsDialogOpen={setIsDialogOpen}
@@ -353,18 +348,8 @@ function Projects() {
             rfq={rfq}
             setRfq={setRfq}
             handleSubmit={handleSubmit}
-            // client={path.split("/").reverse()[0]}
           />
         }
-        {/* {
-          <CreateTask
-            isDialogOpen={isTaskDialogOpen}
-            setIsDialogOpen={setIsTaskDialogOpen}
-            details={projectDetails}
-          />
-        } */}
-
-      
       </div>
     </div>
   );

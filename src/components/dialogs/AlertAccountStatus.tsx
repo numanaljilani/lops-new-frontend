@@ -38,15 +38,15 @@ export default function AlertAccountStatus({
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
 
   const LPOSchema = z.object({
-    amount: z.string().default(item?.amount || "0"),
+    amount: z.number().default(item?.amount || 0),
     status: z.string().default("Pending"),
     verification_status: z.string().default(item?.verification_status || "unverified"),
-    VAT: z.string().default("0"),
-    charity: z.string().default("0"), // Default charity amount
-    total_amount: z.string().default("0"),
+    VAT: z.number().default(0),
+    charity: z.number().default(0), // Default charity amount
+    total_amount: z.number().default(0),
     project_status: z.string().default(item?.status || "Pending"),
-    project_percentage: z.string().default(item?.project_percentage || "0"),
-    invoice_number: z.string().default(item?.invoice_number || "-"),
+    // project_percentage: z.string().default(item?.project_percentage || "0"),
+    // invoice_number: z.string().default(item?.invoice_number || "-"),
     notes: z.string().default(""),
   });
 
@@ -65,9 +65,9 @@ export default function AlertAccountStatus({
       total_amount: item?.amount
         ? (Number(item.amount) + Number(item.amount) * 0.05).toFixed(2)
         : "0.00",
-      invoice_number: item?.invoice_number || "-",
+      // invoice_number: item?.invoice_number || "-",
       verification_status: item?.verification_status || "unverified",
-      project_percentage: item?.project_percentage || "0",
+      project_percentage: item?.project_percentage || 100,
       notes: "",
       project_status: item?.status || "Pending",
     },
@@ -101,10 +101,11 @@ export default function AlertAccountStatus({
         data: {
           ...data,
           job_card: item?.job_card,
+          project_percentage : 100
         },
         id: item.payment_id,
       });
-
+console.log(response , ">>>>")
       if (response.error) {
         setWarningMessage("Failed to submit the form. Please try again.");
       } else {
@@ -163,7 +164,7 @@ export default function AlertAccountStatus({
                 value={item?.job_card}
               />
             </div>
-            <div>
+            {/* <div>
               <Label htmlFor="invoice_number">Invoice</Label>
               <Input
                 id="invoice_number"
@@ -174,7 +175,7 @@ export default function AlertAccountStatus({
               {errors?.invoice_number && (
                 <ErrorMessage message={errors?.invoice_number.message} />
               )}
-            </div>
+            </div> */}
             <div>
               <Label htmlFor="amount">Amount</Label>
               <Input
@@ -253,7 +254,7 @@ export default function AlertAccountStatus({
                 <ErrorMessage message={errors.verification_status.message} />
               )}
             </div>
-            <div>
+            {/* <div>
               <Label htmlFor="project_percentage">Project Percentage</Label>
               <Input
                 id="project_percentage"
@@ -264,7 +265,7 @@ export default function AlertAccountStatus({
               {errors.project_percentage && (
                 <ErrorMessage message={errors.project_percentage.message} />
               )}
-            </div>
+            </div> */}
             <div className="grid gap-3">
               <Label htmlFor="notes">Notes</Label>
               <Textarea
