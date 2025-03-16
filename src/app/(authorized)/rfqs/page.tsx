@@ -342,13 +342,13 @@ function RFQs() {
                       <PaginationItem>
                         <PaginationPrevious
                           onClick={() => paginate(currentPage - 1)}
-                          disabled={currentPage === 1}
+                          // disabled={currentPage === 1}
                         />
                       </PaginationItem>
                       <PaginationItem>
                         <PaginationNext
                           onClick={() => paginate(currentPage + 1)}
-                          disabled={indexOfLastItem >= filteredRFQs.length}
+                          // disabled={indexOfLastItem >= filteredRFQs.length}
                         />
                       </PaginationItem>
                     </PaginationContent>
