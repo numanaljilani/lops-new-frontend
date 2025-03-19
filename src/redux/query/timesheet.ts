@@ -11,7 +11,7 @@ export const timeSheetApi = createApi({
     timesheet: builder.mutation({
         query: (data) => {
           return {
-            url: "timesheets",
+            url: `timesheets/?${'job_car='+data?.job_car || ''}`,
             method: "GET",
             headers: {
               "Content-type": "application/json; charset=UTF-8",
@@ -44,10 +44,10 @@ export const timeSheetApi = createApi({
           };
         },
       }),
-      employeeDetails: builder.mutation({
+      timeSheetDetails: builder.mutation({
         query: (data) => {
           return {
-            url: `employees/${data.id}/`,
+            url: `timesheets/${data.id}/`,
             method: "GET",
             headers: {
               "Content-type": "application/json; charset=UTF-8",
@@ -74,4 +74,4 @@ export const timeSheetApi = createApi({
 
 // Export hooks for usage in functional components, which are
 // auto-generated based on the defined endpoints
-export const { useDeleteEmployeeMutation , useTimesheetMutation ,useCreateTimeSheetMutation , useEmployeeDetailsMutation , usePatchEmployeeMutation} = timeSheetApi
+export const { useDeleteEmployeeMutation , useTimesheetMutation ,useCreateTimeSheetMutation , useTimeSheetDetailsMutation , usePatchEmployeeMutation} = timeSheetApi

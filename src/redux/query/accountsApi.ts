@@ -45,10 +45,10 @@ export const accountsApi = createApi({
           };
         },
       }),
-      clientDetails: builder.mutation({
+      accountsDetails: builder.mutation({
         query: (data) => {
           return {
-            url: `clients/${data.id}/`,
+            url: `accounts/payment-balls/${data.id}/`,
             method: "GET",
             headers: {
               "Content-type": "application/json; charset=UTF-8",
@@ -79,4 +79,4 @@ export const accountsApi = createApi({
 
 // Export hooks for usage in functional components, which are
 // auto-generated based on the defined endpoints
-export const { useClientDetailsMutation , usePaymentBallsListMutation , useVerifyPaymentStatusMutation , useDeleteClientMutation , usePatchClientMutation } = accountsApi
+export const { useAccountsDetailsMutation , usePaymentBallsListMutation , useVerifyPaymentStatusMutation , useDeleteClientMutation , usePatchClientMutation } = accountsApi

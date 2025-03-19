@@ -48,7 +48,13 @@ import { usePaymentBallsListMutation } from "@/redux/query/accountsApi";
 import AlertAccountStatus from "@/components/dialogs/AlertAccountStatus";
 import Wave from "react-wavify";
 import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton component
-import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"; // Import Pagination components
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"; // Import Pagination components
 
 function Accounts() {
   const router = useRouter();
@@ -76,7 +82,7 @@ function Accounts() {
 
   useEffect(() => {
     if (paymentIsSuccess) {
-      console.log(payementData)
+      console.log(payementData);
       setPaymentBalls(payementData.results);
       setLoading(false); // Set loading to false after data is fetched
     }
@@ -117,12 +123,17 @@ function Accounts() {
                   {loading ? (
                     // Skeleton loading UI
                     Array.from({ length: 10 }).map((_, index) => (
-                      <Skeleton key={index} className="h-40 w-40 rounded-full" />
+                      <Skeleton
+                        key={index}
+                        className="h-40 w-40 rounded-full"
+                      />
                     ))
                   ) : currentItems.length === 0 ? (
                     // No data message
                     <div className="w-full text-center py-10">
-                      <p className="text-muted-foreground">No data available.</p>
+                      <p className="text-muted-foreground">
+                        No data available.
+                      </p>
                     </div>
                   ) : (
                     // Display data
@@ -130,10 +141,10 @@ function Accounts() {
                       <div
                         key={index}
                         className={`border cursor-pointer size-40 hover:scale-105 duration-200 shadow-lg hover:shadow-slate-400 rounded-full overflow-hidden relative flex justify-center items-center`}
-                        onClick={() => {
-                          setItem(data);
-                          setIsDialogOpen(true);
-                        }}
+
+                        // onClick={() =>
+                        //   router.push(`/accounts/${data?.payment_id}`)
+                        // }
                       >
                         <Wave
                           fill={
@@ -168,12 +179,31 @@ function Accounts() {
                               </CardTitle> */}
                             </CardHeader>
                             <CardContent>
-                              <div className="text-xl font-bold text-center text-white">
+                              <div
+                                onClick={() => {
+                                  setItem(data);
+                                  setIsDialogOpen(true);
+                                }}
+                                className="text-xl font-bold text-center text-white"
+                              >
                                 {data?.amount} AED
                               </div>
-                              <div className="text-sm tracking-wider font-light text-white text-center">
+                              <div   onClick={() => {
+                          setItem(data);
+                          setIsDialogOpen(true);
+                        }} className="text-sm tracking-wider font-light text-white text-center">
                                 {data?.verification_status}
                               </div>
+
+                              <Button
+                                variant={"link"}
+                                onClick={() =>
+                                  router.push(`/accounts/${data?.payment_id}`)
+                                }
+                                className="text-white underline text-xs"
+                              >
+                                More details
+                              </Button>
                             </CardContent>
                           </div>
                         </Card>

@@ -35,12 +35,14 @@ import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { date, formatDate, timeFormat } from "@/lib/dateFormat";
 import { useComponiesMutation, useDeleteCompanyMutation } from "@/redux/query/componiesApi";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import AlertDialogAlert from "@/components/dialogs/AlertDialog";
 import { useTimesheetMutation } from "@/redux/query/timesheet";
 
+
 function TimeSheet() {
   const router = useRouter()
+    const path = usePathname();
   const [timesheet, setTimeSheet] = useState([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
@@ -54,6 +56,7 @@ function TimeSheet() {
     const res = await timeSheetApi({});
     console.log(res, "response");
   };
+
 
   useEffect(() => {
 
@@ -183,7 +186,7 @@ function TimeSheet() {
                     <TableBody>
                       {timesheet?.map((data : {date_logged : string , added_date : string , hours_logged : string , remarks : string , total_amount : string , url : string}, index : number) => {
                         return (
-                          <TableRow key={index}>
+                          <TableRow key={index} className="cursor-pointer" onClick={()=> router.push(`/timesheet/${path?.split("/")?.reverse()[0]}`)}>
                             
                             <TableCell className="font-medium">
                             {date(data?.date_logged)}

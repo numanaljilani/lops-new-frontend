@@ -70,11 +70,13 @@ export default function CreateEmployee() {
   const onSubmit = async (data: TimeSheetFormValues) => {
     const res = await createTimeSheetApi({
       data: {
-        hours_logged: Number(data.hours_logged) || 6,
+        job_card : data.job_card || 1,
+        hours_logged: Number(data.hours_logged)?.toFixed(2) || 6,
         hourly_rate: Number(data.hourly_rate) || 10,
         date_logged: formatDateForApi(),
         remarks: data.remark,
         total_amount: Number(data.total_amount),
+        team_member : 1,
       },
     });
     console.log(res, "response from the server");

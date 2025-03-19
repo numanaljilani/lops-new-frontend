@@ -135,7 +135,7 @@ function Projects() {
           <Tabs defaultValue="all">
             <div className="flex items-center">
               <div className="ml-auto flex items-center gap-2">
-                <div className="relative flex-1">
+                {/* <div className="relative flex-1">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     type="search"
@@ -144,7 +144,7 @@ function Projects() {
                     // value={searchQuery}
                     // onChange={(e) => handleSearch(e.target.value)}
                   />
-                </div>
+                </div> */}
 
                 <Button
                   size="sm"

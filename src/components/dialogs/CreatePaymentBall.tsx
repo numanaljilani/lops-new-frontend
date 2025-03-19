@@ -85,7 +85,7 @@ function CreatePaymentBall({
     const res = await createPaymentBallApi({
       data: { ...data, job_card: id, color_status: "gray" },
     });
-    console.log(res, "CREATE PAYMENT BAALL");
+    // console.log(res, "CREATE PAYMENT BAALL");
     setIsDialogOpen(false);
   }
 
@@ -94,7 +94,7 @@ function CreatePaymentBall({
 
   useEffect(() => {
     if (isSuccess) {
-      console.log(data, "response from server");
+      // console.log(data, "response from server");
       if (data) {
       }
     }

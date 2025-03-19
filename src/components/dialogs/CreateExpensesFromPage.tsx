@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
-import { z } from "zod";
+import { number, z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import {
@@ -40,9 +40,8 @@ function CreateExpenseFromPage({
 }) {
   const [categories, setCategories] = useState([]);
   const LPOSchema = z.object({
-    // amount: z.string(),
     VAT: z.string(),
-    total_amount: z.string(),
+    total_amount: z.number(),
     net_amount: z.string(),
     date: z.string(),
     supplier_name: z.string().default("-"),
@@ -75,13 +74,12 @@ function CreateExpenseFromPage({
     control,
     getValues,
     setValue,
-    formState: { errors, isSubmitting } ,
-  } : any = useForm({ resolver: zodResolver(LPOSchema) });
+    formState: { errors, isSubmitting },
+  }: any = useForm({ resolver: zodResolver(LPOSchema) });
 
   const netAmount = watch("net_amount");
   const vat = watch("VAT");
 
-  console.log(errors)
   useEffect(() => {
     if (netAmount && vat) {
       const totalAmount = parseFloat(netAmount) + parseFloat(vat);
@@ -90,19 +88,20 @@ function CreateExpenseFromPage({
   }, [netAmount, vat, setValue]);
 
   async function onSubmit(data: any) {
+    const parsedData = {
+      ...data,
+      total_amount: parseFloat(data.total_amount), // Ensure total_amount is a number
+    };
+
     const response = await createExpense({
-      data: {
-        ...data,
-        supplier_name: "Numan",
-        category_name: "Materials",
-      },
+      data: parsedData,
     });
 
-    console.log(response , "RESPONSE")
+    console.log(response, "RESPONSE .....");
 
     toast("Warning", {
       description:
-        "Due to server issue purches or expenses is in added in the project.",
+        "Due to server issue, purchases or expenses are not added to the project.",
     });
 
     setIsDialogOpen(false);
@@ -123,7 +122,7 @@ function CreateExpenseFromPage({
     if (isError) {
       toast("Warning", {
         description:
-          "Due to server issue purches or expenses is in added in the project.",
+          "Due to server issue, purchases or expenses are not added to the project.",
       });
     }
   }, [isError]);
@@ -139,11 +138,11 @@ function CreateExpenseFromPage({
 
   return (
     <Dialog open={isDialogOpen} onOpenChange={() => setIsDialogOpen(false)}>
-      <DialogContent className=" overflow-x-scroll no-scrollbar border border-black rounded-lg w-[90%] max-h-[90%]  scroll-smooth lg:w-[1200px] md:w-[1200px]">
+      <DialogContent className="overflow-x-scroll no-scrollbar border border-black rounded-lg w-[90%] max-h-[90%] scroll-smooth lg:w-[1200px] md:w-[1200px]">
         <DialogHeader>
           <DialogTitle>Add expenses</DialogTitle>
           <DialogDescription>
-            fill the form to add the expenses in related project.
+            Fill the form to add the expenses in the related project.
           </DialogDescription>
         </DialogHeader>
 
@@ -187,11 +186,7 @@ function CreateExpenseFromPage({
             </div>
             <div>
               <Label htmlFor="amount">Supplier</Label>
-              <Input
-                id="supplier"
-                type="text"
-                {...register("supplier")}
-              />
+              <Input id="supplier" type="text" {...register("supplier")} />
               {errors.supplier && (
                 <p className="text-red-500 text-sm">{errors?.supplier?.message}</p>
               )}
@@ -225,8 +220,8 @@ function CreateExpenseFromPage({
               <Label htmlFor="total_amount">Total Amount</Label>
               <Input
                 id="total_amount"
-                type="text"
-                {...register("total_amount", { required: true })}
+                type="text" // or type="number"
+                {...register("total_amount", { required: true, valueAsNumber: true })}
                 readOnly
               />
               {errors.total_amount && (

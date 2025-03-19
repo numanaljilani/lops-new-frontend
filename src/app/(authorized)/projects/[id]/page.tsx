@@ -6,6 +6,7 @@ import CreateExpense from "@/components/dialogs/CreateExpenses";
 import CreatePaymentBall from "@/components/dialogs/CreatePaymentBall";
 import CreateQuotation from "@/components/dialogs/CreateQuotation";
 import CreateTask from "@/components/dialogs/CreateTask";
+import ExpensesDetailsDilog from "@/components/dialogs/ExpensesDetailsDilog";
 import More from "@/components/dialogs/More";
 import UpdateProject from "@/components/dialogs/UpdateProject";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -36,6 +37,7 @@ import {
   useTasksMutation,
 } from "@/redux/query/paymentApi";
 import { useRFQDetailsMutation } from "@/redux/query/rfqsApi";
+import { useTimesheetMutation } from "@/redux/query/timesheet";
 import {
   Activity,
   Blocks,
@@ -47,14 +49,16 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Wave from "react-wavify";
-import { toast, Toaster } from "sonner";
 
 function ProjectDetails() {
   const path = usePathname();
+  const router = useRouter();
 
   const [tab, setTab] = useState("Progress");
   const [updateView, setUpdateView] = useState(false);
   const [approve, setApprove] = useState(false);
+  const [isExpenseDialog, setIsExpensesDialogOpen] = useState(false);
+  const [expenseDetails, setExpenseDetails] = useState({});
   const [paymentBalls, setPaymentBalls] = useState<any>();
   const [paymentBallsDetails, setPaymentBallsDetails] = useState<any>();
   const [taskDetails, setTaskDetails] = useState<any>(undefined);
@@ -62,13 +66,12 @@ function ProjectDetails() {
   const [expenses, setExpenses] = useState([]);
   const [isCreateExpensesDialogOpen, setIsCreateExpensesDialogOpen] =
     useState(false);
-
-  //   console.log(path.split("/").reverse()[0], "Path name");
   const [job, setJob] = useState<any>();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
+  const [timesheet, setTimeSheet] = useState([]);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [more, setMore] = useState(false);
   const [paymentBallId, setPaymentBallId] = useState<number | undefined>();
@@ -93,6 +96,29 @@ function ProjectDetails() {
     },
   ] = usePaymentsMutation();
 
+  const [
+    timeSheetApi,
+    {
+      data: timeSheetData,
+      isSuccess: isTimeSheetSuccess,
+      error: timeSheetError,
+      isError: isTimeSheetError,
+    },
+  ] = useTimesheetMutation();
+
+  const getTimeSheetData = async () => {
+    const res = await timeSheetApi({ job_car: path?.split("/")?.reverse()[0] });
+    // console.log(res, "Time Sheet data ");
+  };
+
+  useEffect(() => {
+    if (isSuccess) {
+      // console.log(data, "response from server");
+      if (timeSheetData) {
+        setTimeSheet(timeSheetData.results);
+      }
+    }
+  }, [isSuccess]);
   const getJobDetails = async () => {
     const res = await jobDetailsApi({ id: path?.split("/")?.reverse()[0] });
     console.log(res, ">>>>>>>>>>>>");
@@ -100,7 +126,7 @@ function ProjectDetails() {
 
   const getPaymentBals = async () => {
     const res = await paymentApi({ id: path?.split("/")?.reverse()[0] });
-    console.log(res, "PAYMENTBALLS");
+    // console.log(res, "PAYMENTBALLS");
   };
 
   let sum = Number(job?.completion_percentage || 0);
@@ -111,6 +137,10 @@ function ProjectDetails() {
     // console.log(res, id, "Response >>>>");
     setPaymentBallTask([...res.data.results]);
   };
+
+  useEffect(() => {
+    getTimeSheetData();
+  }, []);
 
   useEffect(() => {
     if (paymentIsSuccess) {
@@ -151,7 +181,7 @@ function ProjectDetails() {
 
   const getExpenses = async () => {
     const res = await expenseApi({ job_card: path?.split("/")?.reverse()[0] });
-
+    console.log(res, "EXPENSES BY PROJECT ID");
   };
 
   useEffect(() => {
@@ -159,6 +189,9 @@ function ProjectDetails() {
       getExpenses();
     }
   }, [isCreateExpensesDialogOpen]);
+  useEffect(() => {
+    getExpenses();
+  }, []);
 
   let totalAmount = 0;
 
@@ -170,7 +203,10 @@ function ProjectDetails() {
       }
     }
   }, [isExpenseSuccess]);
-
+  const totalHours = timesheet?.reduce(
+    (sum, entry: any) => sum + Number(entry?.hours_logged),
+    0
+  );
   // console.log(job?.payment_terms_display, ">>>>");
 
   return (
@@ -185,13 +221,13 @@ function ProjectDetails() {
               <ClipboardCheck />
               Payment Ball
             </Button> */}
-            <Button
+            {/* <Button
               className="text-sm gap-3 tracking-wide float-right mx-4"
               onClick={() => setApprove(true)}
             >
               <ClipboardCheck />
               Approve
-            </Button>
+            </Button> */}
             <Button
               className="text-sm gap-3 tracking-wide float-right"
               onClick={() => setIsTaskDialogOpen(true)}
@@ -210,7 +246,13 @@ function ProjectDetails() {
           </div>
           <div className="flex justify-between  gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-5  p-4 bg-white rounded-lg shadow-md">
             <Bubble
-              color={!isDateGreaterThanToday(job?.delivery_timelines)  ? "#D2122E" : sum < 100 ? "#5D6166" : "#662d91"}
+              color={
+                !isDateGreaterThanToday(job?.delivery_timelines)
+                  ? "#D2122E"
+                  : sum < 100
+                  ? "#5D6166"
+                  : "#662d91"
+              }
               // color={
               //   sum > 0 && sum < 20
               //     ? "#c7c4bf"
@@ -239,29 +281,29 @@ function ProjectDetails() {
             <Bubble
               color={"#f87171"}
               title={"Hours"}
-              value={"0 Hr"}
+              value={`${totalHours.toFixed(2)} Hr`}
               setTab={setTab}
               btn={true}
             />
             <Bubble
               color={"#c084fc"}
               title={"Expenses"}
-              value={
+              value={`${
                 expenses?.reduce(
                   (sum: any, item: any) => Number(sum) + Number(item.amount),
                   0
                 ) || 0
-              }
+              } AED`}
               setTab={setTab}
               btn={true}
             />
-            {/* <Bubble
+            <Bubble
               color={"#60a5fa"}
-              title={"Etc"}
-              value={"34%"}
-              setTab={setTab}
-              btn={true}
-            /> */}
+              title={"Profit"}
+              value={`${Number(job?.gross_profit).toFixed(2)} AED`}
+              // setTab={setTab}
+              // btn={true}
+            />
           </div>
           <div className="mx-auto w-full flex-1 auto-rows-max gap-4">
             <div className="flex items-center gap-4">
@@ -277,15 +319,15 @@ function ProjectDetails() {
                   <Card x-chunk="dashboard-07-chunk-0">
                     <CardHeader>
                       <div className="flex  justify-between">
-                      <CardTitle>Project Details</CardTitle>
-                      <Button
-                        className="text-sm gap-3 tracking-wide float-right mx-4"
-                      variant={"outline"}
-                        onClick={() => setIsUpdateDialogOpen(true)}
-                      >
-                        <ClipboardCheck />
-                        Update
-                      </Button>
+                        <CardTitle>Project Details</CardTitle>
+                        <Button
+                          className="text-sm gap-3 tracking-wide float-right mx-4"
+                          variant={"outline"}
+                          onClick={() => setIsUpdateDialogOpen(true)}
+                        >
+                          <ClipboardCheck />
+                          Update
+                        </Button>
                       </div>
                       <CardDescription>
                         {/* Enter the employee details and thier performance */}
@@ -356,7 +398,7 @@ function ProjectDetails() {
 
                             {Object.entries(job?.payment_terms_display).map(
                               ([key, value]: any) => {
-                                console.log(key);
+                                // console.log(key);
                                 return (
                                   <div key={key}>
                                     <p>Description: {value.description}</p>
@@ -393,13 +435,12 @@ function ProjectDetails() {
                           {/* {paymentBalls?.map((data, index) => ( */}
 
                           {paymentBalls?.map((ballData: any, index: number) => {
-                            console.log(isDateGreaterThanToday(ballData?.delivery_timelines), " 11111>>>>>>>>");
+                            // console.log(isDateGreaterThanToday(ballData?.delivery_timelines), " 11111>>>>>>>>");
 
                             return (
                               <div
                                 key={index}
                                 className={`border-2 ${
-                                  
                                   paymentBallsDetails?.payment_id ===
                                   ballData?.payment_id
                                     ? "border-blue-600"
@@ -412,7 +453,13 @@ function ProjectDetails() {
                                 }}
                               >
                                 <Wave
-                                  fill={isDateGreaterThanToday(ballData?.delivery_timelines)  ? "#D2122E" :"#4ade80"}
+                                  fill={
+                                    isDateGreaterThanToday(
+                                      ballData?.delivery_timelines
+                                    )
+                                      ? "#D2122E"
+                                      : "#4ade80"
+                                  }
                                   paused={true}
                                   style={{
                                     display: "flex",
@@ -544,18 +591,21 @@ function ProjectDetails() {
                   <Card x-chunk="dashboard-07-chunk-0" className="min-h-64">
                     <CardHeader>
                       <CardTitle>Expenses</CardTitle>
-                      <CardDescription>
-                        {/* Enter the employee details and thier performance */}
+                      <CardDescription className="flex  gap-5 flex-wrap">
                         {expenses?.map((data: any, index: number) => {
-                          console.log(data, "EXP");
+                          // console.log(data, "EXP");
                           return (
                             <div
+                              // onDoubleClick={()=>{
+                              //   setExpenseDetails(data)
+                              //   setIsExpensesDialogOpen(true)
+                              // }}
                               key={index}
                               className={`border cursor-pointer  size-40 hover:scale-105 duration-200 shadow-lg hover:shadow-slate-400 rounded-full overflow-hidden relative flex justify-center items-center`}
                               onClick={() => {
                                 // getTasks(paymentBalls.job_card);
-                                setTaskDetails(data);
-                                setMore(true);
+                                setExpenseDetails(data);
+                                setIsExpensesDialogOpen(true);
                               }}
                             >
                               <Wave
@@ -566,9 +616,10 @@ function ProjectDetails() {
                                   display: "flex",
                                   position: "absolute",
                                   bottom: 0,
+                                  height: "100%",
                                 }}
                                 options={{
-                                  height: 50,
+                                  height: -20,
 
                                   amplitude: 2,
                                   // speed: 0.15,
@@ -619,8 +670,63 @@ function ProjectDetails() {
                         {/* Enter the employee details and thier performance */}
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className="flex  items-center">
-                      <div className="flex gap-5"></div>
+                    <CardContent className="flex  items-center gap-5">
+                      {timesheet?.map((data: any, index: number) => {
+                        // console.log(data, "data ....");
+                        return (
+                          <div
+                            key={index}
+                            className={`border cursor-pointer  size-40 hover:scale-105 duration-200 shadow-lg hover:shadow-slate-400 rounded-full overflow-hidden relative flex justify-center items-center`}
+                            onClick={() => {
+                              router.push(`/timesheet/${data.timesheet_id
+                              }`);
+                            }}
+                          >
+                            <Wave
+                              // fill="#60a5fa"
+                              fill={"#4ade80"}
+                              paused={true}
+                              style={{
+                                display: "flex",
+                                position: "absolute",
+                                bottom: 0,
+                                height: "100%",
+                              }}
+                              options={{
+                                height: -20,
+
+                                amplitude: 2,
+                                // speed: 0.15,
+                                // points: 3,
+                              }}
+                            ></Wave>
+
+                            <Card
+                              x-chunk="dashboard-01-chunk-0"
+                              className="rounded-full size-64 flex justify-center items-center "
+                            >
+                              <div className="z-30">
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                  <CardTitle className="text-md text-center font-medium">
+                                    {data?.employee_name}
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  <div className="text-xl font-bold text-center">
+                                    {data?.hours_logged} hr
+                                  </div>
+                                  <div className="text-sm font-medium text-center">
+                                    {data?.date_logged}
+                                  </div>
+                                  <div className="text-xs font-light text-gray-600 text-center">
+                                    {data?.total_amount} AED
+                                  </div>
+                                </CardContent>
+                              </div>
+                            </Card>
+                          </div>
+                        );
+                      })}
                     </CardContent>
                   </Card>
                 )}
@@ -637,7 +743,7 @@ function ProjectDetails() {
         <UpdateProject
           isDialogOpen={isUpdateDialogOpen}
           setIsDialogOpen={setIsUpdateDialogOpen}
-          data ={job}
+          data={job}
         />
         <CreateTask
           isDialogOpen={isTaskDialogOpen}
@@ -645,6 +751,11 @@ function ProjectDetails() {
           details={job}
           ball={paymentBallsDetails}
           getTasks={getTasks}
+        />
+        <ExpensesDetailsDilog
+          isDialogOpen={isExpenseDialog}
+          setIsDialogOpen={setIsExpensesDialogOpen}
+          data={expenseDetails}
         />
         <CreatePaymentBall
           isDialogOpen={isPaymentDialogOpen}

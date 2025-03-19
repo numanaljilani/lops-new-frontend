@@ -43,9 +43,9 @@ function More({
   data: any;
   getTasks: any;
 }) {
-  if(cardData){
-    console.log(cardData, "cardData");
-  }
+  // if(cardData){
+  //   console.log(cardData, "cardData");
+  // }
 
   const completeStatusSchema = z.object({
     status: z.string().default("Pending"),
@@ -78,12 +78,12 @@ function More({
       },
       id: cardData?.task_id,
     });
-    console.log(res, "res");
+    // console.log(res, "res");
     getTasks(cardData?.payment_ball);
     setIsDialogOpen(false);
   }
 
-  console.log(errors);
+  // console.log(errors);
   return (
     <AlertDialog
       open={isDialogOpen}

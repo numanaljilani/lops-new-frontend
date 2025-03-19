@@ -83,7 +83,7 @@ const defaultPaymentTerms = job?.payment_terms_display
     },
   });
 
-  console.log(errors )
+  // console.log(errors )
   const { fields, append, remove } = useFieldArray({
     control,
     name: "payment_terms", // Name of the field array

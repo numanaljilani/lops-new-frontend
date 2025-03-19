@@ -24,6 +24,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import ErrorMessage from "@/components/errors/ErrorMessage";
 import { useVerifyPaymentStatusMutation } from "@/redux/query/accountsApi";
+import { useRouter } from "next/navigation";
+
 
 export default function AlertAccountStatus({
   isDialogOpen,
@@ -34,6 +36,8 @@ export default function AlertAccountStatus({
   setIsDialogOpen: (value: boolean) => void;
   item: any;
 }) {
+
+  const router = useRouter();
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
 
@@ -155,13 +159,23 @@ console.log(response , ">>>>")
 
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-4 border p-5 rounded-lg shadow-lg">
-            <div>
+            {/* <div>
               <Label htmlFor="job_card">Job Id</Label>
               <Input
                 id="job_card"
                 type="text"
                 disabled
                 value={item?.job_card}
+              />
+            </div> */}
+            <div>
+              <Label htmlFor="job_card">Job Id</Label>
+              <Input
+                id="job_card"
+                type="text"
+                disabled
+                value={item?.
+                  job_number}
               />
             </div>
             {/* <div>
@@ -277,9 +291,12 @@ console.log(response , ">>>>")
                 <ErrorMessage message={errors.notes.message} />
               )}
             </div>
+
+
           </div>
 
           <DialogFooter className="pt-6">
+          
             <Button
               variant={"secondary"}
               onClick={() => setIsDialogOpen(false)}

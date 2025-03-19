@@ -37,15 +37,15 @@ function AlertDialogAlert({
 
   const deleteEmployee = async (url: string) => {
     // Add your deletion logic here
-    console.log(`Deleting at ${url}`);
+    // console.log(`Deleting at ${url}`);
     if(deleteCompany){
       const res = await deleteCompanyApi({ id: url.split("/")[6] });
-      console.log(res, ">>>>");
+      // console.log(res, ">>>>");
       router.replace("/companies");
 
     }else{
       const res = await deleteEmployeeApi({ id: url.split("/")[6] });
-      console.log(res, ">>>>");
+      // console.log(res, ">>>>");
       router.replace("/employee");
     }
 
