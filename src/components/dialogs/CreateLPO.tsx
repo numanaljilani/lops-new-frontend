@@ -36,6 +36,7 @@ function CreateLPO({
 }) {
   const LPOSchema = z.object({
     final_amount: z.string(),
+    project_name: z.string(),
     delivery_timelines: z.string(),
     payment_terms: z
       .array(
@@ -110,10 +111,10 @@ function CreateLPO({
 
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-4 border p-5 rounded-lg shadow-lg">
-            {/* <div>
-              <Label htmlFor="job_number">Job Number</Label>
-              <Input id="job_number" type="text" {...register("job_number")} />
-            </div> */}
+            <div>
+              <Label htmlFor="project_name">Project Name</Label>
+              <Input id="project_name" type="text" {...register("project_name")} />
+            </div>
             <div>
               <Label htmlFor="lpo_number">LPO Number</Label>
               <Input id="lpo_number" type="text" {...register("lpo_number")} />

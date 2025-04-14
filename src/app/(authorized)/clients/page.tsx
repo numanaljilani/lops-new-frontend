@@ -45,11 +45,13 @@ import {
   useDeleteClientMutation,
 } from "../../../redux/query/clientsApi";
 import Alert from "@/components/dialogs/Alert";
+import { PaginationComponent } from "@/components/PaginationComponent";
 
 function Clients() {
   const router = useRouter();
   const [companies, setCompanies] = useState([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [page , setPage] = useState(1)
 
   const [itemToDelete, setItemToDelete] = useState<any>(null);
 
@@ -58,7 +60,7 @@ function Clients() {
     useClientsMutation();
 
   const getClients = async () => {
-    const res = await clientsApi({});
+    const res = await clientsApi({page });
     console.log(res, "response");
   };
 
@@ -69,7 +71,7 @@ function Clients() {
     if (isDialogOpen) {
       getClients();
     }
-  }, [isDialogOpen]);
+  }, [isDialogOpen , page]);
 
   useEffect(() => {
     if (isSuccess) {
@@ -278,10 +280,7 @@ function Clients() {
                   </Table>
                 </CardContent>
                 <CardFooter>
-                  <div className="text-xs text-muted-foreground">
-                    Showing <strong>1-10</strong> of <strong>32</strong>{" "}
-                    products
-                  </div>
+                      <PaginationComponent setPage={setPage} numberOfPages={data?.count} page={page}/>
                 </CardFooter>
               </Card>
             </TabsContent>

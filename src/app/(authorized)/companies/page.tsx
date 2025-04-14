@@ -37,12 +37,13 @@ import { useComponiesMutation, useDeleteCompanyMutation } from "@/redux/query/co
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AlertDialogAlert from "@/components/dialogs/AlertDialog";
+import { PaginationComponent } from "@/components/PaginationComponent";
 
 function Companies() {
   const router = useRouter()
   const [companies, setCompanies] = useState([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  
+  const [page , setPage] = useState(1)
   const [itemToDelete, setItemToDelete] = useState<any>(null);
 
   const [companiesApi, { data, isSuccess, error, isError }] =
@@ -234,10 +235,7 @@ function Companies() {
                   </Table>
                 </CardContent>
                 <CardFooter>
-                  <div className="text-xs text-muted-foreground">
-                    Showing <strong>1-10</strong> of <strong>32</strong>{" "}
-                    products
-                  </div>
+                <PaginationComponent setPage={setPage} numberOfPages={data?.count} page={page}/>
                 </CardFooter>
               </Card>
             </TabsContent>

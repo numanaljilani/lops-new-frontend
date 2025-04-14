@@ -26,7 +26,6 @@ import ErrorMessage from "@/components/errors/ErrorMessage";
 import { useVerifyPaymentStatusMutation } from "@/redux/query/accountsApi";
 import { useRouter } from "next/navigation";
 
-
 export default function AlertAccountStatus({
   isDialogOpen,
   setIsDialogOpen,
@@ -36,7 +35,6 @@ export default function AlertAccountStatus({
   setIsDialogOpen: (value: boolean) => void;
   item: any;
 }) {
-
   const router = useRouter();
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
@@ -44,7 +42,9 @@ export default function AlertAccountStatus({
   const LPOSchema = z.object({
     amount: z.number().default(item?.amount || 0),
     status: z.string().default("Pending"),
-    verification_status: z.string().default(item?.verification_status || "unverified"),
+    verification_status: z
+      .string()
+      .default(item?.verification_status || "unverified"),
     VAT: z.number().default(0),
     charity: z.number().default(0), // Default charity amount
     total_amount: z.number().default(0),
@@ -76,7 +76,6 @@ export default function AlertAccountStatus({
       project_status: item?.status || "Pending",
     },
   });
-  
 
   const [verifyPaymentStatus, { data, isSuccess, error, isError, isLoading }] =
     useVerifyPaymentStatusMutation();
@@ -105,11 +104,11 @@ export default function AlertAccountStatus({
         data: {
           ...data,
           job_card: item?.job_card,
-          project_percentage : 100
+          project_percentage: 100,
         },
         id: item.payment_id,
       });
-console.log(response , ">>>>")
+      console.log(response, ">>>>");
       if (response.error) {
         setWarningMessage("Failed to submit the form. Please try again.");
       } else {
@@ -174,8 +173,7 @@ console.log(response , ">>>>")
                 id="job_card"
                 type="text"
                 disabled
-                value={item?.
-                  job_number}
+                value={item?.job_number}
               />
             </div>
             {/* <div>
@@ -256,7 +254,7 @@ console.log(response , ">>>>")
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value={"unverified"}>
-                        {"Unverified"}
+                        Ready to invoice
                       </SelectItem>
                       <SelectItem value={"invoiced"}>{"Invoiced"}</SelectItem>
                       <SelectItem value={"paid"}>{"Paid"}</SelectItem>
@@ -287,16 +285,11 @@ console.log(response , ">>>>")
                 className="min-h-32"
                 {...register("notes")}
               />
-              {errors.notes && (
-                <ErrorMessage message={errors.notes.message} />
-              )}
+              {errors.notes && <ErrorMessage message={errors.notes.message} />}
             </div>
-
-
           </div>
 
           <DialogFooter className="pt-6">
-          
             <Button
               variant={"secondary"}
               onClick={() => setIsDialogOpen(false)}

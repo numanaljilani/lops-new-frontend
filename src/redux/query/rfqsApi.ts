@@ -9,9 +9,10 @@ export const RFQSApi = createApi({
   baseQuery: fetchBaseQuery({ baseUrl: `${urls.server}/api/v1/client_new/` }),
   endpoints: (builder) => ({
     allRFQs: builder.mutation({
-        query: ({quotation_number}) => {
+        query: ({quotation_number , page }) => {
+          console.log("Inside api" , page )
           return {
-            url: `rfqs/?${quotation_number && `quotation_number=`+ quotation_number}`,
+            url: `rfqs/?page=${page ||"" }&${quotation_number && `quotation_number=`+ quotation_number}`,
             method: "GET",
             headers: {
               "Content-type": "application/json; charset=UTF-8",

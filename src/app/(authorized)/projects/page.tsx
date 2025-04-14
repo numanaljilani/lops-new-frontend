@@ -61,10 +61,12 @@ import CreateExpense from "@/components/dialogs/CreateExpenses";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton component
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"; // Import Pagination components
+import { PaginationComponent } from "@/components/PaginationComponent";
 
 function Projects() {
   const router = useRouter();
   const [jobs, setJobs] = useState([]);
+  const [page , setPage] = useState(1)
   const [projectDetails, setProjectDetails] = useState<any>();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [rfq , setRfq] = useState<any>()
@@ -88,7 +90,7 @@ function Projects() {
 
   const getJobs = async () => {
     setLoading(true); // Set loading to true before fetching data
-    const res = await jobApi({});
+    const res = await jobApi({page });
     console.log(res, "response");
   };
 
@@ -104,7 +106,7 @@ function Projects() {
 
   useEffect(() => {
     if (isSuccess) {
-      console.log(data, "response from server");
+   
       if (data) {
         setJobs(data.results);
         setLoading(false); // Set loading to false after data is fetched
@@ -117,7 +119,7 @@ function Projects() {
       id: itemToDelete.job_id,
       token: "",
     });
-    console.log(res, ">>>>");
+
     getJobs();
   };
 
@@ -174,6 +176,7 @@ function Projects() {
                           Job No
                         </TableHead>
                         <TableHead>Client</TableHead>
+                        {/* <TableHead>Project Name</TableHead> */}
                         <TableHead>Brief of scope</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Profit</TableHead>
@@ -188,6 +191,9 @@ function Projects() {
                         // Skeleton loading UI
                         Array.from({ length: itemsPerPage }).map((_, index) => (
                           <TableRow key={index}>
+                            <TableCell>
+                              <Skeleton className="h-4 w-full" />
+                            </TableCell>
                             <TableCell>
                               <Skeleton className="h-4 w-full" />
                             </TableCell>
@@ -238,6 +244,14 @@ function Projects() {
                             >
                               {data?.client_name || "-"}
                             </TableCell>
+                            {/* <TableCell
+                              className="font-medium"
+                              onClick={() =>
+                                router.push(`/projects/${data.job_id}`)
+                              }
+                            >
+                              {data?.project_name || "-"}
+                            </TableCell> */}
                             <TableCell
                               className="font-medium"
                               onClick={() =>
@@ -314,22 +328,7 @@ function Projects() {
                 </CardContent>
                 {/* Pagination */}
                 <CardFooter className="flex justify-center">
-                  <Pagination>
-                    <PaginationContent>
-                      <PaginationItem>
-                        <PaginationPrevious
-                          onClick={() => paginate(currentPage - 1)}
-                          // disabled={currentPage === 1}
-                        />
-                      </PaginationItem>
-                      <PaginationItem>
-                        <PaginationNext
-                          onClick={() => paginate(currentPage + 1)}
-                          // disabled={indexOfLastItem >= jobs.length}
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
+                <PaginationComponent setPage={setPage} numberOfPages={data?.count} page={page}/>
                 </CardFooter>
               </Card>
             </TabsContent>

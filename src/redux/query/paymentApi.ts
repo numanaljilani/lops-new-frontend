@@ -68,7 +68,20 @@ export const paymentApi = createApi({
         };
       },
     }),
-    deleteClient: builder.mutation({
+    deleteTask: builder.mutation({
+      query: ({id , token}) => {
+  
+        return {
+          url: `tasks/${id}/`,
+          method: "DELETE",
+          headers: {
+            "Content-type": "application/json; charset=UTF-8",
+            authorization: `bearer ${token}`,
+          },
+        };
+      },
+    }),
+    deletePaymentBall: builder.mutation({
       query: (data) => {
         // console.log("delet client ", data);
         return {
@@ -116,8 +129,9 @@ export const {
   usePaymentsMutation,
   useTasksMutation,
   useCreateTaskMutation,
-  useDeleteClientMutation,
+  useDeletePaymentBallMutation,
   usePatchClientMutation,
   useCreateBallMutation,
-  useUpdateTtasksMutation
+  useUpdateTtasksMutation,
+  useDeleteTaskMutation
 } = paymentApi;

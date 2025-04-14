@@ -66,7 +66,7 @@ function CreatePaymentBall({
     project_percentage: z.string().default("0"),
     project_status: z.string(),
     notes: z.string(),
-    invoice_number: z.string(),
+    // invoice_number: z.string(),
     amount: z.string(),
     payment_terms: z.any(),
   });
@@ -79,18 +79,19 @@ function CreatePaymentBall({
     formState: { errors, isSubmitting },
   } = useForm({ resolver: zodResolver(PaymentBallSchema) });
 
-  const now = today(getLocalTimeZone());
 
+  const now = today(getLocalTimeZone());
+  const [createPaymentBallApi, { data, isSuccess, error, isError }] =
+    useCreateBallMutation();
   async function onSubmit(data: any) {
     const res = await createPaymentBallApi({
       data: { ...data, job_card: id, color_status: "gray" },
     });
-    // console.log(res, "CREATE PAYMENT BAALL");
+    console.log(res, "CREATE PAYMENT BAALL");
     setIsDialogOpen(false);
   }
 
-  const [createPaymentBallApi, { data, isSuccess, error, isError }] =
-    useCreateBallMutation();
+
 
   useEffect(() => {
     if (isSuccess) {
@@ -179,7 +180,7 @@ function CreatePaymentBall({
                 </div>
               </div>
             </div> */}
-            <div>
+            {/* <div>
               <Label htmlFor="invoice_number">Invoice Number</Label>
 
               <div className="space-y-2">
@@ -193,7 +194,7 @@ function CreatePaymentBall({
                   />
                 </div>
               </div>
-            </div>
+            </div> */}
             <div>
               <Label htmlFor="invoice_number">Note</Label>
 
@@ -202,7 +203,7 @@ function CreatePaymentBall({
                   <Input
                     id="input-16"
                     className="-me-px rounded-e-none ps-6 shadow-none"
-                    placeholder="1234001"
+                    // placeholder="1234001"
                     type="text"
                     {...register("notes")}
                   />

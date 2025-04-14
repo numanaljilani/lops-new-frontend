@@ -39,7 +39,8 @@ function CreateDialog({
     useClientsMutation();
 
   const getClients = async () => {
-    await clientsApi({});
+    const res = await clientsApi({page : 1});
+    console.log(res , "<><><><>><><>>")
   };
 
   useEffect(() => {

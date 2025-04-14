@@ -9,9 +9,9 @@ export const accountsApi = createApi({
   baseQuery: fetchBaseQuery({ baseUrl: `${urls.server}/api/v1/client_new/` }),
   endpoints: (builder) => ({
     paymentBallsList: builder.mutation({
-        query: (data) => {
+        query: ({page , id , percentage}) => {
           return {
-            url: "accounts/payment-balls/?verification_status=&project_status=&project_percentage=100",
+            url: `accounts/payment-balls/?page=${page}&verification_status=&project_status=&project_percentage=${percentage || ''}&job_card=${id || ""}`,
             method: "GET",
             headers: {
               "Content-type": "application/json; charset=UTF-8",

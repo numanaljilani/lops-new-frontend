@@ -51,12 +51,14 @@ import CreateLPO from "@/components/dialogs/CreateLPO";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton component
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"; // Import Pagination components
+import { PaginationComponent } from "@/components/PaginationComponent";
 
 function RFQs() {
   const router = useRouter();
   const [rfqs, setRFQs] = useState([]);
   const [filteredRFQs, setFilteredRFQs] = useState([]); // State for filtered RFQs
   const [searchQuery, setSearchQuery] = useState(""); // State for search query
+  const [page , setPage] = useState(1)
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCreateRFQDialogOpen, setIsCreateRFQDialogOpen] = useState(false);
   const [isCreateLPODialogOpen, setIsCreateLPODialogOpen] = useState(false);
@@ -89,12 +91,12 @@ function RFQs() {
   // Fetch RFQs
   const getRFQs = async () => {
     setLoading(true); // Set loading to true before fetching data
-    const res = await rfqsApi({});
+    const res = await rfqsApi({page});
   };
 
   useEffect(() => {
     getRFQs();
-  }, []);
+  }, [page]);
 
   useEffect(() => {
     if (isSuccess && data) {
@@ -110,10 +112,10 @@ function RFQs() {
     let res;
     if (query === "") {
       // If the search query is empty, reset to all RFQs
-       res = await rfqsApi({ quotation_number: query });
+       res = await rfqsApi({ quotation_number: query ,page : 1 });
       setFilteredRFQs(rfqs);
     } else {
-       res = await rfqsApi({ quotation_number: query });
+       res = await rfqsApi({ quotation_number: query  , page : 1 });
       // Call the API to search for RFQs
       setLoading(true); // Show loading state while fetching
       // Pass the search query to the API
@@ -129,7 +131,7 @@ function RFQs() {
     setIsCreateRFQDialogOpen(false);
 
     const res = await createRFQApi({ data: { ...rfq }, token: "" });
-    console.log(res, "response");
+    // console.log(res, "response");
     getRFQs();
   };
 
@@ -139,7 +141,7 @@ function RFQs() {
       id: itemToDelete.rfq_id,
       token: "",
     });
-    console.log(res, ">>>>");
+    // console.log(res, ">>>>");
     getRFQs();
   };
 
@@ -261,7 +263,7 @@ function RFQs() {
                             </TableCell>
                             <TableCell
                               className="font-medium"
-                              onClick={() => router.push(`/rfqs/${data.rfq_id}`)}
+                              // onClick={() => router.push(`/rfqs/${data.rfq_id}`)}
                             >
                               {data?.quotation_number}
                             </TableCell>
@@ -337,22 +339,7 @@ function RFQs() {
                 </CardContent>
                 {/* Pagination */}
                 <CardFooter className="flex justify-center">
-                  <Pagination>
-                    <PaginationContent>
-                      <PaginationItem>
-                        <PaginationPrevious
-                          onClick={() => paginate(currentPage - 1)}
-                          // disabled={currentPage === 1}
-                        />
-                      </PaginationItem>
-                      <PaginationItem>
-                        <PaginationNext
-                          onClick={() => paginate(currentPage + 1)}
-                          // disabled={indexOfLastItem >= filteredRFQs.length}
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
+                       <PaginationComponent setPage={setPage} numberOfPages={data?.count} page={page}/>
                 </CardFooter>
               </Card>
             </TabsContent>

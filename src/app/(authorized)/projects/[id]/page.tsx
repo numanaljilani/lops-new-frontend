@@ -6,6 +6,7 @@ import CreateExpense from "@/components/dialogs/CreateExpenses";
 import CreatePaymentBall from "@/components/dialogs/CreatePaymentBall";
 import CreateQuotation from "@/components/dialogs/CreateQuotation";
 import CreateTask from "@/components/dialogs/CreateTask";
+import DeleteItem from "@/components/dialogs/DeleteItem";
 import ExpensesDetailsDilog from "@/components/dialogs/ExpensesDetailsDilog";
 import More from "@/components/dialogs/More";
 import UpdateProject from "@/components/dialogs/UpdateProject";
@@ -17,24 +18,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { date, formatDate, isDateGreaterThanToday } from "@/lib/dateFormat";
-import { useComponiesMutation } from "@/redux/query/componiesApi";
-import { usePatchEmployeeMutation } from "@/redux/query/employee";
+import { usePaymentBallsListMutation } from "@/redux/query/accountsApi";
+
 import { useExpensesMutation } from "@/redux/query/expensesApi";
 import { useJobDetailsMutation } from "@/redux/query/jobApi";
 import {
+  useDeletePaymentBallMutation,
   usePaymentsMutation,
   useTasksMutation,
+  useDeleteTaskMutation,
 } from "@/redux/query/paymentApi";
 import { useRFQDetailsMutation } from "@/redux/query/rfqsApi";
 import { useTimesheetMutation } from "@/redux/query/timesheet";
@@ -44,6 +38,7 @@ import {
   ClipboardCheck,
   CreditCard,
   DollarSign,
+  Trash2,
   Users,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
@@ -69,6 +64,9 @@ function ProjectDetails() {
   const [job, setJob] = useState<any>();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isPaymentDeleteDialogOpen, setIsPaymentDeleteDialogOpen] =
+    useState(false);
+  const [isTaskDeleteDialogOpen, setIsTaskDeleteDialogOpen] = useState(false);
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const [timesheet, setTimeSheet] = useState([]);
@@ -86,6 +84,8 @@ function ProjectDetails() {
       isError: taskIsError,
     },
   ] = useTasksMutation();
+
+  const [daleteTaskApi] = useDeleteTaskMutation();
   const [
     paymentApi,
     {
@@ -94,7 +94,8 @@ function ProjectDetails() {
       error: paymentError,
       isError: paymentIsError,
     },
-  ] = usePaymentsMutation();
+  ] = usePaymentBallsListMutation();
+  const [deletePaymentBallApi, {}] = useDeletePaymentBallMutation();
 
   const [
     timeSheetApi,
@@ -111,6 +112,7 @@ function ProjectDetails() {
     // console.log(res, "Time Sheet data ");
   };
 
+
   useEffect(() => {
     if (isSuccess) {
       // console.log(data, "response from server");
@@ -119,14 +121,22 @@ function ProjectDetails() {
       }
     }
   }, [isSuccess]);
+  useEffect(() => {
+    if (paymentIsError) {
+      // console.log(data, "response from server");
+      if (timeSheetData) {
+        console.log(paymentError , "paymentError")
+      }
+    }
+  }, [paymentIsError]);
   const getJobDetails = async () => {
     const res = await jobDetailsApi({ id: path?.split("/")?.reverse()[0] });
-    console.log(res, ">>>>>>>>>>>>");
+    // console.log(res, ">>>>>>>>>>>>");
   };
 
   const getPaymentBals = async () => {
-    const res = await paymentApi({ id: path?.split("/")?.reverse()[0] });
-    // console.log(res, "PAYMENTBALLS");
+    const res = await paymentApi({ page : 1,id: path?.split("/")?.reverse()[0] });
+    console.log(res, "PAYMENTBALLS");
   };
 
   let sum = Number(job?.completion_percentage || 0);
@@ -134,8 +144,9 @@ function ProjectDetails() {
   const getTasks = async (id: number) => {
     const res = await taskApi({ id });
 
-    // console.log(res, id, "Response >>>>");
-    setPaymentBallTask([...res.data.results]);
+    if (res?.data) {
+      setPaymentBallTask(res?.data?.results);
+    }
   };
 
   useEffect(() => {
@@ -144,6 +155,7 @@ function ProjectDetails() {
 
   useEffect(() => {
     if (paymentIsSuccess) {
+      console.log(payementData?.results , "payementData?.results")
       setPaymentBalls(payementData?.results);
     }
   }, [paymentIsSuccess]);
@@ -153,10 +165,10 @@ function ProjectDetails() {
     getPaymentBals();
   }, []);
   useEffect(() => {
-    if (!isPaymentDialogOpen) {
+    if (!isPaymentDialogOpen || !isPaymentDeleteDialogOpen  || !more) {
       getPaymentBals();
     }
-  }, [isPaymentDialogOpen]);
+  }, [isPaymentDialogOpen, isPaymentDeleteDialogOpen , more]);
 
   useEffect(() => {
     if (isSuccess) {
@@ -181,7 +193,7 @@ function ProjectDetails() {
 
   const getExpenses = async () => {
     const res = await expenseApi({ job_card: path?.split("/")?.reverse()[0] });
-    console.log(res, "EXPENSES BY PROJECT ID");
+    // console.log(res, "EXPENSES BY PROJECT ID");
   };
 
   useEffect(() => {
@@ -192,6 +204,13 @@ function ProjectDetails() {
   useEffect(() => {
     getExpenses();
   }, []);
+  useEffect(() => {
+    if (!isTaskDialogOpen) {
+      if (taskDetails?.task_id) {
+        getTasks(taskDetails?.task_id);
+      }
+    }
+  }, [isTaskDialogOpen]);
 
   let totalAmount = 0;
 
@@ -208,6 +227,20 @@ function ProjectDetails() {
     0
   );
   // console.log(job?.payment_terms_display, ">>>>");
+
+  const [paymentBallToDelete, setPaymentBallToDelete] = useState();
+
+  const deletePaymentBall = async () => {
+    const res = await deletePaymentBallApi({
+      id: paymentBallsDetails.payment_id,
+    });
+    console.log(res, "RESPONSE");
+  };
+
+  const deleteTask = async () => {
+    const res = await daleteTaskApi({ id: taskDetails?.task_id });
+    console.log(res, ">>>>>>>");
+  };
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -419,13 +452,25 @@ function ProjectDetails() {
                       <CardHeader className="flex-">
                         <CardTitle>Payments</CardTitle>
                         <CardDescription>
+                          {paymentBallsDetails && (
+                            <Button
+                              className="text-sm gap-3 ml-5 tracking-wide float-right border border-red-30 hover:border-red-600 hover:bg-red-100 hover:text-red-600"
+                              variant={"outline"}
+                              onClick={() => {
+                                setIsPaymentDeleteDialogOpen(true);
+                              }}
+                            >
+                              <Trash2 size={18} />
+                              Delete
+                            </Button>
+                          )}
                           <Button
                             className="text-sm gap-3 ml-5 tracking-wide float-right"
                             onClick={() => {
                               setIsPaymentDialogOpen(true);
                             }}
                           >
-                            <ClipboardCheck />
+                            <ClipboardCheck size={18} />
                             Payment Ball
                           </Button>
                         </CardDescription>
@@ -520,7 +565,7 @@ function ProjectDetails() {
                             {/* Enter the employee details and thier performance */}
                           </CardDescription>
                         </CardHeader>
-                        <CardContent className="flex  items-center ">
+                        <CardContent className="flex  items-center gap-x-5">
                           {payemetBallTask.map((data: any, index: number) => {
                             return (
                               <div
@@ -678,8 +723,7 @@ function ProjectDetails() {
                             key={index}
                             className={`border cursor-pointer  size-40 hover:scale-105 duration-200 shadow-lg hover:shadow-slate-400 rounded-full overflow-hidden relative flex justify-center items-center`}
                             onClick={() => {
-                              router.push(`/timesheet/${data.timesheet_id
-                              }`);
+                              router.push(`/timesheet/${data.timesheet_id}`);
                             }}
                           >
                             <Wave
@@ -777,6 +821,22 @@ function ProjectDetails() {
           isDialogOpen={more}
           data={taskDetails}
           getTasks={getTasks}
+          setIsTaskDeleteDialogOpen={setIsTaskDeleteDialogOpen}
+        />
+
+        <DeleteItem
+          isDialogOpen={isPaymentDeleteDialogOpen}
+          setIsDialogOpen={setIsPaymentDeleteDialogOpen}
+          text={`Are you sure you want to delete payment ball with Id ${paymentBallsDetails?.payment_id}? This action
+          cannot be undone. `}
+          deleteItem={deletePaymentBall}
+        />
+        <DeleteItem
+          isDialogOpen={isTaskDeleteDialogOpen}
+          setIsDialogOpen={setIsTaskDeleteDialogOpen}
+          text={`Are you sure you want to delete the task ? This action
+          cannot be undone. `}
+          deleteItem={deleteTask}
         />
       </div>
     </div>

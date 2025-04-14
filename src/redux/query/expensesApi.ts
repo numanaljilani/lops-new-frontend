@@ -23,7 +23,7 @@ export const expensesApi = createApi({
         query: (data) => {
           console.log(data , "API")
           return {
-            url: `expenses/?${data?.job_card && `job_card=`+data?.job_card}`,
+            url: `expenses/?page=${data?.page || 1 }&${data?.job_card && `job_card=`+data?.job_card}`,
             method: "GET",
             headers: {
               "Content-type": "application/json; charset=UTF-8",

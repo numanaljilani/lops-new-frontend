@@ -45,11 +45,13 @@ import CreateExpenseFromPage from "@/components/dialogs/CreateExpensesFromPage";
 import { useExpensesMutation } from "@/redux/query/expensesApi";
 import { useJobsMutation } from "@/redux/query/jobApi";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PaginationComponent } from "@/components/PaginationComponent";
 
 function Expenses() {
   const router = useRouter();
   const [expenses, setExpenses] = useState([]);
   const [alljobs, setAllJobs] = useState([]);
+  const [page , setPage] = useState(1)
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCreateExpensesDialogOpen, setIsCreateExpensesDialogOpen] =
     useState(false);
@@ -74,7 +76,8 @@ function Expenses() {
 
   const getExpenses = async () => {
     setIsLoading(true);
-    const res = await expenseApi({});
+    const res = await expenseApi({ page });
+ 
     setIsLoading(false);
   };
 
@@ -82,7 +85,7 @@ function Expenses() {
     if (!isCreateExpensesDialogOpen) {
       getExpenses();
     }
-  }, [isCreateExpensesDialogOpen]);
+  }, [isCreateExpensesDialogOpen , page]);
 
   useEffect(() => {
     if (isSuccess) {
@@ -100,39 +103,19 @@ function Expenses() {
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
           <Tabs defaultValue="all">
             <div className="flex items-center justify-between">
-              <TabsList className="hidden sm:flex">
+              {/* <TabsList className="hidden sm:flex">
                 <TabsTrigger value="all">All</TabsTrigger>
                 <TabsTrigger value="pending">Pending</TabsTrigger>
                 <TabsTrigger value="completed">Completed</TabsTrigger>
-              </TabsList>
+              </TabsList> */}
               <div className="ml-auto flex items-center gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-7 gap-1">
-                      <ListFilter className="h-3.5 w-3.5" />
-                      <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                        Filter
-                      </span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Filter by</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuCheckboxItem checked>
-                      All
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem>Pending</DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem>
-                      Completed
-                    </DropdownMenuCheckboxItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <Button size="sm" variant="outline" className="h-7 gap-1">
+                
+                {/* <Button size="sm" variant="outline" className="h-7 gap-1">
                   <File className="h-3.5 w-3.5" />
                   <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
                     Export
                   </span>
-                </Button>
+                </Button> */}
                 <Button
                   size="sm"
                   className="h-7 gap-1"
@@ -276,11 +259,12 @@ function Expenses() {
                     </div>
                   )}
                 </CardContent>
-                <CardFooter>
-                  <div className="text-xs text-muted-foreground">
+                <CardFooter className="flex flex-row">
+                  {/* <div className="text-xs text-muted-foreground">
                     Showing <strong>1-{expenses.length}</strong> of{" "}
-                    <strong>{expenses.length}</strong> expenses
-                  </div>
+                    <strong>{data?.count}</strong> expenses
+                  </div> */}
+                  <PaginationComponent setPage={setPage} numberOfPages={data?.count} page={page}/>
                 </CardFooter>
               </Card>
             </TabsContent>

@@ -7,9 +7,9 @@ export const jobApi = createApi({
   baseQuery: fetchBaseQuery({ baseUrl: `${urls.server}/api/v1/client_new/` }),
   endpoints: (builder) => ({
     jobs: builder.mutation({
-      query: (data) => {
+      query: ({page}) => {
         return {
-          url: "jobcards",
+          url: `jobcards/?page=${page || 1 }`,
           method: "GET",
           headers: {
             "Content-type": "application/json; charset=UTF-8",

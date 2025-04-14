@@ -50,10 +50,12 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useRouter } from "next/navigation";
+import { PaginationComponent } from "@/components/PaginationComponent";
 
 function Employee() {
   const router = useRouter()
   const [employee, setEmployee] = useState([]);
+    const [page , setPage] = useState(1)
   const [employeeApi, { data, isSuccess, error, isError }] =
     useEmployeeMutation();
 
@@ -255,10 +257,7 @@ function Employee() {
                   </Table>
                 </CardContent>
                 <CardFooter>
-                  <div className="text-xs text-muted-foreground">
-                    Showing <strong>1-10</strong> of <strong>32</strong>{" "}
-                    products
-                  </div>
+                <PaginationComponent setPage={setPage} numberOfPages={data?.count} page={page}/>
                 </CardFooter>
               </Card>
             </TabsContent>

@@ -9,9 +9,9 @@ export const employeeApi = createApi({
   baseQuery: fetchBaseQuery({ baseUrl: `${urls.server}/api/v1/` }),
   endpoints: (builder) => ({
     employee: builder.mutation({
-        query: (data) => {
+        query: ({page}) => {
           return {
-            url: "employees",
+            url: `employees/?page=${page || 1}`,
             method: "GET",
             headers: {
               "Content-type": "application/json; charset=UTF-8",

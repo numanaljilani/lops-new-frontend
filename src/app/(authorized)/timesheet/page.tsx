@@ -7,64 +7,62 @@ import { Badge } from "@/components/ui/badge";
 
 import { Button } from "@/components/ui/button";
 import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardFooter,
-    CardHeader,
-    CardTitle,
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
 import {
-    DropdownMenu,
-    DropdownMenuCheckboxItem,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { date, formatDate, timeFormat } from "@/lib/dateFormat";
-import { useComponiesMutation, useDeleteCompanyMutation } from "@/redux/query/componiesApi";
+import {
+  useComponiesMutation,
+  useDeleteCompanyMutation,
+} from "@/redux/query/componiesApi";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import AlertDialogAlert from "@/components/dialogs/AlertDialog";
 import { useTimesheetMutation } from "@/redux/query/timesheet";
-
+import { PaginationComponent } from "@/components/PaginationComponent";
 
 function TimeSheet() {
-  const router = useRouter()
-    const path = usePathname();
+  const router = useRouter();
+  const path = usePathname();
   const [timesheet, setTimeSheet] = useState([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  
+  const [page, setPage] = useState(1);
   const [itemToDelete, setItemToDelete] = useState<any>(null);
 
   const [timeSheetApi, { data, isSuccess, error, isError }] =
-  useTimesheetMutation();
-  const [deleteCompanyApi] = useDeleteCompanyMutation()
+    useTimesheetMutation();
+  const [deleteCompanyApi] = useDeleteCompanyMutation();
 
   const getTimeSheetData = async () => {
-    const res = await timeSheetApi({});
+    const res = await timeSheetApi({page});
     console.log(res, "response");
   };
 
-
   useEffect(() => {
-
-      getTimeSheetData();
-    
- 
-  }, []);
-
+    getTimeSheetData();
+  }, [page]);
 
   useEffect(() => {
     if (isSuccess) {
@@ -75,18 +73,17 @@ function TimeSheet() {
     }
   }, [isSuccess]);
 
+  const deleteCompany = async (url: string) => {
+    console.log(url.split("/")[6]);
+    const res = await deleteCompanyApi({ id: url.split("/")[6] });
+    console.log(res, ">>>>");
+    getTimeSheetData();
+  };
 
-  const deleteCompany = async(url : string) =>{
-    console.log(url.split("/")[6])
-    const res = await deleteCompanyApi({id : url.split("/")[6]})
-    console.log(res , ">>>>")
-    getTimeSheetData()
-  }
-
-  const update = async (url : string) =>{
-    console.log(url.split("/").reverse()[1])
-    router.push(`/timesheet/${url.split("/").reverse()[1]}`)
-  }
+  const update = async (url: string) => {
+    console.log(url.split("/").reverse()[1]);
+    router.push(`/timesheet/${url.split("/").reverse()[1]}`);
+  };
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
@@ -155,14 +152,13 @@ function TimeSheet() {
                 <CardHeader>
                   <CardTitle>Time & Logs</CardTitle>
                   <CardDescription>
-                    Manage your Times and logs and view  performance.
+                    Manage your Times and logs and view performance.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Table>
                     <TableHeader>
                       <TableRow>
-                      
                         {/* <TableHead>Name</TableHead> */}
                         <TableHead>Date</TableHead>
                         <TableHead>In</TableHead>
@@ -184,63 +180,100 @@ function TimeSheet() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {timesheet?.map((data : {date_logged : string , added_date : string , hours_logged : string , remarks : string , total_amount : string , url : string}, index : number) => {
-                        return (
-                          <TableRow key={index} className="cursor-pointer" onClick={()=> router.push(`/timesheet/${path?.split("/")?.reverse()[0]}`)}>
-                            
-                            <TableCell className="font-medium">
-                            {date(data?.date_logged)}
-                            </TableCell>
-                            {/* <TableCell>
+                      {timesheet?.map(
+                        (
+                          data: {
+                            date_logged: string;
+                            added_date: string;
+                            hours_logged: string;
+                            remarks: string;
+                            total_amount: string;
+                            url: string;
+                          },
+                          index: number
+                        ) => {
+                          return (
+                            <TableRow
+                              key={index}
+                              className="cursor-pointer"
+                              onClick={() =>
+                                router.push(
+                                  `/timesheet/${path?.split("/")?.reverse()[0]}`
+                                )
+                              }
+                            >
+                              <TableCell className="font-medium">
+                                {date(data?.date_logged)}
+                              </TableCell>
+                              {/* <TableCell>
                               <Badge variant="outline">{data?.active ? "Active" : "Inactive"}</Badge>
                             </TableCell> */}
-                            <TableCell>{data?.added_date ? timeFormat(data?.added_date ) : "-"}</TableCell>
-                            <TableCell className="hidden md:table-cell">
-                            {data?.added_date ? timeFormat(data?.added_date) : "-"}
-                            </TableCell>
-                            <TableCell className="hidden md:table-cell">
-                              {data.hours_logged
-}
-                            </TableCell>
-                            <TableCell className="hidden md:table-cell">
-                              {data.total_amount
-}
-                            </TableCell>
-                            <TableCell className="hidden md:table-cell">
-                              {data.remarks}
-                            </TableCell>
-                            <TableCell>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    aria-haspopup="true"
-                                    size="icon"
-                                    variant="ghost"
-                                  >
-                                    <MoreHorizontal className="h-4 w-4" />
-                                    <span className="sr-only">Toggle menu</span>
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                  <DropdownMenuItem onClick={()=> update(data.url)}>Edit</DropdownMenuItem>
-                                  <DropdownMenuItem onClick={()=>{
-                                  setItemToDelete(data);
-                                    setIsDialogOpen(true)}}>Delete</DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
+                              <TableCell>
+                                {data?.added_date
+                                  ? timeFormat(data?.added_date)
+                                  : "-"}
+                              </TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                {data?.added_date
+                                  ? timeFormat(data?.added_date)
+                                  : "-"}
+                              </TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                {data.hours_logged}
+                              </TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                {data.total_amount}
+                              </TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                {data.remarks}
+                              </TableCell>
+                              <TableCell>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      aria-haspopup="true"
+                                      size="icon"
+                                      variant="ghost"
+                                    >
+                                      <MoreHorizontal className="h-4 w-4" />
+                                      <span className="sr-only">
+                                        Toggle menu
+                                      </span>
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>
+                                      Actions
+                                    </DropdownMenuLabel>
+                                    <DropdownMenuItem
+                                      onClick={() => update(data.url)}
+                                    >
+                                      Edit
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        setItemToDelete(data);
+                                        setIsDialogOpen(true);
+                                      }}
+                                    >
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        }
+                      )}
                     </TableBody>
                   </Table>
                 </CardContent>
                 <CardFooter>
-                  <div className="text-xs text-muted-foreground">
-                    Showing <strong>1-10</strong> of <strong>32</strong>{" "}
-                    products
-                  </div>
+                  <PaginationComponent
+                    setPage={setPage}
+                    numberOfPages={data?.count}
+                    page={page}
+                  />
                 </CardFooter>
               </Card>
             </TabsContent>

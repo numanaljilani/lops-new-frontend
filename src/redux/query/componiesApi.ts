@@ -9,9 +9,9 @@ export const companiesApi = createApi({
   baseQuery: fetchBaseQuery({ baseUrl: `${urls.server}/api/v1/` }),
   endpoints: (builder) => ({
     componies: builder.mutation({
-        query: (data) => {
+        query: ({page}) => {
           return {
-            url: "companies",
+            url: `companies/?page=${page || 1 }`,
             method: "GET",
             headers: {
               "Content-type": "application/json; charset=UTF-8",
