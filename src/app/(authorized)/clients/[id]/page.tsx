@@ -1,13 +1,10 @@
 "use client";
 import AlertDialogAlert from "@/components/dialogs/AlertDialog";
-import CreateDialog from "@/components/dialogs/CreateDialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -20,43 +17,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Tabs } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { formatDate } from "@/lib/dateFormat";
 import {
   useClientDetailsMutation,
   usePatchClientMutation,
 } from "@/redux/query/clientsApi";
-import { useCreateRFQMutation, useRfqsMutation } from "@/redux/query/rfqsApi";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@radix-ui/react-dropdown-menu";
-import { TabsContent } from "@radix-ui/react-tabs";
-import { File, ListFilter, MoreHorizontal, PlusCircle } from "lucide-react";
-import Image from "next/image";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
 import { useForm, Controller } from "react-hook-form";
+import { toast, Toaster } from "sonner";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 
-// Define Zod schema for form validation
 const clientSchema = z.object({
   client_name: z.string().min(1, "Client name is required"),
   aob: z.string().min(1, "AOB is required"),
@@ -71,22 +43,27 @@ const clientSchema = z.object({
 
 type ClientFormValues = z.infer<typeof clientSchema>;
 
-export default function Client() {
-  const router = useRouter();
-  const path = usePathname();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isCreateRFQDialogOpen, setIsCreateRFQDialogOpen] = useState(false);
-  const [updateView, setUpdateView] = useState(false);
+function Skeleton({ className } : any) {
+  return <div className={`animate-pulse bg-muted rounded-md ${className}`} />;
+}
 
-  const [clientsDetailsApi, { data, isSuccess, error, isError }] =
+export default function Client() {
+  const { id } = useParams();
+  const router = useRouter();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [updateView, setUpdateView] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const [clientsDetailsApi, { data, isSuccess, isLoading: isClientLoading }] =
     useClientDetailsMutation();
-  const [patchClientApi] = usePatchClientMutation();
+  const [patchClientApi, { isLoading: isPatchLoading }] = usePatchClientMutation();
 
   const {
     handleSubmit,
     control,
     formState: { errors },
     reset,
+    setValue,
   } = useForm<ClientFormValues>({
     resolver: zodResolver(clientSchema),
     defaultValues: {
@@ -102,57 +79,383 @@ export default function Client() {
     },
   });
 
-  useEffect(() => {
-    if (isSuccess && data) {
-      reset(data); // Reset form with fetched data
-    }
-  }, [isSuccess, data, reset]);
-
   const getClientDetails = async () => {
-    const res = await clientsDetailsApi({
-      id: path.split("/").reverse()[0],
-      token: "",
-    });
-    console.log(res, "response from the server");
+    if (!id) return;
+    setIsLoading(true);
+    try {
+      const res = await clientsDetailsApi({ id, token: "" });
+      console.log(res, "response from the server");
+    } catch (err) {
+      console.error("Error fetching client:", err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
     getClientDetails();
-  }, []);
+  }, [id]);
 
-  const saveCompanyDetails = async (formData: ClientFormValues) => {
-    const res = await patchClientApi({
-      id: path.split("/").reverse()[0],
-      details: formData,
-      token: "",
-    });
-    toast(`Updated`, {
-      description: "Client information has been updated.",
-    });
-    setUpdateView(false);
+  useEffect(() => {
+    if (isSuccess && data) {
+      reset(data);
+      setValue("status", data.status);
+    }
+  }, [isSuccess, data, reset, setValue]);
+
+  const saveClientDetails = async (formData: ClientFormValues) => {
+    if (!id) return;
+    try {
+      const res = await patchClientApi({
+        id,
+        details: formData,
+        token: "",
+      });
+      toast("Updated", {
+        description: "Client information has been updated.",
+      });
+      setUpdateView(false);
+      getClientDetails();
+    } catch (err) {
+      console.error("Error updating client:", err);
+    }
   };
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
-      <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
+      <Toaster />
+      <div className="flex flex-col gap-4 p-4 sm:p-6 md:p-8">
         {updateView ? (
-          <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
-            <div className="mx-auto grid max-w-[59rem]  w-full flex-1 auto-rows-max gap-4">
-              <div className="flex items-center gap-4 ">
-                <h1 className="flex-1 shrink-0 whitespace-nowrap text-xl font-semibold tracking-tight sm:grow-0">
-                  Client
+          <main className="grid flex-1 items-start gap-4 w-full mx-auto">
+            <div className="grid gap-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <h1 className="text-xl font-semibold tracking-tight">
+                  Update Client
                 </h1>
-
-                <div className="hidden items-center gap-2 md:ml-auto md:flex">
+                <div className="flex items-center gap-2 ml-auto">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setUpdateView(false)}
+                    disabled={isPatchLoading}
                   >
                     Discard
                   </Button>
-                  <Button size="sm" onClick={handleSubmit(saveCompanyDetails)}>
-                    Save Changes
+                  <Button
+                    size="sm"
+                    onClick={handleSubmit(saveClientDetails)}
+                    disabled={isPatchLoading}
+                  >
+                    {isPatchLoading ? "Saving..." : "Save Changes"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="bg-red-200 text-red-700 hover:bg-red-300"
+                    onClick={() => setIsDialogOpen(true)}
+                    disabled={isPatchLoading}
+                  >
+                    Delete
+                  </Button>
+                </div>
+              </div>
+              <div className="grid gap-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Client Details</CardTitle>
+                    <CardDescription>Update the client details</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleSubmit(saveClientDetails)}>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="grid gap-3">
+                          <Label htmlFor="client_name">Name</Label>
+                          {isLoading ? (
+                            <Skeleton className="h-10 w-full" />
+                          ) : (
+                            <div>
+                              <Controller
+                                name="client_name"
+                                control={control}
+                                render={({ field }) => (
+                                  <Input
+                                    {...field}
+                                    id="client_name"
+                                    type="text"
+                                    placeholder="Client Name"
+                                  />
+                                )}
+                              />
+                              {errors.client_name && (
+                                <p className="text-red-500 text-sm">
+                                  {errors.client_name.message}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <div className="grid gap-3">
+                          <Label htmlFor="aob">AOB</Label>
+                          {isLoading ? (
+                            <Skeleton className="h-10 w-full" />
+                          ) : (
+                            <div>
+                              <Controller
+                                name="aob"
+                                control={control}
+                                render={({ field }) => (
+                                  <Input
+                                    {...field}
+                                    id="aob"
+                                    type="text"
+                                    placeholder="AOB"
+                                  />
+                                )}
+                              />
+                              {errors.aob && (
+                                <p className="text-red-500 text-sm">
+                                  {errors.aob.message}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <div className="grid gap-3">
+                          <Label htmlFor="contact_person">Contact Person</Label>
+                          {isLoading ? (
+                            <Skeleton className="h-10 w-full" />
+                          ) : (
+                            <div>
+                              <Controller
+                                name="contact_person"
+                                control={control}
+                                render={({ field }) => (
+                                  <Input
+                                    {...field}
+                                    id="contact_person"
+                                    type="text"
+                                    placeholder="Contact Person"
+                                  />
+                                )}
+                              />
+                              {errors.contact_person && (
+                                <p className="text-red-500 text-sm">
+                                  {errors.contact_person.message}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <div className="grid gap-3">
+                          <Label htmlFor="contact_number">Contact Number</Label>
+                          {isLoading ? (
+                            <Skeleton className="h-10 w-full" />
+                          ) : (
+                            <div>
+                              <Controller
+                                name="contact_number"
+                                control={control}
+                                render={({ field }) => (
+                                  <Input
+                                    {...field}
+                                    id="contact_number"
+                                    type="tel"
+                                    placeholder="Contact Number"
+                                  />
+                                )}
+                              />
+                              {errors.contact_number && (
+                                <p className="text-red-500 text-sm">
+                                  {errors.contact_number.message}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <div className="grid gap-3">
+                          <Label htmlFor="contact_info">Contact Email</Label>
+                          {isLoading ? (
+                            <Skeleton className="h-10 w-full" />
+                          ) : (
+                            <div>
+                              <Controller
+                                name="contact_info"
+                                control={control}
+                                render={({ field }) => (
+                                  <Input
+                                    {...field}
+                                    id="contact_info"
+                                    type="email"
+                                    placeholder="Contact Email"
+                                  />
+                                )}
+                              />
+                              {errors.contact_info && (
+                                <p className="text-red-500 text-sm">
+                                  {errors.contact_info.message}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <div className="grid gap-3">
+                          <Label htmlFor="company_name">Company Name</Label>
+                          {isLoading ? (
+                            <Skeleton className="h-10 w-full" />
+                          ) : (
+                            <div>
+                              <Controller
+                                name="company_name"
+                                control={control}
+                                render={({ field }) => (
+                                  <Input
+                                    {...field}
+                                    id="company_name"
+                                    type="text"
+                                    placeholder="Company Name"
+                                  />
+                                )}
+                              />
+                              {errors.company_name && (
+                                <p className="text-red-500 text-sm">
+                                  {errors.company_name.message}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <div className="grid gap-3">
+                          <Label htmlFor="type">Service</Label>
+                          {isLoading ? (
+                            <Skeleton className="h-10 w-full" />
+                          ) : (
+                            <div>
+                              <Controller
+                                name="type"
+                                control={control}
+                                render={({ field }) => (
+                                  <Select
+                                    onValueChange={field.onChange}
+                                    value={field.value}
+                                  >
+                                    <SelectTrigger id="type">
+                                      <SelectValue placeholder="Select Service" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="Consultancy Services">
+                                        Consultancy Services
+                                      </SelectItem>
+                                      <SelectItem value="General Contracting">
+                                        General Contracting
+                                      </SelectItem>
+                                      <SelectItem value="Electro-Mechanical Works">
+                                        Electro-Mechanical Works
+                                      </SelectItem>
+                                      <SelectItem value="Design & Drafting Services">
+                                        Design & Drafting Services
+                                      </SelectItem>
+                                      <SelectItem value="IT Solutions">
+                                        IT Solutions
+                                      </SelectItem>
+                                      <SelectItem value="Video Production Services">
+                                        Video Production Services
+                                      </SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                )}
+                              />
+                              {errors.type && (
+                                <p className="text-red-500 text-sm">
+                                  {errors.type.message}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <div className="grid gap-3">
+                          <Label htmlFor="status">Status</Label>
+                          {isLoading ? (
+                            <Skeleton className="h-10 w-full" />
+                          ) : (
+                            <Controller
+                              name="status"
+                              control={control}
+                              render={({ field }) => (
+                                <Select
+                                  onValueChange={(value) =>
+                                    field.onChange(value === "true")
+                                  }
+                                  value={field.value ? "true" : "false"}
+                                >
+                                  <SelectTrigger id="status">
+                                    <SelectValue placeholder="Select status" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="true">Active</SelectItem>
+                                    <SelectItem value="false">Inactive</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              )}
+                            />
+                          )}
+                        </div>
+                        <div className="grid gap-3 sm:col-span-2">
+                          <Label htmlFor="about">About</Label>
+                          {isLoading ? (
+                            <Skeleton className="h-32 w-full" />
+                          ) : (
+                            <div>
+                              <Controller
+                                name="about"
+                                control={control}
+                                render={({ field }) => (
+                                  <Textarea
+                                    {...field}
+                                    id="about"
+                                    className="min-h-32"
+                                    placeholder="About"
+                                  />
+                                )}
+                              />
+                              {errors.about && (
+                                <p className="text-red-500 text-sm">
+                                  {errors.about.message}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </form>
+                  </CardContent>
+                </Card>
+              </div>
+              <div className="flex gap-2 sm:hidden">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => setUpdateView(false)}
+                >
+                  Discard
+                </Button>
+                <Button
+                  size="sm"
+                  className="flex-1"
+                  onClick={handleSubmit(saveClientDetails)}
+                >
+                  Save
+                </Button>
+              </div>
+            </div>
+          </main>
+        ) : (
+          <main className="grid flex-1 items-start gap-4 w-full mx-auto">
+            <div className="grid gap-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <h1 className="text-xl font-semibold tracking-tight">Client</h1>
+                <div className="flex gap-2 ml-auto sm:flex-row flex-col">
+                  <Button size="sm" onClick={() => setUpdateView(true)}>
+                    Update
                   </Button>
                   <Button
                     size="sm"
@@ -163,404 +466,109 @@ export default function Client() {
                   </Button>
                 </div>
               </div>
-              <div className="grid gap-4 md:grid-cols-[1fr_250px] lg:grid-cols-3 lg:gap-8">
-                <div className="grid auto-rows-max items-start gap-4 lg:col-span-2 lg:gap-8">
-                  <Card x-chunk="dashboard-07-chunk-0">
-                    <CardHeader>
-                      <CardTitle>Client Details</CardTitle>
-                      <CardDescription>
-                        Update the Client details
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <form onSubmit={handleSubmit(saveCompanyDetails)}>
-                        <div className="grid gap-6">
-                          <div className="grid gap-3">
-                            <Label htmlFor="client_name">Name</Label>
-                            <Controller
-                              name="client_name"
-                              control={control}
-                              render={({ field }) => (
-                                <Input
-                                  {...field}
-                                  id="client_name"
-                                  type="text"
-                                  className="w-full"
-                                  placeholder="Client Name"
-                                />
-                              )}
-                            />
-                            {errors.client_name && (
-                              <p className="text-red-500 text-sm">
-                                {errors.client_name.message}
-                              </p>
-                            )}
-                          </div>
-                          <div className="grid gap-3">
-                            <Label htmlFor="aob">AOB</Label>
-                            <Controller
-                              name="aob"
-                              control={control}
-                              render={({ field }) => (
-                                <Input
-                                  {...field}
-                                  id="aob"
-                                  type="text"
-                                  className="w-full"
-                                  placeholder="AOB"
-                                />
-                              )}
-                            />
-                            {errors.aob && (
-                              <p className="text-red-500 text-sm">
-                                {errors.aob.message}
-                              </p>
-                            )}
-                          </div>
-                          <div className="grid gap-3">
-                            <Label htmlFor="contact_person">
-                              Contact Person
-                            </Label>
-                            <Controller
-                              name="contact_person"
-                              control={control}
-                              render={({ field }) => (
-                                <Input
-                                  {...field}
-                                  id="contact_person"
-                                  type="text"
-                                  className="w-full"
-                                  placeholder="Contact Person"
-                                />
-                              )}
-                            />
-                            {errors.contact_person && (
-                              <p className="text-red-500 text-sm">
-                                {errors.contact_person.message}
-                              </p>
-                            )}
-                          </div>
-                          <div className="grid gap-3">
-                            <Label htmlFor="contact_number">
-                              Contact Number
-                            </Label>
-                            <Controller
-                              name="contact_number"
-                              control={control}
-                              render={({ field }) => (
-                                <Input
-                                  {...field}
-                                  id="contact_number"
-                                  type="text"
-                                  className="w-full"
-                                  placeholder="Contact Number"
-                                />
-                              )}
-                            />
-                            {errors.contact_number && (
-                              <p className="text-red-500 text-sm">
-                                {errors.contact_number.message}
-                              </p>
-                            )}
-                          </div>
-                          <div className="grid gap-3">
-                            <Label htmlFor="contact_info">Contact Email</Label>
-                            <Controller
-                              name="contact_info"
-                              control={control}
-                              render={({ field }) => (
-                                <Input
-                                  {...field}
-                                  id="contact_info"
-                                  type="email"
-                                  className="w-full"
-                                  placeholder="Contact Email"
-                                />
-                              )}
-                            />
-                            {errors.contact_info && (
-                              <p className="text-red-500 text-sm">
-                                {errors.contact_info.message}
-                              </p>
-                            )}
-                          </div>
-                          <div className="grid gap-3">
-                            <Label htmlFor="company_name">Company Name</Label>
-                            <Controller
-                              name="company_name"
-                              control={control}
-                              render={({ field }) => (
-                                <Input
-                                  {...field}
-                                  id="company_name"
-                                  type="text"
-                                  className="w-full"
-                                  placeholder="Company Name"
-                                />
-                              )}
-                            />
-                            {errors.company_name && (
-                              <p className="text-red-500 text-sm">
-                                {errors.company_name.message}
-                              </p>
-                            )}
-                          </div>
-                          <div className="grid gap-3">
-                            <Label htmlFor="type">Service</Label>
-                            <Controller
-                              name="type"
-                              control={control}
-                              render={({ field }) => (
-                                <Select
-                                  onValueChange={field.onChange}
-                                  value={field.value}
-                                >
-                                  <SelectTrigger
-                                    id="type"
-                                    aria-label="Select Service"
-                                  >
-                                    <SelectValue placeholder="Select Service" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="Consultancy Services">
-                                      Consultancy Services
-                                    </SelectItem>
-                                    <SelectItem value="General Contracting">
-                                      General Contracting
-                                    </SelectItem>
-                                    <SelectItem value="Electro-Mechanical Works">
-                                      Electro-Mechanical Works
-                                    </SelectItem>
-                                    <SelectItem value="Design & Drafting Services">
-                                      Design & Drafting Services
-                                    </SelectItem>
-                                    <SelectItem value="IT Solutions">
-                                      IT Solutions
-                                    </SelectItem>
-                                    <SelectItem value="Video Production Services">
-                                      Video Production Services
-                                    </SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              )}
-                            />
-                            {errors.type && (
-                              <p className="text-red-500 text-sm">
-                                {errors.type.message}
-                              </p>
-                            )}
-                          </div>
-                          <div className="grid gap-3">
-                            <Label htmlFor="about">About</Label>
-                            <Controller
-                              name="about"
-                              control={control}
-                              render={({ field }) => (
-                                <Textarea
-                                  {...field}
-                                  id="about"
-                                  className="min-h-32"
-                                  placeholder="About"
-                                />
-                              )}
-                            />
-                            {errors.about && (
-                              <p className="text-red-500 text-sm">
-                                {errors.about.message}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </form>
-                    </CardContent>
-                  </Card>
-                </div>
-                <div className="grid auto-rows-max items-start gap-4 lg:gap-8">
-                  <Card x-chunk="dashboard-07-chunk-3">
-                    <CardHeader>
-                      <CardTitle>Employee Status</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid gap-6">
-                        <div className="grid gap-3">
-                          <Label htmlFor="status">Status</Label>
-                          <Controller
-                            name="status"
-                            control={control}
-                            render={({ field }) => (
-                              <Select
-                                onValueChange={(value) =>
-                                  field.onChange(value === "true")
-                                }
-                                value={field.value ? "true" : "false"}
-                              >
-                                <SelectTrigger
-                                  id="status"
-                                  aria-label="Select status"
-                                >
-                                  <SelectValue placeholder="Select status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="true">Active</SelectItem>
-                                  <SelectItem value="false">
-                                    Inactive
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                            )}
-                          />
-                        </div>
+              <div className="grid gap-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Client Details</CardTitle>
+                    <CardDescription>
+                      Checkout the client project and their status
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="grid gap-3">
+                        <Label htmlFor="client_name">Name</Label>
+                        {isLoading ? (
+                          <Skeleton className="h-6 w-3/4" />
+                        ) : (
+                          <h4 className="font-semibold text-lg">{data?.client_name || "-"}</h4>
+                        )}
                       </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-              <div className="flex items-center justify-center gap-2 md:hidden">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setUpdateView(false)}
-                >
-                  Discard
-                </Button>
-                <Button size="sm" onClick={handleSubmit(saveCompanyDetails)}>
-                  Save Changes
-                </Button>
-              </div>
-            </div>
-            <AlertDialogAlert
-              isDialogOpen={isDialogOpen}
-              setIsDialogOpen={setIsDialogOpen}
-              itemToDelete={data}
-              deleteCompany={true}
-            />
-          </main>
-        ) : (
-          <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
-            <div className="mx-auto grid max-w-[59rem] flex-1 auto-rows-max gap-4">
-              <div className="flex items-center gap-4">
-                <h1 className="flex-1 shrink-0 whitespace-nowrap text-xl font-semibold tracking-tight sm:grow-0">
-                  Client
-                </h1>
-
-                <div className="hidden items-center gap-2 md:ml-auto md:flex"></div>
-              </div>
-              <div className="grid gap-4 md:grid-cols-[1fr_250px] lg:grid-cols-3 lg:gap-8">
-                <div className="grid auto-rows-max items-start gap-4 lg:col-span-2 lg:gap-8">
-                  <Card x-chunk="dashboard-07-chunk-0">
-                    <CardHeader>
-                      <CardTitle>Client Details</CardTitle>
-                      <CardDescription>
-                        Checkout the client project and their status
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid gap-6">
-                        <div className="grid gap-3">
-                          <Label htmlFor="name">Name</Label>
-                          <h4 className="font-semibold text-lg">
-                            {data?.client_name}
-                          </h4>
-                        </div>
-                        <div className="grid gap-3">
-                          <Label htmlFor="company">Company</Label>
-                          <h4 className="font-semibold text-lg">
-                            {data?.company_name || "-"}
-                          </h4>
-                        </div>
-                        <div className="grid gap-3">
-                          <Label htmlFor="company">AOB</Label>
-                          <h4 className="font-semibold text-lg">
-                            {data?.aob || "-"}
-                          </h4>
-                        </div>
-                        <div className="grid gap-3">
-                          <Label htmlFor="contact">Contact Person</Label>
-                          <h4 className="font-semibold text-lg">
-                            {data?.contact_person}
-                          </h4>
-                        </div>
-                        <div className="grid gap-3">
-                          <Label htmlFor="contact">Phone </Label>
-                          <h4 className="font-semibold text-lg">
-                            {data?.contact_number}
-                          </h4>
-                        </div>
-                        <div className="grid gap-3">
-                          <Label htmlFor="contact">Contact</Label>
-                          <h4 className="font-semibold text-lg">
-                            {data?.contact_info}
-                          </h4>
-                        </div>
-                        <div className="grid gap-3">
-                          <Label htmlFor="contact">About</Label>
-                          <h4 className="font-medium text-lg">
-                            {data?.about}
-                          </h4>
-                        </div>
+                      <div className="grid gap-3">
+                        <Label htmlFor="company_name">Company</Label>
+                        {isLoading ? (
+                          <Skeleton className="h-6 w-3/4" />
+                        ) : (
+                          <h4 className="font-semibold text-lg">{data?.company_name || "-"}</h4>
+                        )}
                       </div>
-                    </CardContent>
-                  </Card>
-                </div>
-                <div className="grid auto-rows-max items-start gap-4 lg:gap-8">
-                  <Card x-chunk="dashboard-07-chunk-3">
-                    <CardHeader>
-                      <CardTitle>Client Status</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid gap-6">
-                        <div className="grid gap-3">
-                          <Label htmlFor="status">Status</Label>
-                          <h4 className="font-semibold text-lg">
-                            {data?.status ? "Active" : "Inactive"}
-                          </h4>
-                        </div>
+                      <div className="grid gap-3">
+                        <Label htmlFor="aob">AOB</Label>
+                        {isLoading ? (
+                          <Skeleton className="h-6 w-3/4" />
+                        ) : (
+                          <h4 className="font-semibold text-lg">{data?.aob || "-"}</h4>
+                        )}
                       </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card x-chunk="dashboard-07-chunk-5">
-                    <CardHeader>
-                      <CardTitle>Actions</CardTitle>
-                      <CardDescription>
-                        You can update and delete the client.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex justify-between gap-2">
-                        <Button
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => setUpdateView(true)}
-                        >
-                          Update
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="bg-red-200 text-red-700 hover:bg-red-300 flex-1"
-                          onClick={() => setIsDialogOpen(true)}
-                          variant="secondary"
-                        >
-                          Delete
-                        </Button>
+                      <div className="grid gap-3">
+                        <Label htmlFor="contact_person">Contact Person</Label>
+                        {isLoading ? (
+                          <Skeleton className="h-6 w-3/4" />
+                        ) : (
+                          <h4 className="font-semibold text-lg">{data?.contact_person || "-"}</h4>
+                        )}
                       </div>
-                    </CardContent>
-                  </Card>
-                </div>
+                      <div className="grid gap-3">
+                        <Label htmlFor="contact_number">Phone</Label>
+                        {isLoading ? (
+                          <Skeleton className="h-6 w-3/4" />
+                        ) : (
+                          <h4 className="font-semibold text-lg">{data?.contact_number || "-"}</h4>
+                        )}
+                      </div>
+                      <div className="grid gap-3">
+                        <Label htmlFor="contact_info">Contact Email</Label>
+                        {isLoading ? (
+                          <Skeleton className="h-6 w-3/4" />
+                        ) : (
+                          <h4 className="font-semibold text-lg">{data?.contact_info || "-"}</h4>
+                        )}
+                      </div>
+                      <div className="grid gap-3">
+                        <Label htmlFor="type">Service</Label>
+                        {isLoading ? (
+                          <Skeleton className="h-6 w-3/4" />
+                        ) : (
+                          <h4 className="font-semibold text-lg">{data?.type || "-"}</h4>
+                        )}
+                      </div>
+                      <div className="grid gap-3">
+                        <Label htmlFor="status">Status</Label>
+                        {isLoading ? (
+                          <Skeleton className="h-6 w-1/2" />
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`h-3 w-3 rounded-full ${data?.status ? "bg-green-500" : "bg-red-500"}`}
+                            />
+                            <h4 className="font-semibold text-lg">
+                              {data?.status ? "Active" : "Inactive"}
+                            </h4>
+                          </div>
+                        )}
+                      </div>
+                      <div className="grid gap-3 sm:col-span-2">
+                        <Label htmlFor="about">About</Label>
+                        {isLoading ? (
+                          <Skeleton className="h-20 w-full" />
+                        ) : (
+                          <h4 className="font-medium text-base">{data?.about || "-"}</h4>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           </main>
         )}
-      </div>
-      {
-        <CreateDialog
-          setIsDialogOpen={setIsCreateRFQDialogOpen}
-          isDialogOpen={isCreateRFQDialogOpen}
-          rfq={{}}
-          setRfq={() => {}}
-          handleSubmit={() => {}}
+        <AlertDialogAlert
+          isDialogOpen={isDialogOpen}
+          setIsDialogOpen={setIsDialogOpen}
+          itemToDelete={data}
+          deleteCompany={true}
         />
-      }
+      </div>
     </div>
   );
 }

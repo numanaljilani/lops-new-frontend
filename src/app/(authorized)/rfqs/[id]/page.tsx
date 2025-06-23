@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { usePathname } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 import { toast, Toaster } from "sonner";
 import AlertDialogAlert from "@/components/dialogs/AlertDialog";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,7 @@ import Alert from "@/components/dialogs/Alert";
 
 function RFQDetails() {
   const path = usePathname();
+  const { id } = useParams();
   const [updateView, setUpdateView] = useState(false); // State to toggle between read-only and edit modes
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -51,9 +52,7 @@ function RFQDetails() {
     },
   ] = useRFQDetailsMutation();
   const rfqSchema = z.object({
-    rfq_id: z
-      .number()
-      .min(1, "RFQ ID is required and must be a positive number"),
+    rfq_id: z.optional(),
     client: z
       .string()
       .min(1, "Client ID is required and must be a positive number"),
@@ -79,7 +78,7 @@ function RFQDetails() {
       client: rfqData?.client_id?.toString(), // Ensure client_id is a string
       project_type: rfqData?.project_type,
       scope_of_work: rfqData?.scope_of_work,
-   
+
       quotation_amount: rfqData?.quotation_amount,
       remarks: rfqData?.remarks,
       status: rfqData?.status || "Pending", // Default to "Pending" if status is not available
@@ -121,12 +120,12 @@ function RFQDetails() {
 
   useEffect(() => {
     if (clientsIsSuccess && clientsData) {
-      setClients(clientsData.results); // Assuming the API returns an array of clients in `results`
+      setClients(clientsData.data); // Assuming the API returns an array of clients in `results`
     }
   }, [clientsIsSuccess, clientsData]);
 
   const getRFQDetails = async () => {
-    await rfqDetaislApi({ rfq_id: path?.split("/")?.reverse()[0] });
+    await rfqDetaislApi({ rfq_id: id });
   };
 
   useEffect(() => {
@@ -139,32 +138,35 @@ function RFQDetails() {
     if (rfqIsSuccess && rfqData) {
       reset({
         ...rfqData,
-        client: rfqData.client_id?.toString(), // Ensure client_id is a string
+        client: rfqData.client?._id?.toString(), // Ensure client_id is a string
       }); // Reset form with fetched RFQ data
     }
   }, [rfqIsSuccess, rfqData, reset]);
 
   const onSubmit = async (formData: RFQFormData) => {
     try {
-      console.log(path?.split("/")?.reverse()[0], { ...formData });
+      console.log(id, { ...formData });
       const res = await patchRFQApi({
-        id: path?.split("/")?.reverse()[0],
+        id: id,
         data: { ...formData },
       });
       console.log(res, "RESPONSE");
-      if (patchIsSuccess) {
-        toast.success("RFQ updated successfully");
-        setUpdateView(false); // Switch back to read-only mode after successful update
-      }
     } catch (error) {
       toast.error("Failed to update RFQ");
     }
   };
 
+  useEffect(() => {
+    if (patchIsSuccess) {
+      toast.success("RFQ updated successfully");
+      setUpdateView(false); // Switch back to read-only mode after successful update
+    }
+  }, [patchIsSuccess]);
+
   const [deleteRFQApi] = useDeleteRfqMutation();
   const deleteRFQ = async () => {
     const res = await deleteRFQApi({
-      id: path?.split("/")?.reverse()[0],
+      id,
       token: "",
     });
   };
@@ -198,26 +200,11 @@ function RFQDetails() {
                         className="grid gap-6"
                       >
                         <div className="grid gap-3">
-                          <Label htmlFor="rfq_id">RFQ ID</Label>
-                          <Controller
-                            name="rfq_id"
-                            control={control}
-                            render={({ field }) => (
-                              <Input {...field} type="number" disabled />
-                            )}
-                          />
-                          {errors.rfq_id && (
-                            <p className="text-red-500">
-                              {errors.rfq_id.message}
-                            </p>
-                          )}
-                        </div>
-                        <div className="grid gap-3">
                           <Label htmlFor="client">Client</Label>
                           <Controller
                             name="client"
                             control={control}
-                            defaultValue={rfqData?.client_id?.toString()} // Ensure default value is set
+                            defaultValue={rfqData?.client?.client_id?.toString()} // Ensure default value is set
                             render={({ field }) => (
                               <Select
                                 onValueChange={field.onChange}
@@ -235,8 +222,8 @@ function RFQDetails() {
                                 <SelectContent>
                                   {clients?.map((client) => (
                                     <SelectItem
-                                      key={client?.client_id}
-                                      value={String(client?.client_id)}
+                                      key={client?._id}
+                                      value={String(client?._id)}
                                     >
                                       {client?.client_name}
                                     </SelectItem>
@@ -280,15 +267,13 @@ function RFQDetails() {
                           )}
                         </div>
 
-                        
-
                         <div className="grid gap-3">
                           <Label htmlFor="quotation_amount">
                             Quotation Amount
                           </Label>
                           <Controller
                             name="quotation_amount"
-                            defaultValue={rfqData?.quotation_amount     }
+                            defaultValue={rfqData?.quotation_amount}
                             control={control}
                             render={({ field }) => <Input {...field} />}
                           />
@@ -372,17 +357,17 @@ function RFQDetails() {
                       <div className="grid gap-6">
                         <div className="grid gap-3">
                           <Label htmlFor="rfq_id">RFQ ID</Label>
-                          <p>{rfqData?.rfq_id}</p>
+                          <p>{rfqData?.rfqId}</p>
                         </div>
 
                         <div className="grid gap-3">
                           <Label htmlFor="client_name">Client Name</Label>
-                          <p>{rfqData?.client_name}</p>
+                          <p>{rfqData?.client?.client_name}</p>
                         </div>
 
                         <div className="grid gap-3">
                           <Label htmlFor="rfq_date">RFQ Date</Label>
-                          <p>{formatDate(rfqData?.rfq_date)}</p>
+                          <p>{formatDate(rfqData?.createdAt)}</p>
                         </div>
 
                         <div className="grid gap-3">
@@ -399,7 +384,7 @@ function RFQDetails() {
                           <Label htmlFor="quotation_number">
                             Quotation Number
                           </Label>
-                          <p>{rfqData?.quotation_number}</p>
+                          <p>{rfqData?.quotationNo}</p>
                         </div>
 
                         <div className="grid gap-3">

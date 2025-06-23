@@ -3,9 +3,9 @@ import { Toaster } from "@/components/ui/sonner";
 import localFont from "next/font/local";
 import "./globals.css";
 import { Provider } from "react-redux";
-import { store } from "@/redux/store";
-// import { Provider } from "react-redux";
-// import { store } from "@/redux/store";
+import { store , persistor} from "@/redux/store";
+import {  PersistGate } from 'redux-persist/integration/react'
+
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -31,8 +31,10 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Provider store={store}>
+          <PersistGate loading={null} persistor={persistor}>
         {children}
         <Toaster />
+        </PersistGate>
         </Provider>
       </body>
     </html>

@@ -24,7 +24,7 @@ export default function Home() {
   const login = () => {
     console.log("email :", email);
     console.log("password :", password);
-    router.push("/dashboard");
+    // router.push("/dashboard");
     if (email && password) {
       toast(`${email} you have loggedin"`, {
         description: "Sunday, December 03, 2023 at 9:00 AM",

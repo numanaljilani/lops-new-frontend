@@ -51,7 +51,7 @@ function CreateDialog({
     if (isSuccess) {
      
       if (data) {
-        setClients(data.results);
+        setClients(data.data);
       }
     }
   }, [isSuccess, data]);
@@ -82,8 +82,8 @@ function CreateDialog({
                 <SelectValue placeholder="Select Client" />
               </SelectTrigger>
               <SelectContent>
-                {clients.map((client: any, index) => (
-                  <SelectItem key={index} value={client.client_id}>
+                {clients?.map((client: any, index) => (
+                  <SelectItem key={index} value={client._id}>
                     {client.client_name}
                   </SelectItem>
                 ))}

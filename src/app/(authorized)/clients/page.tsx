@@ -77,7 +77,7 @@ function Clients() {
     if (isSuccess) {
       console.log(data, "response from server");
       if (data) {
-        setCompanies(data.results);
+        setCompanies(data.data);
       }
     }
   }, [isSuccess]);
@@ -198,11 +198,11 @@ function Clients() {
                         (
                           data: {
                             client_name: string;
-                            created_at: string;
+                            createdAt: string;
                             name: string;
                             contact_info: string;
                             status: boolean;
-                            client_id: string;
+                            _id: string;
                             company_name: string;
                             contact_person: string;
                             contact_number: string;
@@ -210,7 +210,7 @@ function Clients() {
                           index: number
                         ) => {
                           return (
-                            <TableRow key={index} onClick={() => update(data.client_id)} className="cursor-pointer">
+                            <TableRow key={index} onClick={() => update(data._id)} className="cursor-pointer">
                               <TableCell className="hidden sm:table-cell">
                                {index + 1}
                               </TableCell>
@@ -236,7 +236,7 @@ function Clients() {
                               {data?.contact_number}
                               </TableCell>
                               <TableCell className="hidden md:table-cell">
-                                {formatDate(data?.created_at)}
+                                {formatDate(data?.createdAt)}
                               </TableCell>
                               <TableCell>
                                 <DropdownMenu>
@@ -257,7 +257,7 @@ function Clients() {
                                       Actions
                                     </DropdownMenuLabel>
                                     <DropdownMenuItem
-                                      onClick={() => update(data.client_id)}
+                                      onClick={() => update(data._id)}
                                     >
                                       Edit
                                     </DropdownMenuItem>

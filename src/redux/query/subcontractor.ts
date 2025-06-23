@@ -2,10 +2,10 @@ import { urls } from "@/constants/urls";
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
 // Define a service using a base URL and expected endpoints
-export const taskApi = createApi({
-  reducerPath: "taskApi",
+export const subcontractorApi = createApi({
+  reducerPath: "subcontractorApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: `${urls.server}/task`,
+    baseUrl: `${urls.server}`,
     prepareHeaders: (headers, { getState }) => {
       const token = (getState() as any)?.user?.accessToken;
       console.log(token, "TOKEN");
@@ -16,45 +16,45 @@ export const taskApi = createApi({
     },
   }),
   endpoints: (builder) => ({
-    tasks: builder.mutation({
-      query: ({ id }) => {
-        return {
-          url: `/?paymentId=${id || ""}`,
-          method: "GET",
-          headers: {
-            "Content-type": "application/json; charset=UTF-8",
-          },
-        };
-      },
-    }),
-    myTasks: builder.mutation({
-      query: ({ projectId }) => {
-        return {
-          url: `/?mytask=true&projectId=${projectId || ""}`,
-          method: "GET",
-          headers: {
-            "Content-type": "application/json; charset=UTF-8",
-          },
-        };
-      },
-    }),
-    createTask: builder.mutation({
+    subcontractors: builder.mutation({
       query: (data) => {
         return {
-          url: "/",
-          method: "POST",
-          body: data.data,
+          url: "subcontractors",
+          method: "GET",
           headers: {
             "Content-type": "application/json; charset=UTF-8",
           },
         };
       },
     }),
-    deleteTask: builder.mutation({
+    subcontractorById: builder.mutation({
+      query: ({ id }) => {
+        return {
+          url: `subcontractors/${id}`,
+          method: "GET",
+          headers: {
+            "Content-type": "application/json; charset=UTF-8",
+          },
+        };
+      },
+    }),
+    createSubcontractor: builder.mutation({
+      query: ({ data }) => {
+        return {
+          url: "subcontractors/",
+          method: "POST",
+          body: data,
+          headers: {
+            "Content-type": "application/json; charset=UTF-8",
+          },
+        };
+      },
+    }),
+    deleteClient: builder.mutation({
       query: (data) => {
         console.log("delet client ", data);
         return {
-          url: `/${data?.id}/`,
+          url: `clients/${data?.id}/`,
           method: "DELETE",
           headers: {
             "Content-type": "application/json; charset=UTF-8",
@@ -63,10 +63,10 @@ export const taskApi = createApi({
         };
       },
     }),
-    taskDetails: builder.mutation({
+    clientDetails: builder.mutation({
       query: (data) => {
         return {
-          url: `/${data.id}/`,
+          url: `clients/${data.id}/`,
           method: "GET",
           headers: {
             "Content-type": "application/json; charset=UTF-8",
@@ -75,16 +75,15 @@ export const taskApi = createApi({
         };
       },
     }),
-    updateTask: builder.mutation({
-      query: (data) => {
-        console.log(data, "<><><");
+    createSubcontractTask: builder.mutation({
+      query: ({ data }) => {
         return {
-          url: `/${data.id}/`,
-          method: "PUT",
-          body: data.data,
+          url: `client_new/subcontracts/`,
+          method: "POST",
+          body: data,
           headers: {
             "Content-type": "application/json; charset=UTF-8",
-            authorization: `bearer ${data.token}`,
+            //   authorization: `bearer ${token}`,
           },
         };
       },
@@ -95,10 +94,9 @@ export const taskApi = createApi({
 // Export hooks for usage in functional components, which are
 // auto-generated based on the defined endpoints
 export const {
-  useTaskDetailsMutation,
-  useTasksMutation,
-  useDeleteTaskMutation,
-  useUpdateTaskMutation,
-  useCreateTaskMutation,
-  useMyTasksMutation,
-} = taskApi;
+  useSubcontractorByIdMutation,
+  useSubcontractorsMutation,
+  useCreateSubcontractorMutation,
+  useDeleteClientMutation,
+  useCreateSubcontractTaskMutation,
+} = subcontractorApi;

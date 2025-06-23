@@ -1,5 +1,11 @@
 "use client";
-import { File, ListFilter, MoreHorizontal, PlusCircle, Router } from "lucide-react";
+import {
+  File,
+  ListFilter,
+  MoreHorizontal,
+  PlusCircle,
+  Router,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -53,9 +59,9 @@ import { useRouter } from "next/navigation";
 import { PaginationComponent } from "@/components/PaginationComponent";
 
 function Employee() {
-  const router = useRouter()
+  const router = useRouter();
   const [employee, setEmployee] = useState([]);
-    const [page , setPage] = useState(1)
+  const [page, setPage] = useState(1);
   const [employeeApi, { data, isSuccess, error, isError }] =
     useEmployeeMutation();
 
@@ -74,7 +80,7 @@ function Employee() {
     if (isSuccess) {
       console.log(data, "response from server");
       if (data) {
-        setEmployee(data.results);
+        setEmployee(data.data);
       }
     }
   }, [isSuccess]);
@@ -104,7 +110,6 @@ function Employee() {
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
           <Tabs defaultValue="all">
             <div className="flex items-center">
-           
               <div className="ml-auto flex items-center gap-2">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -187,37 +192,47 @@ function Employee() {
                       {employee?.map(
                         (
                           data: {
-                            name: string;
-                            created_at: string;
-                            url: string;
+                            userId: { name: string };
+                            createdAt: string;
+                            _id: string;
                             salary: string;
                             status: boolean;
                           },
                           index
                         ) => {
                           return (
-                            <TableRow key={index} onClick={()=> router.push(`/employee/${data?.url?.split("/")[6]}`)} className="cursor-pointer">
+                            <TableRow
+                              key={index}
+                              onClick={() =>
+                                router.push(
+                                  `/employee/${data?._id}`
+                                )
+                              }
+                              className="cursor-pointer"
+                            >
                               <TableCell className="hidden sm:table-cell">
                                 <Image
                                   alt="Employee Image"
                                   className="aspect-square rounded-md object-cover"
                                   height="64"
-                                  src={`https://ui-avatars.com/api/?name=${data?.name}&&color=fff&&background=3A72EC&&rounded=true&&font-size=0.44`}
+                                  src={`https://ui-avatars.com/api/?name=${data?.userId?.name}&&color=fff&&background=3A72EC&&rounded=true&&font-size=0.44`}
                                   width="64"
                                 />
                               </TableCell>
                               <TableCell className="font-medium">
-                                {data?.name}
+                                {data?.userId?.name}
                               </TableCell>
                               <TableCell>
-                                <Badge variant="outline">{data.status ? "Active" : "Inactive"}</Badge>
+                                <Badge variant="outline">
+                                  {data.status ? "Active" : "Inactive"}
+                                </Badge>
                               </TableCell>
                               <TableCell>{data?.salary}</TableCell>
                               <TableCell className="hidden md:table-cell">
                                 0
                               </TableCell>
                               <TableCell className="hidden md:table-cell">
-                                {formatDate(data?.created_at)}
+                                {formatDate(data?.createdAt)}
                               </TableCell>
                               <TableCell>
                                 <DropdownMenu>
@@ -237,7 +252,13 @@ function Employee() {
                                     <DropdownMenuLabel>
                                       Actions
                                     </DropdownMenuLabel>
-                                    <DropdownMenuItem onClick={()=> router.push(`/employee/${data?.url?.split("/")[6]}`)}>Edit</DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() =>
+                                        router.push(`/employee/${data?._id}`)
+                                      }
+                                    >
+                                      Edit
+                                    </DropdownMenuItem>
                                     <DropdownMenuItem
                                       onClick={() => {
                                         setIsDialogOpen(true);
@@ -257,7 +278,11 @@ function Employee() {
                   </Table>
                 </CardContent>
                 <CardFooter>
-                <PaginationComponent setPage={setPage} numberOfPages={data?.count} page={page}/>
+                  <PaginationComponent
+                    setPage={setPage}
+                    numberOfPages={data?.count}
+                    page={page}
+                  />
                 </CardFooter>
               </Card>
             </TabsContent>

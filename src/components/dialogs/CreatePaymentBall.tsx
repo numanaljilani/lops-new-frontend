@@ -63,7 +63,7 @@ function CreatePaymentBall({
   const { id } = useParams();
 
   const PaymentBallSchema = z.object({
-    project_percentage: z.string().default("0"),
+    projectPercentage: z.string(),
     project_status: z.string(),
     notes: z.string(),
     // invoice_number: z.string(),
@@ -79,19 +79,16 @@ function CreatePaymentBall({
     formState: { errors, isSubmitting },
   } = useForm({ resolver: zodResolver(PaymentBallSchema) });
 
-
   const now = today(getLocalTimeZone());
   const [createPaymentBallApi, { data, isSuccess, error, isError }] =
     useCreateBallMutation();
   async function onSubmit(data: any) {
     const res = await createPaymentBallApi({
-      data: { ...data, job_card: id, color_status: "gray" },
+      data: { ...data, projectId: id, color_status: "gray" },
     });
     console.log(res, "CREATE PAYMENT BAALL");
     setIsDialogOpen(false);
   }
-
-
 
   useEffect(() => {
     if (isSuccess) {
@@ -122,7 +119,9 @@ function CreatePaymentBall({
             <div className="text-gray-500 text-xs">
               <div>
                 Job Id :{" "}
-                <span className="text-gray-700 text-sm">{details?.job_id}</span>
+                <span className="text-gray-700 text-sm">
+                  {details?.projectId}
+                </span>
               </div>
               <div>
                 Job Number :{" "}
@@ -157,6 +156,21 @@ function CreatePaymentBall({
                     placeholder="000"
                     type="text"
                     {...register("amount")}
+                  />
+                </div>
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="projectPercentage">Project Percentage</Label>
+
+              <div className="space-y-2">
+                <div className="relative flex rounded-lg shadow-sm shadow-black/5">
+                  <Input
+                    id="input-16"
+                    className="-me-px rounded-e-none rounded-lg ps-6 shadow-none"
+                    placeholder="000"
+                    type="text"
+                    {...register("projectPercentage")}
                   />
                 </div>
               </div>

@@ -7,7 +7,16 @@ import { urls } from '@/constants/urls';
 export const authApi = createApi({
   reducerPath: 'authApi',
   // 192.168.242.213
-  baseQuery: fetchBaseQuery({ baseUrl: `${urls.server}auth/`}),
+  baseQuery: fetchBaseQuery({ baseUrl: `${urls.server}/`,
+    prepareHeaders: (headers, { getState }) => {
+      const token = (getState() as any)?.user?.accessToken;
+  
+      if (token) {
+        headers.set("Authorization", `Bearer ${token}`);
+      }
+      return headers;
+    },
+  }),
   endpoints: (builder) => ({
   
       login: builder.mutation({
@@ -22,14 +31,14 @@ export const authApi = createApi({
           };
         },
       }),
-      me: builder.mutation({
-        query: (token) => {
+      profile: builder.mutation({
+        query: () => {
           return {
-            url: "me",
+            url: "profile",
             method: "GET",
             headers: {
               "Content-type": "application/json; charset=UTF-8",
-              authorization: `bearer ${token}`,
+             
             },
           };
         },
@@ -39,4 +48,4 @@ export const authApi = createApi({
 
 // Export hooks for usage in functional components, which are
 // auto-generated based on the defined endpoints
-export const { useLoginMutation ,useMeMutation } = authApi
+export const { useLoginMutation ,useProfileMutation } = authApi

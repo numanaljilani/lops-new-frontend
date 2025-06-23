@@ -23,139 +23,583 @@ import {
   useEmployeeDetailsMutation,
   usePatchEmployeeMutation,
 } from "@/redux/query/employee";
-import { usePathname, useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { toast, Toaster } from "sonner";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Checkbox } from "@/components/ui/checkbox";
+import ErrorMessage from "@/components/errors/ErrorMessage";
+
+const employeeSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email address"),
+  location: z.string().min(1, "Location is required"),
+  contact: z.string().min(1, "Contact number is required"),
+  description: z.string().optional(),
+  company: z.string().optional(),
+  position: z.string().min(1, "Designation is required"),
+  salary: z.number().min(0, "Salary must be positive"),
+  Currency: z.string().default("AED"),
+  costPerHour: z.number().min(0, "Hourly rate must be positive"),
+  status: z.boolean(),
+  access: z.array(z.string()).optional(),
+});
+
+function Skeleton({ className }: any) {
+  return <div className={`animate-pulse bg-muted rounded-md ${className}`} />;
+}
+
+const accessLevels = [
+  { id: "admin", label: "Admin" },
+  { id: "team lead", label: "Team Lead" },
+  { id: "sales", label: "Sales" },
+  { id: "subcontractor", label: "Sub Contractor" },
+  { id: "accounts", label: "Accounts" },
+  { id: "team member", label: "Team Member" },
+];
 
 function Employee() {
-  const path = usePathname();
-
+  const { id } = useParams();
+  const router = useRouter();
   const [updateView, setUpdateView] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  //   console.log(path.split("/").reverse()[0], "Path name");
-  const [employeeDetails, setEmployeeDetails] = useState<{
-    name: string;
-    email: string;
-    contact: string;
-    description: string;
-    location: string;
-    company: string;
-    position: string;
-    salary: number;
-    hourly_rate: number;
-    Currency: string;
-    status: boolean;
-  }>({
-    name: "",
-    email: "",
+  const [employeeDetails, setEmployeeDetails] = useState({
+    userId: { name: "", email: "" },
     contact: "",
     description: "",
     location: "",
     company: "",
     position: "",
     salary: 0,
-    hourly_rate: 0,
+    costPerHour: 0,
     Currency: "",
     status: false,
+    access: [],
   });
 
-  const [employeeApi, { data, isSuccess, error, isError }] =
+  const [employeeApi, { data, isSuccess, isLoading: isEmployeeLoading }] =
     useEmployeeDetailsMutation();
   const [
-    patchEmployeApi,
-    {
-      data: patchData,
-      isSuccess: patchIsSuccess,
-      error: patchError,
-      isError: patchIsError,
-    },
+    patchEmployeeApi,
+    { isSuccess: patchIsSuccess, isLoading: isPatchLoading },
   ] = usePatchEmployeeMutation();
+  const [
+    companiesApi,
+    {
+      data: companiesData,
+      isSuccess: companiesIsSuccess,
+      isLoading: isCompaniesLoading,
+    },
+  ] = useComponiesMutation();
+
+  const [companies, setCompanies] = useState([]);
+
+  const {
+    register,
+    handleSubmit,
+    control,
+    setValue,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(employeeSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      location: "",
+      contact: "",
+      description: "",
+      company: data?.company?._id,
+      position: "",
+      salary: 0,
+      Currency: "AED",
+      costPerHour: 0,
+      status: false,
+      access: data?.access,
+    },
+  });
+
   const getEmployeeDetails = async () => {
-    console.log(employeeDetails);
-    const res = await employeeApi({ id: path?.split("/")?.reverse()[0] });
-    console.log(res, "response from the server");
+    if (!id) return;
+    setIsLoading(true);
+    try {
+      const res = await employeeApi({ id });
+      console.log(res, "response from the server");
+    } catch (err) {
+      console.error("Error fetching employee:", err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const updateEmployee = async () => {
-    setUpdateView(false);
-    const res = await patchEmployeApi({
-      id: path?.split("/")?.reverse()[0],
-      details: employeeDetails,
-    });
-    console.log(res, "updated");
-    toast(
-      `Updated`,
+  const getCompanies = async () => {
+    try {
+      const res = await companiesApi({});
+      console.log(res, "companies response");
+    } catch (err) {
+      console.error("Error fetching companies:", err);
+    }
+  };
 
-      {
+  const onSubmit = async (data: any) => {
+    console.log(data, "UPDAT DATA");
+    if (!id) return;
+    try {
+      const res = await patchEmployeeApi({
+        id,
+        details: {
+          userId: { name: data.name, email: data.email },
+          contact: data.contact,
+          description: data.description,
+          location: data.location,
+          company: data.company,
+          position: data.position,
+          salary: data.salary,
+          costPerHour: data.costPerHour,
+          Currency: data.Currency,
+          status: data.status,
+          access: data.access,
+        },
+      });
+      console.log(res, "updated");
+      toast("Updated", {
         description: "Employee information has been updated.",
-      }
-    );
+      });
+      setUpdateView(false);
+    } catch (err) {
+      console.error("Error updating employee:", err);
+    }
   };
 
   useEffect(() => {
     getEmployeeDetails();
-  }, []);
+    getCompanies();
+  }, [id]);
+
+  useEffect(() => {
+    if (isSuccess && data?.employee) {
+      const emp = data.employee;
+      setEmployeeDetails(emp);
+      setValue("name", emp.userId.name);
+      setValue("email", emp.userId.email);
+      setValue("location", emp.location);
+      setValue("contact", emp.contact);
+      setValue("description", emp.description);
+      setValue("company", emp.company?._id);
+      setValue("position", emp.position);
+      setValue("salary", emp.salary);
+      setValue("Currency", emp.Currency);
+      setValue("costPerHour", emp.costPerHour);
+      setValue("status", emp.status);
+      setValue("access", emp.access);
+    }
+  }, [isSuccess, data, setValue]);
+
   useEffect(() => {
     if (patchIsSuccess) {
       getEmployeeDetails();
-      setUpdateView(false);
     }
   }, [patchIsSuccess]);
+
   useEffect(() => {
-    if (isSuccess) {
-      console.log(data, "response from the server");
-      // router.replace("/employee");
-      setEmployeeDetails(data);
+    if (companiesIsSuccess && companiesData?.data) {
+      setCompanies(companiesData.data);
     }
-  }, [isSuccess]);
-
-  const [companies, setCompanies] = useState<any>([]);
-  const [
-    companiesApi,
-    {
-      data: comapniesData,
-      isSuccess: companiesIsSuccess,
-      error: companiesError,
-      isError: companiesIsError,
-    },
-  ] = useComponiesMutation();
-
-  const getCompanies = async () => {
-    const res = await companiesApi({});
-  };
-
-  useEffect(() => {
-    getCompanies();
-  }, []);
-
-  useEffect(() => {
-    if (companiesIsSuccess) {
-      console.log(comapniesData, "response from server");
-      if (comapniesData) {
-        setCompanies(comapniesData.results);
-      }
-    }
-  }, [companiesIsSuccess]);
-
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  }, [companiesIsSuccess, companiesData]);
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-muted/40">
-      <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
+    <div className="flex  min-h-screen w-full flex-col bg-muted/40">
+      <Toaster />
+      <div className="flex  flex-col gap-4 p-4 sm:p-6 md:p-8">
         {updateView ? (
-          <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
-            <div className="mx-auto grid max-w-[59rem] flex-1 auto-rows-max gap-4">
-              <div className="flex items-center gap-4">
-                <h1 className="flex-1 shrink-0 whitespace-nowrap text-xl font-semibold tracking-tight sm:grow-0">
+          <main className="grid w-full flex-1 items-start gap-4 mx-auto">
+            <div className="grid gap-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <h1 className="text-xl font-semibold tracking-tight">
                   Update Employee
                 </h1>
-
-                <div className="hidden items-center gap-2 md:ml-auto md:flex">
-                  <Button variant="outline" size="sm" onClick={()=>setUpdateView(false)}>
+                <div className="flex items-center gap-2 ml-auto">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setUpdateView(false)}
+                    disabled={isPatchLoading}
+                  >
                     Discard
                   </Button>
-                  <Button size="sm" onClick={updateEmployee}>
-                    Save Changes
+                  <Button
+                    size="sm"
+                    onClick={handleSubmit(onSubmit)}
+                    disabled={isPatchLoading}
+                  >
+                    {isPatchLoading ? "Saving..." : "Save Changes"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="bg-red-200 text-red-700 hover:bg-red-300"
+                    onClick={() => setIsDialogOpen(true)}
+                    disabled={isPatchLoading}
+                  >
+                    Delete
+                  </Button>
+                </div>
+              </div>
+              <div className="grid gap-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Employee Details</CardTitle>
+                    <CardDescription>
+                      Enter the employee details
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="grid gap-3">
+                        <Label htmlFor="name">Name</Label>
+                        {isLoading ? (
+                          <Skeleton className="h-10 w-full" />
+                        ) : (
+                          <div>
+                            <Input
+                              id="name"
+                              type="text"
+                              placeholder="Hamdan Al Maktoom"
+                              {...register("name")}
+                            />
+                            {errors.name && (
+                              <p className="text-red-500 text-sm">
+                                {errors.name.message}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <div className="grid gap-3">
+                        <Label htmlFor="email">Email</Label>
+                        {isLoading ? (
+                          <Skeleton className="h-10 w-full" />
+                        ) : (
+                          <div>
+                            <Input
+                              id="email"
+                              type="email"
+                              placeholder="example@gmail.com"
+                              {...register("email")}
+                            />
+                            {errors.email && (
+                              <p className="text-red-500 text-sm">
+                                {errors.email.message}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <div className="grid gap-3">
+                        <Label htmlFor="location">Location</Label>
+                        {isLoading ? (
+                          <Skeleton className="h-10 w-full" />
+                        ) : (
+                          <div>
+                            <Input
+                              id="location"
+                              type="text"
+                              placeholder="Dubai, Abu Dhabi, Sharjah"
+                              {...register("location")}
+                            />
+                            {errors.location && (
+                              <p className="text-red-500 text-sm">
+                                {errors.location.message}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <div className="grid gap-3">
+                        <Label htmlFor="contact">Contact</Label>
+                        {isLoading ? (
+                          <Skeleton className="h-10 w-full" />
+                        ) : (
+                          <div>
+                            <Input
+                              id="contact"
+                              type="tel"
+                              placeholder="+971 999999999"
+                              {...register("contact")}
+                            />
+                            {errors.contact && (
+                              <p className="text-red-500 text-sm">
+                                {errors.contact.message}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <div className="grid gap-3">
+                        <Label htmlFor="status">Status</Label>
+                        {isLoading ? (
+                          <Skeleton className="h-10 w-full" />
+                        ) : (
+                          <Select
+                            onValueChange={(value) =>
+                              setValue("status", value === "true")
+                            }
+                            defaultValue={employeeDetails?.status.toString()}
+                          >
+                            <SelectTrigger id="status">
+                              <SelectValue placeholder="Select status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="true">Active</SelectItem>
+                              <SelectItem value="false">Inactive</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
+                      <div />
+                      <div className="grid w-screen gap-3 ">
+                        <Label htmlFor="access">Access Levels</Label>
+                        <Controller
+                          name="access"
+                          control={control}
+                          defaultValue={employeeDetails?.userId?.access || []}
+                          render={({ field }) => (
+                            <div className="flex w-full  gap-5">
+                              {accessLevels.map((level) => (
+                                <div
+                                  key={level.id}
+                                  className="flex items-center justify-between gap-2"
+                                >
+                                  <Checkbox
+                                    id={level.id}
+                                    checked={field.value?.includes(level.id)}
+                                    onCheckedChange={(checked) => {
+                                      const newAccess = checked
+                                        ? [...(field.value || []), level.id] // Add if checked
+                                        : field.value?.filter(
+                                            (v: any) => v !== level.id
+                                          ); // Remove if unchecked
+                                      field.onChange(newAccess);
+                                    }}
+                                  />
+                                  <Label htmlFor={level.id}>
+                                    {level.label}
+                                  </Label>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        />
+                        {errors.access && (
+                          <ErrorMessage
+                            message={errors.access.message?.toString()}
+                          />
+                        )}
+                      </div>
+                      <div className="grid gap-3 sm:col-span-2">
+                        <Label htmlFor="description">Description</Label>
+                        {isLoading ? (
+                          <Skeleton className="h-32 w-full" />
+                        ) : (
+                          <div>
+                            <Textarea
+                              id="description"
+                              className="min-h-32"
+                              {...register("description")}
+                            />
+                            {errors.description && (
+                              <p className="text-red-500 text-sm">
+                                {errors.description.message}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Company Details</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="grid gap-3">
+                        <Label htmlFor="company">Company</Label>
+                        {isCompaniesLoading ? (
+                          <Skeleton className="h-10 w-full" />
+                        ) : (
+                          <div>
+                            <Select
+                              onValueChange={(value) =>
+                                setValue("company", value)
+                              }
+                              defaultValue={employeeDetails?.company?._id}
+                            >
+                              <SelectTrigger id="company">
+                                <SelectValue placeholder="Select Company" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {companies.map((data: any, index) => (
+                                  <SelectItem key={index} value={data._id}>
+                                    {data?.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {errors.company && (
+                              <p className="text-red-500 text-sm">
+                                {errors.company.message}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <div className="grid gap-3">
+                        <Label htmlFor="position">Designation</Label>
+                        {isLoading ? (
+                          <Skeleton className="h-10 w-full" />
+                        ) : (
+                          <div>
+                            <Select
+                              onValueChange={(value) =>
+                                setValue("position", value)
+                              }
+                              defaultValue={employeeDetails?.position}
+                            >
+                              <SelectTrigger id="position">
+                                <SelectValue placeholder="Select Designation" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Sales Member">
+                                  Sales Member
+                                </SelectItem>
+                                <SelectItem value="Team Leads">
+                                  Team Leads
+                                </SelectItem>
+                                <SelectItem value="Team Members">
+                                  Team Members
+                                </SelectItem>
+                                <SelectItem value="Sub-Contractors">
+                                  Sub-Contractors
+                                </SelectItem>
+                                <SelectItem value="Accountant Members">
+                                  Accountant Members
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                            {errors.position && (
+                              <p className="text-red-500 text-sm">
+                                {errors.position.message}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <div className="grid gap-3">
+                        <Label htmlFor="salary">Salary (AED)</Label>
+                        {isLoading ? (
+                          <Skeleton className="h-10 w-full" />
+                        ) : (
+                          <div>
+                            <Input
+                              id="salary"
+                              type="number"
+                              placeholder="5000 AED"
+                              {...register("salary", { valueAsNumber: true })}
+                            />
+                            {errors.salary && (
+                              <p className="text-red-500 text-sm">
+                                {errors.salary.message}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <div className="grid gap-3">
+                        <Label htmlFor="currency">Currency</Label>
+                        {isLoading ? (
+                          <Skeleton className="h-10 w-full" />
+                        ) : (
+                          <div>
+                            <Select
+                              onValueChange={(value) =>
+                                setValue("Currency", value)
+                              }
+                              defaultValue={employeeDetails?.Currency || "AED"}
+                            >
+                              <SelectTrigger id="currency">
+                                <SelectValue placeholder="Select Currency" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="AED">AED</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            {errors.Currency && (
+                              <p className="text-red-500 text-sm">
+                                {errors.Currency.message}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <div className="grid gap-3">
+                        <Label htmlFor="costPerHour">Hourly Rate (AED)</Label>
+                        {isLoading ? (
+                          <Skeleton className="h-10 w-full" />
+                        ) : (
+                          <div>
+                            <Input
+                              id="costPerHour"
+                              type="number"
+                              placeholder="20 AED"
+                              {...register("costPerHour", {
+                                valueAsNumber: true,
+                              })}
+                            />
+                            {errors.costPerHour && (
+                              <p className="text-red-500 text-sm">
+                                {errors.costPerHour.message}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              <div className="flex gap-2 sm:hidden">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => setUpdateView(false)}
+                >
+                  Discard
+                </Button>
+                <Button
+                  size="sm"
+                  className="flex-1"
+                  onClick={handleSubmit(onSubmit)}
+                >
+                  Save
+                </Button>
+              </div>
+            </div>
+          </main>
+        ) : (
+          <main className="grid flex-1 items-start gap-4 w-full mx-auto">
+            <div className="grid gap-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <h1 className="text-xl font-semibold tracking-tight">
+                  Employee
+                </h1>
+                <div className="flex gap-2 ml-auto sm:flex-row flex-col">
+                  <Button size="sm" onClick={() => setUpdateView(true)}>
+                    Update
                   </Button>
                   <Button
                     size="sm"
@@ -166,434 +610,168 @@ function Employee() {
                   </Button>
                 </div>
               </div>
-              <div className="grid gap-4 md:grid-cols-[1fr_250px] lg:grid-cols-3 lg:gap-8">
-                <div className="grid auto-rows-max items-start gap-4 lg:col-span-2 lg:gap-8">
-                  <Card x-chunk="dashboard-07-chunk-0">
-                    <CardHeader>
-                      <CardTitle>Employee Details</CardTitle>
-                      <CardDescription>
-                        Enter the employee details
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid gap-6">
-                        <div className="grid gap-3">
-                          <Label htmlFor="name">Name</Label>
-                          <Input
-                            id="name"
-                            type="text"
-                            className="w-full"
-                            placeholder="Hamdan Al Maktoom"
-                            onChange={(e) => {
-                              e.preventDefault();
-                              setEmployeeDetails({
-                                ...employeeDetails,
-                                name: e.target.value,
-                              });
-                            }}
-                            defaultValue={employeeDetails?.name}
-                          />
-                        </div>
-                        <div className="grid gap-3">
-                          <Label htmlFor="name">Email</Label>
-                          <Input
-                            id="email"
-                            type="email"
-                            className="w-full"
-                            placeholder="example@gmail.com"
-                            onChange={(e) => {
-                              e.preventDefault();
-                              setEmployeeDetails({
-                                ...employeeDetails,
-                                email: e.target.value,
-                              });
-                            }}
-                            defaultValue={employeeDetails?.email}
-                          />
-                        </div>
-                        <div className="grid gap-3">
-                          <Label htmlFor="name">Location</Label>
-                          <Input
-                            id="location"
-                            type="text"
-                            className="w-full"
-                            placeholder="Dubai , Abu dhabi , Sharjah"
-                            onChange={(e) => {
-                              e.preventDefault();
-                              setEmployeeDetails({
-                                ...employeeDetails,
-                                location: e.target.value,
-                              });
-                            }}
-                            defaultValue={employeeDetails?.location}
-                          />
-                        </div>
-                        <div className="grid gap-3">
-                          <Label htmlFor="contact">Contact</Label>
-                          <Input
-                            id="contact"
-                            type="number"
-                            className="w-full"
-                            placeholder="+971 999999999"
-                            onChange={(e) => {
-                              e.preventDefault();
-                              setEmployeeDetails({
-                                ...employeeDetails,
-                                contact: e.target.value,
-                              });
-                            }}
-                            defaultValue={employeeDetails?.contact}
-                          />
-                        </div>
-                        <div className="grid gap-3">
-                          <Label htmlFor="description">Description</Label>
-                          <Textarea
-                            id="description"
-                            defaultValue={employeeDetails?.description}
-                            className="min-h-32"
-                            onChange={(e) => {
-                              e.preventDefault();
-                              setEmployeeDetails({
-                                ...employeeDetails,
-                                description: e.target.value,
-                              });
-                            }}
-                          />
-                        </div>
+              <div className="grid gap-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Employee Details</CardTitle>
+                    <CardDescription>
+                      Employee details and performance
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="grid gap-3">
+                        <Label htmlFor="name">Name</Label>
+                        {isLoading ? (
+                          <Skeleton className="h-6 w-3/4" />
+                        ) : (
+                          <h4 className="font-semibold text-lg">
+                            {employeeDetails?.userId.name || "-"}
+                          </h4>
+                        )}
                       </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card x-chunk="dashboard-07-chunk-1">
-                    <CardHeader>
-                      <CardTitle>Compony Details</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid gap-6 sm:grid-cols-2">
-                        <div className="grid gap-3">
-                          <Label htmlFor="category">Compony</Label>
-                          <Select
-                            onValueChange={(value) =>
-                              setEmployeeDetails({
-                                ...employeeDetails,
-                                company: value,
-                              })
-                            }
-                          >
-                            <SelectTrigger
-                              id="category"
-                              aria-label="Select Compony"
-                            >
-                              <SelectValue placeholder="Select Compony" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {companies.map(
-                                (
-                                  data: { name: string; url: string },
-                                  index: number
-                                ) => (
-                                  <SelectItem key={index} value={data?.url}>
-                                    {data?.name}
-                                  </SelectItem>
-                                )
-                              )}
-                              {/* <SelectItem value="http://127.0.0.1:8000/api/v1/employees/4/">
-                            LECS
-                          </SelectItem> */}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="grid gap-3">
-                          <Label htmlFor="subcategory">Designation</Label>
-                          <Select
-                            value={employeeDetails.position}
-                            onValueChange={(value) =>
-                              setEmployeeDetails({
-                                ...employeeDetails,
-                                position: value,
-                              })
-                            }
-                          >
-                            <SelectTrigger
-                              id="subcategory"
-                              aria-label="Select Designation"
-                            >
-                              <SelectValue placeholder="Select subcategory" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Sales Member">
-                                Sales Member
-                              </SelectItem>
-                              <SelectItem value="Team Leads">
-                                Team Leads
-                              </SelectItem>
-                              <SelectItem value="Team Members">
-                                Team Members
-                              </SelectItem>
-                              <SelectItem value="Sub-Contractors">
-                                Sub-Contractors
-                              </SelectItem>
-                              <SelectItem value="Accountant Members">
-                                Accountant Members
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="grid gap-3">
-                          <Label htmlFor="Salary">Salary (AED)</Label>
-                          <Input
-                            id="Salary"
-                            type="number"
-                            className="w-full"
-                            placeholder="5000 AED"
-                            onChange={(e) => {
-                              e.preventDefault();
-                              setEmployeeDetails({
-                                ...employeeDetails,
-                                salary: Number(e.target.value),
-                              });
-                            }}
-                          />
-                        </div>
-                        <div className="grid gap-3">
-                          <Label htmlFor="subcategory">Currency</Label>
-                          <Select
-                            onValueChange={(value) =>
-                              setEmployeeDetails({
-                                ...employeeDetails,
-                                Currency: value,
-                              })
-                            }
-                          >
-                            <SelectTrigger
-                              id="subcategory"
-                              aria-label="Select Currency"
-                            >
-                              <SelectValue placeholder="Select Currency" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="AED">AED</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="grid gap-3">
-                          <Label htmlFor="Hourly">Hourly Rate (AED)</Label>
-                          <Input
-                            id="Hourly"
-                            type="number"
-                            className="w-full"
-                            placeholder="20 AED"
-                            onChange={(e) => {
-                              e.preventDefault();
-                              setEmployeeDetails({
-                                ...employeeDetails,
-                                hourly_rate: Number(e.target.value),
-                              });
-                            }}
-                          />
-                        </div>
+                      <div className="grid gap-3">
+                        <Label htmlFor="email">Email</Label>
+                        {isLoading ? (
+                          <Skeleton className="h-6 w-3/4" />
+                        ) : (
+                          <h4 className="font-semibold text-lg">
+                            {employeeDetails?.userId.email || "-"}
+                          </h4>
+                        )}
                       </div>
-                    </CardContent>
-                  </Card>
-                </div>
-                <div className="grid auto-rows-max items-start gap-4 lg:gap-8">
-                  <Card x-chunk="dashboard-07-chunk-3">
-                    <CardHeader>
-                      <CardTitle>Employee Status</CardTitle>
-                      <CardDescription>
-                        Update the status of the client he/she active or
-                        inactive.
-                      </CardDescription>
-                    </CardHeader>
-
-                    <CardContent>
-                      <div className="grid gap-6">
-                        <div className="grid gap-3">
-                          <Select
-                            onValueChange={(value) =>
-                              setEmployeeDetails({
-                                ...employeeDetails,
-                                status: value === "true",
-                              })
-                            }
-                          >
-                            <SelectTrigger
-                              id="status"
-                              aria-label="Select status"
-                            >
-                              <SelectValue placeholder="Select status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {/* <SelectItem value="draft">On Leave</SelectItem> */}
-                              <SelectItem value={"true"}>Active</SelectItem>
-                              <SelectItem value={"false"}>Inactive</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
+                      <div className="grid gap-3">
+                        <Label htmlFor="location">Location</Label>
+                        {isLoading ? (
+                          <Skeleton className="h-6 w-3/4" />
+                        ) : (
+                          <h4 className="font-semibold text-lg">
+                            {employeeDetails?.location || "-"}
+                          </h4>
+                        )}
                       </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-              <div className="flex items-center justify-center gap-2 md:hidden">
-                <Button variant="outline" size="sm">
-                  Discard
-                </Button>
-                <Button size="sm">Save</Button>
-              </div>
-            </div>
-          </main>
-        ) : (
-          <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
-            <div className="mx-auto grid max-w-[59rem] flex-1 auto-rows-max gap-4">
-              <div className="flex items-center gap-4">
-                <h1 className="flex-1 shrink-0 whitespace-nowrap text-xl font-semibold tracking-tight sm:grow-0">
-                  Employee
-                </h1>
-
-                <div className="hidden items-center gap-2 md:ml-auto md:flex"></div>
-              </div>
-              <div className="grid gap-4 md:grid-cols-[1fr_250px] lg:grid-cols-3 lg:gap-8">
-                <div className="grid auto-rows-max items-start gap-4 lg:col-span-2 lg:gap-8">
-                  <Card x-chunk="dashboard-07-chunk-0">
-                    <CardHeader>
-                      <CardTitle>Employee Details</CardTitle>
-                      <CardDescription>
-                        Enter the employee details and thier performance
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid gap-6">
-                        <div className="grid gap-3">
-                          <Label htmlFor="name">Name</Label>
-
+                      <div className="grid gap-3">
+                        <Label htmlFor="contact">Contact</Label>
+                        {isLoading ? (
+                          <Skeleton className="h-6 w-3/4" />
+                        ) : (
                           <h4 className="font-semibold text-lg">
-                            {employeeDetails.name}
+                            {employeeDetails?.contact || "-"}
                           </h4>
-                        </div>
-                        <div className="grid gap-3">
-                          <Label htmlFor="name">Email</Label>
-
-                          <h4 className="font-semibold text-lg">
-                            {employeeDetails.email}
-                          </h4>
-                        </div>
-                        <div className="grid gap-3">
-                          <Label htmlFor="name">Location</Label>
-
-                          <h4 className="font-semibold text-lg">
-                            {employeeDetails.location}
-                          </h4>
-                        </div>
-                        <div className="grid gap-3">
-                          <Label htmlFor="contact">Contact</Label>
-
-                          <h4 className="font-semibold text-lg">
-                            {employeeDetails.contact
-                              ? employeeDetails.contact
-                              : "-"}
-                          </h4>
-                        </div>
-                        <div className="grid gap-3">
-                          <Label htmlFor="description">Description</Label>
-
+                        )}
+                      </div>
+                      <div className="grid gap-3">
+                        <Label htmlFor="status">Status</Label>
+                        {isLoading ? (
+                          <Skeleton className="h-6 w-1/2" />
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`h-3 w-3 rounded-full ${
+                                employeeDetails?.status
+                                  ? "bg-green-500"
+                                  : "bg-red-500"
+                              }`}
+                            />
+                            <h4 className="font-semibold text-lg">
+                              {employeeDetails?.status ? "Active" : "Inactive"}
+                            </h4>
+                          </div>
+                        )}
+                      </div>
+                      <div className="grid gap-3">
+                        <Label htmlFor="status">Access</Label>
+                        {isLoading ? (
+                          <Skeleton className="h-6 w-1/2" />
+                        ) : (
+                          <div className="flex items-center gap-2 ">
+                            {employeeDetails?.userId?.access?.map(
+                              (name: string, index: number) => (
+                                <div key={index} className=' px-r-4'>
+                                  <span
+                                    className={`h-3 w-3 rounded-full ${"bg-green-500"}`}
+                                  />
+                                  <h4 className="font-semibold text-lg">
+                                    {name} |
+                                  </h4>
+                                </div>
+                              )
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <div className="grid gap-3 sm:col-span-2">
+                        <Label htmlFor="description">Description</Label>
+                        {isLoading ? (
+                          <Skeleton className="h-20 w-full" />
+                        ) : (
                           <h4 className="font-semibold text-base">
-                            {employeeDetails.description
-                              ? employeeDetails.description
-                              : "-"}
+                            {employeeDetails?.description || "-"}
                           </h4>
-                        </div>
+                        )}
                       </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card x-chunk="dashboard-07-chunk-1">
-                    <CardHeader>
-                      <CardTitle>Compony Details</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid gap-6 sm:grid-cols-2">
-                        <div className="grid gap-3">
-                          <Label htmlFor="category">Compony</Label>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Company Details</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="grid gap-3">
+                        <Label htmlFor="company">Company</Label>
+                        {isLoading ? (
+                          <Skeleton className="h-6 w-3/4" />
+                        ) : (
                           <h4 className="font-semibold text-lg text-wrap">
-                            {
-                              companies?.filter(
-                                (data: any) =>
-                                  data.url == employeeDetails.company
-                              )[0]?.name
-                            }
+                            {employeeDetails?.company?.name || "-"}
                           </h4>
-                        </div>
-                        <div className="grid gap-3">
-                          <Label htmlFor="subcategory">Designation</Label>
-                          <h4 className="font-semibold text-lg">
-                            {employeeDetails.position}
-                          </h4>
-                        </div>
-                        <div className="grid gap-3">
-                          <Label htmlFor="Salary">Salary (AED)</Label>
-                          <h4 className="font-semibold text-lg">
-                            {employeeDetails.salary}
-                          </h4>
-                        </div>
-                        <div className="grid gap-3">
-                          <Label htmlFor="subcategory">Currency</Label>
-                          <h4 className="font-semibold text-lg">{"AED"}</h4>
-                        </div>
-                        <div className="grid gap-3">
-                          <Label htmlFor="Hourly">Hourly Rate (AED)</Label>
-
-                          <h4>{employeeDetails.hourly_rate}</h4>
-                        </div>
+                        )}
                       </div>
-                    </CardContent>
-                  </Card>
-                </div>
-                <div className="grid auto-rows-max items-start gap-4 lg:gap-8">
-                  <Card x-chunk="dashboard-07-chunk-3">
-                    <CardHeader>
-                      <CardTitle>Employee Status</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid gap-6">
-                        <div className="grid gap-3">
-                          {/* <Label htmlFor="status">Status</Label> */}
+                      <div className="grid gap-3">
+                        <Label htmlFor="position">Designation</Label>
+                        {isLoading ? (
+                          <Skeleton className="h-6 w-3/4" />
+                        ) : (
                           <h4 className="font-semibold text-lg">
-                            {employeeDetails.status ? "Active" : "Inactive"}
+                            {employeeDetails?.position || "-"}
                           </h4>
-                        </div>
+                        )}
                       </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card x-chunk="dashboard-07-chunk-5">
-                    <CardHeader>
-                      <CardTitle>Actions</CardTitle>
-                      <CardDescription>
-                        You can update and delete the employee.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex justify-between gap-2">
-                        <Button
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => setUpdateView(true)}
-                        >
-                          Update
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="bg-red-200 text-red-700 hover:bg-red-300 flex-1"
-                          onClick={() => setIsDialogOpen(true)}
-                          variant="secondary"
-                        >
-                          Delete
-                        </Button>
+                      <div className="grid gap-3">
+                        <Label htmlFor="salary">Salary (AED)</Label>
+                        {isLoading ? (
+                          <Skeleton className="h-6 w-3/4" />
+                        ) : (
+                          <h4 className="font-semibold text-lg">
+                            {employeeDetails?.salary || "-"}
+                          </h4>
+                        )}
                       </div>
-                    </CardContent>
-                  </Card>
-                </div>
+                      <div className="grid gap-3">
+                        <Label htmlFor="currency">Currency</Label>
+                        {isLoading ? (
+                          <Skeleton className="h-6 w-3/4" />
+                        ) : (
+                          <h4 className="font-semibold text-lg">
+                            {employeeDetails?.Currency || "AED"}
+                          </h4>
+                        )}
+                      </div>
+                      <div className="grid gap-3">
+                        <Label htmlFor="costPerHour">Hourly Rate (AED)</Label>
+                        {isLoading ? (
+                          <Skeleton className="h-6 w-3/4" />
+                        ) : (
+                          <h4 className="font-semibold text-lg">
+                            {employeeDetails?.costPerHour || "-"}
+                          </h4>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           </main>

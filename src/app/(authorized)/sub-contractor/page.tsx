@@ -1,5 +1,11 @@
 "use client";
-import { File, ListFilter, MoreHorizontal, PlusCircle } from "lucide-react";
+import {
+  File,
+  ListFilter,
+  MoreHorizontal,
+  PlusCircle,
+  Router,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -31,75 +37,83 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { date, formatDate, timeFormat } from "@/lib/dateFormat";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  useComponiesMutation,
-  useDeleteCompanyMutation,
-} from "@/redux/query/componiesApi";
+  useDeleteEmployeeMutation,
+  useEmployeeMutation,
+} from "@/redux/query/employee";
 import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import AlertDialogAlert from "@/components/dialogs/AlertDialog";
-import { useTimesheetMutation } from "@/redux/query/timesheet";
+import { formatDate } from "@/lib/dateFormat";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useRouter } from "next/navigation";
 import { PaginationComponent } from "@/components/PaginationComponent";
+import { useSubcontractorsMutation } from "@/redux/query/subcontractor";
+import CreateSubcontractor from "@/components/dialogs/CreateSubcontractor";
 
-function TimeSheet() {
+function Employee() {
   const router = useRouter();
-  const path = usePathname();
-  const [timesheet, setTimeSheet] = useState([]);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [employee, setSubcontractor] = useState([]);
   const [page, setPage] = useState(1);
-  const [itemToDelete, setItemToDelete] = useState<any>(null);
+  const [subcontractorApi, { data, isSuccess, error, isError }] =
+    useSubcontractorsMutation();
 
-  const [timeSheetApi, { data, isSuccess, error, isError }] =
-    useTimesheetMutation();
-  const [deleteCompanyApi] = useDeleteCompanyMutation();
+  const [deleteEmployeeApi] = useDeleteEmployeeMutation();
 
-  const getTimeSheetData = async () => {
-    const res = await timeSheetApi({page});
-    console.log(res, "response");
+  const getSubcontractor = async () => {
+    const res = await subcontractorApi({});
+    // console.log(res, "response");
   };
 
   useEffect(() => {
-    getTimeSheetData();
-  }, [page]);
+    getSubcontractor();
+  }, []);
 
   useEffect(() => {
     if (isSuccess) {
       console.log(data, "response from server");
       if (data) {
-        setTimeSheet(data.data);
+        setSubcontractor(data.results);
       }
     }
   }, [isSuccess]);
 
-  const deleteCompany = async (url: string) => {
+  // const deleteEmployee = async (emp: string) => {
+  //   // console.log(emp.split("/")[6]);
+  //   // const res = await deleteEmployeeApi({ id: emp.split("/")[6] });
+  //   // console.log(res, ">>>>");
+  //   // getEmployes();
+  // };
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<any>(null);
+
+  const deleteEmployee = async (url: string) => {
+    // Add your deletion logic here
+    console.log(`Deleting employee at ${url}`);
     console.log(url.split("/")[6]);
-    const res = await deleteCompanyApi({ id: url.split("/")[6] });
+    const res = await deleteEmployeeApi({ id: url.split("/")[6] });
     console.log(res, ">>>>");
-    getTimeSheetData();
+    getSubcontractor();
+    setItemToDelete(null);
   };
 
-  const update = async (url: string) => {
-    console.log(url);
-    router.push(`/timesheet/${url}`);
-  };
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
           <Tabs defaultValue="all">
             <div className="flex items-center">
-              {/* <TabsList>
-              <TabsTrigger value="all">All</TabsTrigger>
-              <TabsTrigger value="Sales">Sales</TabsTrigger>
-              <TabsTrigger value="Team Leads">Team Leads</TabsTrigger>
-              <TabsTrigger value="Team Members">Team Members</TabsTrigger>
-              <TabsTrigger value="Sub-Contractors">Sub-Contractors</TabsTrigger>
-              <TabsTrigger value="Accounts">Accounts</TabsTrigger>
-            </TabsList> */}
               <div className="ml-auto flex items-center gap-2">
-                <DropdownMenu>
+                {/* <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="h-7 gap-1">
                       <ListFilter className="h-3.5 w-3.5" />
@@ -130,49 +144,49 @@ function TimeSheet() {
                       Accounts Members
                     </DropdownMenuCheckboxItem>
                   </DropdownMenuContent>
-                </DropdownMenu>
-                <Button size="sm" variant="outline" className="h-7 gap-1">
+                </DropdownMenu> */}
+                {/* <Button size="sm" variant="outline" className="h-7 gap-1">
                   <File className="h-3.5 w-3.5" />
                   <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
                     Export
                   </span>
+                </Button> */}
+
+                <Button
+                  size="sm"
+                  className="h-7 gap-1"
+                  onClick={() => setIsDialogOpen(true)}
+                >
+                  <PlusCircle className="h-3.5 w-3.5" />
+                  <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                    Add Subcontractor
+                  </span>
                 </Button>
-                <Link href="/timesheet/create-timesheet">
-                  <Button size="sm" className="h-7 gap-1">
-                    <PlusCircle className="h-3.5 w-3.5" />
-                    <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                      Add
-                    </span>
-                  </Button>
-                </Link>
               </div>
             </div>
             <TabsContent value="all">
               <Card x-chunk="dashboard-06-chunk-0">
                 <CardHeader>
-                  <CardTitle>Time & Logs</CardTitle>
+                  <CardTitle>Subcontractor</CardTitle>
                   <CardDescription>
-                    Manage your Times and logs and view performance.
+                    Manage your subcontractor and view their performance.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        {/* <TableHead>Name</TableHead> */}
-                        <TableHead>Date</TableHead>
-                        <TableHead>Start</TableHead>
+                        <TableHead className="hidden w-[100px] sm:table-cell">
+                          <span className="sr-only">Image</span>
+                        </TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Email</TableHead>
                         <TableHead className="hidden md:table-cell">
-                          End
+                          Contact
                         </TableHead>
                         <TableHead className="hidden md:table-cell">
-                          Hours Logged
-                        </TableHead>
-                        <TableHead className="hidden md:table-cell">
-                          Amount
-                        </TableHead>
-                        <TableHead className="hidden md:table-cell">
-                          Remark
+                          Company Name
                         </TableHead>
                         <TableHead>
                           <span className="sr-only">Actions</span>
@@ -180,57 +194,55 @@ function TimeSheet() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {timesheet?.map(
+                      {employee?.map(
                         (
                           data: {
-                            _id: string;
+                            name: string;
                             created_at: string;
-                            startTime: string;
-                            endTime: string;
-                            date_logged: string;
-                            added_date: string;
-                            hours_logged: string;
-                            remarks: string;
-                            total_amount: string;
                             url: string;
+                            email: string;
+                            contact: string;
+                            company_name: string;
+                            status: boolean;
                           },
-                          index: number
+                          index
                         ) => {
-                          console.log(data)
                           return (
                             <TableRow
                               key={index}
-                              className="cursor-pointer"
                               onClick={() =>
                                 router.push(
-                                  `/timesheet/${data._id}`
+                                  `/employee/${data?.url?.split("/")[6]}`
                                 )
                               }
+                              className="cursor-pointer"
                             >
+                              <TableCell className="hidden sm:table-cell">
+                                <Image
+                                  alt="Employee Image"
+                                  className="aspect-square rounded-md object-cover"
+                                  height="64"
+                                  src={`https://ui-avatars.com/api/?name=${data?.name}&&color=fff&&background=3A72EC&&rounded=true&&font-size=0.44`}
+                                  width="64"
+                                />
+                              </TableCell>
                               <TableCell className="font-medium">
-                                {date(data?.created_at)}
+                                {data?.name}
                               </TableCell>
-                              {/* <TableCell>
-                              <Badge variant="outline">{data?.active ? "Active" : "Inactive"}</Badge>
-                            </TableCell> */}
                               <TableCell>
-                                {data?.startTime
-                                  ? timeFormat(data?.startTime)
-                                  : "-"}
+                                <Badge variant="outline">
+                                  {data.status ? "Active" : "Inactive"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{data?.email}</TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                {data?.contact}
                               </TableCell>
                               <TableCell className="hidden md:table-cell">
-                                {data?.endTime
-                                  ? timeFormat(data?.endTime)
-                                  : "-"}
+                                {data?.company_name}
                               </TableCell>
                               <TableCell className="hidden md:table-cell">
-                                {data.hours_logged}
-                              </TableCell>
-                              <TableCell className="hidden md:table-cell">
-                                {data.total_amount}
-                              </TableCell>
-                              <TableCell className="hidden md:table-cell">
-                                {data.remarks}
+                                {formatDate(data?.created_at)}
                               </TableCell>
                               <TableCell>
                                 <DropdownMenu>
@@ -251,14 +263,20 @@ function TimeSheet() {
                                       Actions
                                     </DropdownMenuLabel>
                                     <DropdownMenuItem
-                                      onClick={() => update(data._id)}
+                                      onClick={() =>
+                                        router.push(
+                                          `/employee/${
+                                            data?.url?.split("/")[6]
+                                          }`
+                                        )
+                                      }
                                     >
                                       Edit
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
                                       onClick={() => {
-                                        setItemToDelete(data);
                                         setIsDialogOpen(true);
+                                        setItemToDelete(data);
                                       }}
                                     >
                                       Delete
@@ -283,16 +301,16 @@ function TimeSheet() {
               </Card>
             </TabsContent>
           </Tabs>
+
+          <CreateSubcontractor
+            isDialogOpen={isDialogOpen}
+            setIsDialogOpen={setIsDialogOpen}
+            
+          />
         </main>
-        <AlertDialogAlert
-          isDialogOpen={isDialogOpen}
-          setIsDialogOpen={setIsDialogOpen}
-          itemToDelete={itemToDelete}
-          deleteCompany={true}
-        />
       </div>
     </div>
   );
 }
 
-export default TimeSheet;
+export default Employee;

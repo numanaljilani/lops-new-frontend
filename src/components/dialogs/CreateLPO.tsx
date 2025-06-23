@@ -73,7 +73,7 @@ function CreateLPO({
     control,
     name: "payment_terms", // Ensure this matches the field name in your schema
   });
-
+console.log(rfq_info)
   async function onSubmit(data: any) {
     const response = await createJobApi({
       data: {
@@ -99,10 +99,10 @@ function CreateLPO({
         <div className="border p-5 rounded-lg bg-white shadow-lg">
           <span className="text-sm text-gray-600">Name</span>
           <h5 className="font-semibold text-lg">
-            {rfq_info.client_name ? rfq_info.client_name : rfq_info.name}
+            { rfq_info?.client?.client_name}
           </h5>
           <span className="text-sm text-gray-600">RFQ Id</span>
-          <h5 className="font-semibold text-lg">{rfq_info.rfq_id}</h5>
+          <h5 className="font-semibold text-lg">{rfq_info.rfqId}</h5>
           <span className="text-sm text-gray-600">Quotation Amount</span>
           <h5 className="font-semibold text-lg">
             {rfq_info.quotation_amount} AED

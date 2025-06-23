@@ -27,13 +27,14 @@ import {
   useExpensescategoriesMutation,
   useGetExpenseByIdMutation,
 } from "@/redux/query/expensesApi";
-import { usePathname, useRouter } from "next/navigation";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast, Toaster } from "sonner";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useTimeSheetDetailsMutation } from "@/redux/query/timesheet";
+import { date } from "@/lib/dateFormat";
 
 // Define Zod schema for form validation
 const employeeSchema = z.object({
@@ -48,83 +49,27 @@ const employeeSchema = z.object({
 
 type EmployeeFormValues = z.infer<typeof employeeSchema>;
 
-function Employee() {
-  const path = usePathname();
+function Timesheet() {
+  const { id } = useParams();
+
   const [updateView, setUpdateView] = useState(false);
   const [timeSheet, setTimeSheetDetails] = useState<any>();
-  const [categories, setCategories] = useState([]);
 
-  const [expensesDetailsApi, { data, isSuccess, error, isError }] =
+  const [timesheetDetailsApi, { data, isSuccess, error, isError }] =
     useTimeSheetDetailsMutation();
-  const [
-    updateExpensesApi,
-    {
-      data: patchData,
-      isSuccess: patchIsSuccess,
-      error: patchError,
-      isError: patchIsError,
-    },
-  ] = usePatchEmployeeMutation();
-
-  const {
-    register,
-    handleSubmit,
-    control,
-    formState: { errors, isSubmitting },
-    reset,
-  } = useForm<EmployeeFormValues>({
-    resolver: zodResolver(employeeSchema),
-    defaultValues: {
-      date: "",
-      job_number: "",
-      category: "",
-      amount: "",
-      vat_amount: "",
-      expense_type: "",
-      description: "",
-    },
-  });
 
   const getTimeSheetDetails = async () => {
-    const res = await expensesDetailsApi({
-      id: path?.split("/")?.reverse()[0],
+    const res = await timesheetDetailsApi({
+      id,
     });
+
+    setTimeSheetDetails(res?.data)
+
     console.log(res, "timesheet RESPONSE");
   };
-
   useEffect(() => {
     getTimeSheetDetails();
   }, []);
-
-  useEffect(() => {
-    if (patchIsSuccess) {
-      getTimeSheetDetails();
-      setUpdateView(false);
-    }
-  }, [patchIsSuccess]);
-
-  useEffect(() => {
-    if (isSuccess && data) {
-      reset(data); // Reset form with fetched data
-      setTimeSheetDetails(data);
-    }
-  }, [isSuccess, data, reset]);
-
-  const [expensesCategories, { data: expRes }] =
-    useExpensescategoriesMutation();
-
-  const getExpCategories = async () => {
-    const res = await expensesCategories({});
-    if (res.data) {
-      setCategories(res.data.results);
-    }
-    console.log(res.data, "CATE");
-  };
-  useEffect(() => {
-    getExpCategories();
-  }, []);
-
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -394,21 +339,11 @@ function Employee() {
                         <div className="grid gap-3">
                           <Label htmlFor="date">Date</Label>
                           <h4 className="font-semibold text-lg">
-                            {timeSheet?.date_logged}
+                            {date(timeSheet?.created_at)}
                           </h4>
                         </div>
-                        <div className="grid gap-3">
-                          <Label htmlFor="date">Name</Label>
-                          <h4 className="font-semibold text-lg">
-                            {timeSheet?.employee_name}
-                          </h4>
-                        </div>
-                        <div className="grid gap-3">
-                          <Label htmlFor="job_number">Hourly rate</Label>
-                          <h4 className="font-semibold text-lg">
-                            {timeSheet?.hourly_rate} AED
-                          </h4>
-                        </div>
+                
+                       <div></div>
                         <div className="grid gap-3">
                           <Label htmlFor="job_number">Hour Loged</Label>
                           <h4 className="font-semibold text-lg">
@@ -445,4 +380,4 @@ function Employee() {
   );
 }
 
-export default Employee;
+export default Timesheet;

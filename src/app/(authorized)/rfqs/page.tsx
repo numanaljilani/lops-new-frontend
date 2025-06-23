@@ -1,5 +1,11 @@
 "use client";
-import { File, ListFilter, MoreHorizontal, PlusCircle, Search } from "lucide-react";
+import {
+  File,
+  ListFilter,
+  MoreHorizontal,
+  PlusCircle,
+  Search,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -32,14 +38,11 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { formatDate } from "@/lib/dateFormat";
-import {
-  useComponiesMutation,
-  useDeleteCompanyMutation,
-} from "@/redux/query/componiesApi";
+
 import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import AlertDialogAlert from "@/components/dialogs/AlertDialog";
-import { useDeleteClientMutation } from "../../../redux/query/clientsApi";
+
 import Alert from "@/components/dialogs/Alert";
 import {
   useAllRFQsMutation,
@@ -50,7 +53,13 @@ import CreateDialog from "@/components/dialogs/CreateDialog";
 import CreateLPO from "@/components/dialogs/CreateLPO";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton component
-import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"; // Import Pagination components
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"; // Import Pagination components
 import { PaginationComponent } from "@/components/PaginationComponent";
 
 function RFQs() {
@@ -58,7 +67,7 @@ function RFQs() {
   const [rfqs, setRFQs] = useState([]);
   const [filteredRFQs, setFilteredRFQs] = useState([]); // State for filtered RFQs
   const [searchQuery, setSearchQuery] = useState(""); // State for search query
-  const [page , setPage] = useState(1)
+  const [page, setPage] = useState(1);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCreateRFQDialogOpen, setIsCreateRFQDialogOpen] = useState(false);
   const [isCreateLPODialogOpen, setIsCreateLPODialogOpen] = useState(false);
@@ -91,7 +100,7 @@ function RFQs() {
   // Fetch RFQs
   const getRFQs = async () => {
     setLoading(true); // Set loading to true before fetching data
-    const res = await rfqsApi({page});
+    const res = await rfqsApi({ page });
   };
 
   useEffect(() => {
@@ -100,8 +109,9 @@ function RFQs() {
 
   useEffect(() => {
     if (isSuccess && data) {
-      setRFQs(data.results);
-      setFilteredRFQs(data.results); // Initialize filtered RFQs with all RFQs
+      console.log(data, "DATA");
+      setRFQs(data.data);
+      setFilteredRFQs(data.data); // Initialize filtered RFQs with all RFQs
       setLoading(false); // Set loading to false after data is fetched
     }
   }, [isSuccess, data]);
@@ -112,16 +122,16 @@ function RFQs() {
     let res;
     if (query === "") {
       // If the search query is empty, reset to all RFQs
-       res = await rfqsApi({ quotation_number: query ,page : 1 });
+      res = await rfqsApi({ quotation_number: query, page: 1 });
       setFilteredRFQs(rfqs);
     } else {
-       res = await rfqsApi({ quotation_number: query  , page : 1 });
+      res = await rfqsApi({ quotation_number: query, page: 1 });
       // Call the API to search for RFQs
       setLoading(true); // Show loading state while fetching
       // Pass the search query to the API
       // console.log(res , "res")
       if (res.data) {
-        setFilteredRFQs(res.data.results); // Update filtered RFQs with the API response
+        setFilteredRFQs(res.data.data); // Update filtered RFQs with the API response
       }
       setLoading(false); // Hide loading state after fetching
     }
@@ -136,7 +146,6 @@ function RFQs() {
   };
 
   const deleteRFQ = async () => {
-    
     const res = await deleteRFQApi({
       id: itemToDelete.rfq_id,
       token: "",
@@ -148,7 +157,7 @@ function RFQs() {
   // Pagination logic
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredRFQs.slice(indexOfFirstItem, indexOfLastItem);
+  const currentItems = filteredRFQs?.slice(indexOfFirstItem, indexOfLastItem);
 
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
@@ -158,20 +167,18 @@ function RFQs() {
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
           <Tabs defaultValue="all">
             <div className="flex items-center gap-10">
-              
-
               <div className="ml-auto flex items-center gap-2">
                 {/* Search Bar */}
-              <div className="relative flex-1">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Search by RFQ ID..."
-                  className="w-full rounded-lg bg-background pl-8"
-                  value={searchQuery}
-                  onChange={(e) => handleSearch(e.target.value)}
-                />
-              </div>
+                <div className="relative flex-1">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="search"
+                    placeholder="Search by RFQ ID..."
+                    className="w-full rounded-lg bg-background pl-8"
+                    value={searchQuery}
+                    onChange={(e) => handleSearch(e.target.value)}
+                  />
+                </div>
                 <Button
                   size="sm"
                   className="h-7 gap-1"
@@ -244,55 +251,67 @@ function RFQs() {
                             </TableCell>
                           </TableRow>
                         ))
-                      ) : currentItems.length === 0 ? (
+                      ) : rfqs?.length === 0 ? (
                         // No data message
                         <TableRow>
                           <TableCell colSpan={8} className="text-center py-10">
-                            <p className="text-muted-foreground">No data available.</p>
+                            <p className="text-muted-foreground">
+                              No data available.
+                            </p>
                           </TableCell>
                         </TableRow>
                       ) : (
                         // Display data
-                        currentItems.map((data: any, index: number) => (
+                        rfqs?.map((data: any, index: number) => (
                           <TableRow className="cursor-pointer" key={index}>
                             <TableCell
                               className="font-medium"
-                              onClick={() => router.push(`/rfqs/${data.rfq_id}`)}
+                              onClick={() =>
+                                router.push(`/rfqs/${data._id}`)
+                              }
                             >
-                              {data?.rfq_id}
+                              {data?.rfqId}
                             </TableCell>
                             <TableCell
                               className="font-medium"
                               // onClick={() => router.push(`/rfqs/${data.rfq_id}`)}
                             >
-                              {data?.quotation_number}
+                              {data?.quotationNo}
                             </TableCell>
                             <TableCell
                               className="font-medium"
-                              onClick={() => router.push(`/rfqs/${data.rfq_id}`)}
+                              onClick={() =>
+                                router.push(`/rfqs/${data._id}`)
+                              }
                             >
-                              {data?.client_name}
+                              {data?.client?.client_name}
                             </TableCell>
                             <TableCell
                               className="hidden md:table-cell"
-                              onClick={() => router.push(`/rfqs/${data.rfq_id}`)}
+                              onClick={() =>
+                                router.push(`/rfqs/${data._id}`)
+                              }
                             >
                               {data?.project_type}
                             </TableCell>
                             <TableCell
                               className="hidden md:table-cell"
-                              onClick={() => router.push(`/rfqs/${data.rfq_id}`)}
+                              onClick={() =>
+                                router.push(`/rfqs/${data._id}`)
+                              }
                             >
                               {data?.scope_of_work}
                             </TableCell>
                             <TableCell
                               className="hidden md:table-cell"
-                              onClick={() => router.push(`/rfqs/${data.rfq_id}`)}
+                              onClick={() =>
+                                router.push(`/rfqs/${data._id}`)
+                              }
                             >
                               {data?.quotation_amount}
                             </TableCell>
                             <TableCell className="hidden md:table-cell">
-                              {formatDate(data?.rfq_date)}
+                              {formatDate(data?.createdAt)}
                             </TableCell>
                             <TableCell className="md:table-cell">
                               <Button
@@ -339,7 +358,11 @@ function RFQs() {
                 </CardContent>
                 {/* Pagination */}
                 <CardFooter className="flex justify-center">
-                       <PaginationComponent setPage={setPage} numberOfPages={data?.count} page={page}/>
+                  <PaginationComponent
+                    setPage={setPage}
+                    numberOfPages={data?.count}
+                    page={page}
+                  />
                 </CardFooter>
               </Card>
             </TabsContent>

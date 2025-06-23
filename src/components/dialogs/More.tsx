@@ -28,10 +28,14 @@ import {
 } from "../ui/select";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useUpdateTtasksMutation } from "@/redux/query/paymentApi";
 import { Textarea } from "../ui/textarea";
 import { Input } from "../ui/input";
-import { Trash2 } from "lucide-react";
+import { CopyPlus, Trash2 } from "lucide-react";
+import { useUpdateTaskMutation } from "@/redux/query/taskApi";
+import { toast } from "sonner";
+import { useSelector } from "react-redux";
+import { hasCommon } from "@/utils/checkAccess";
+import { adminAndTeamLeadCanAccess } from "@/utils/accessArrays";
 
 function More({
   isDialogOpen,
@@ -46,62 +50,78 @@ function More({
   getTasks: any;
   setIsTaskDeleteDialogOpen: any;
 }) {
-  // if(cardData){
-  //   console.log(cardData, "cardData");
-  // }
-
   const completeStatusSchema = z.object({
     status: z.string().default("Pending"),
-
-    weightage: z.string().default(cardData?.weightage),
-    remark: z.string().default(cardData?.remarks),
-    completion_percentage: z.string().default(cardData?.completion_percentage),
+    weightage: z.string().min(1, "Weightage is required"),
+    remark: z.string().optional(),
+    completion_percentage: z.string().min(1, "Completion percentage is required"),
   });
-
+ const access = useSelector((state: any) => state?.user?.user.access);
   const {
     register,
     handleSubmit,
-    watch,
     control,
-    getValues,
+    reset,
     formState: { errors, isSubmitting },
-  } = useForm({ resolver: zodResolver(completeStatusSchema) });
+  } :any = useForm({
+    resolver: zodResolver(completeStatusSchema),
+    defaultValues: {
+      status: cardData?.status || "Pending",
+      weightage: cardData?.weightage?.toString() || "0",
+      remark: cardData?.remarks || "",
+      completion_percentage: cardData?.completion_percentage?.toString() || "0",
+    },
+  });
 
-  const [updateTaskStatus, { data: taskResponse, isSuccess, error, isError }] =
-    useUpdateTtasksMutation();
-  // console.log(data, "ONSUBMIT");
+  const [updateTaskStatus] = useUpdateTaskMutation();
+  const [updateWeightage, setUpdateWeightage] = useState(true);
+
+  useEffect(() => {
+    if (cardData) {
+      reset({
+        status: cardData?.status || "Pending",
+        weightage: cardData?.weightage?.toString() || "0",
+        remark: cardData?.remarks || "",
+        completion_percentage: cardData?.completion_percentage?.toString() || "0",
+      });
+    }
+  }, [cardData, reset]);
+
+  console.log(cardData)
   async function onSubmit(data: any) {
-    console.log(data, "data");
-    const res = await updateTaskStatus({
-      data: {
-        ...data,
-        due_date: cardData?.due_date,
-        task_brief: cardData?.task_brief,
-        weightage: data?.weightage,
-        payment_ball: cardData?.payment_ball,
-      },
-      id: cardData?.task_id,
-    });
-    console.log(res, "res");
-    getTasks(cardData?.payment_ball);
-    setIsDialogOpen(false);
+    try {
+      const payload = {
+        data: {
+          ...data,
+          due_date: cardData?.due_date,
+          task_brief: cardData?.task_brief,
+          weightage: parseInt(data.weightage),
+          completion_percentage: parseInt(data.completion_percentage),
+          paymentId: cardData?.paymentId?._id,
+          projectId : cardData?.paymentId?.projectId
+        },
+        id: cardData?._id,
+      };
+
+      const res = await updateTaskStatus(payload).unwrap();
+      toast.success("Task updated successfully");
+      getTasks(cardData?.paymentId);
+      setIsDialogOpen(false);
+    } catch (error) {
+      toast.error("Failed to update task");
+      console.error("Update task error:", error);
+    }
   }
 
-  // console.log(errors);
   return (
-    <AlertDialog
-      open={isDialogOpen}
-      onOpenChange={() => setIsDialogOpen(false)}
-    >
+    <AlertDialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <AlertDialogTrigger asChild></AlertDialogTrigger>
 
       <AlertDialogContent className="max-h-[80vh] overflow-y-auto">
-        {" "}
-        {/* Add scrollable styles here */}
         <AlertDialogHeader>
           <AlertDialogTitle>Task Details</AlertDialogTitle>
         </AlertDialogHeader>
-        {/* Scrollable Content */}
+
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-4">
             <div className="text-lg font-semibold tracking-wide gap-4">
@@ -118,7 +138,7 @@ function More({
               </div>
               <div>
                 <span className="font-thin">Due Date</span> :{" "}
-                {cardData?.due_date}
+                {formatDate(cardData?.due_date)}
               </div>
               <div>
                 <span className="font-thin">Status</span> : {cardData?.status}
@@ -129,21 +149,32 @@ function More({
               </div>
             </div>
 
-            <div>
-              {/* <AlertDialogDescription>
-
-              </AlertDialogDescription> */}
+            <div className="space-y-4">
               <div>
                 <Label htmlFor="weightage">Task weightage</Label>
-                <Input
-                  id="weightage"
-                  type="number"
-                  // defaultValue={}
-                  defaultValue={cardData?.weightage}
-                  // value={formData.password} onChange={handleInputChange}
-                  {...register("weightage")}
-                />
+                <div className="flex flex-row gap-x-3">
+                  <Input
+                    id="weightage"
+                    type="number"
+                    min="0"
+                    max="100"
+                    disabled={updateWeightage}
+                    {...register("weightage")}
+                  />
+                {hasCommon(access , adminAndTeamLeadCanAccess) &&  <Button
+                    type="button"
+                    onClick={() => setUpdateWeightage(!updateWeightage)}
+                  >
+                    <CopyPlus size={18} />
+                  </Button>}
+                </div>
+                {errors.weightage && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.weightage.message}
+                  </p>
+                )}
               </div>
+
               <div>
                 <Label htmlFor="completion_percentage">
                   Completion Percentage
@@ -151,17 +182,21 @@ function More({
                 <Input
                   id="completion_percentage"
                   type="number"
-                  defaultValue={cardData?.completion_percentage}
-                  // value={formData.password} onChange={handleInputChange}
+                  min="0"
+                  max="100"
                   {...register("completion_percentage")}
                 />
+                {errors.completion_percentage && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.completion_percentage.message}
+                  </p>
+                )}
               </div>
 
               <div className="grid gap-3">
                 <Label htmlFor="remark">Remark</Label>
                 <Textarea
                   id="remark"
-                  defaultValue={cardData?.remarks}
                   className="min-h-32"
                   {...register("remark")}
                 />
@@ -173,10 +208,9 @@ function More({
               <Controller
                 name="status"
                 control={control}
-                defaultValue={cardData?.status}
                 render={({ field }) => (
                   <Select
-                    onValueChange={(value) => field.onChange(value)}
+                    onValueChange={field.onChange}
                     value={field.value}
                   >
                     <SelectTrigger id="status" aria-label="Select Status">
@@ -184,7 +218,7 @@ function More({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Pending">Pending</SelectItem>
-                      <SelectItem value="InProgress">InProgress</SelectItem>
+                      <SelectItem value="InProgress">In Progress</SelectItem>
                       <SelectItem value="Completed">Completed</SelectItem>
                     </SelectContent>
                   </Select>
@@ -192,25 +226,26 @@ function More({
               />
             </div>
           </div>
+
           <AlertDialogFooter className="py-6">
-            <Button size="lg" type="submit" className="py-4">
-              Mark
-            </Button>
             <Button
               size="lg"
               type="submit"
+              className="py-4"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Submitting..." : "Save Changes"}
+            </Button>
+          {hasCommon(access , adminAndTeamLeadCanAccess) &&  <Button
+              size="lg"
+              type="button"
               className="py-4 gap-x-3"
-              variant={"destructive"}
-              onClick={() => {
-                if(setIsTaskDeleteDialogOpen){
-                  setIsTaskDeleteDialogOpen(true);
-                }
-           
-              }}
+              variant="destructive"
+              onClick={() => setIsTaskDeleteDialogOpen(true)}
             >
               <Trash2 size={18} />
               Delete
-            </Button>
+            </Button>}
             <AlertDialogCancel>Cancel</AlertDialogCancel>
           </AlertDialogFooter>
         </form>

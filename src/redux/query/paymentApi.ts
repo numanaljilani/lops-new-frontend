@@ -4,12 +4,24 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 // Define a service using a base URL and expected endpoints
 export const paymentApi = createApi({
   reducerPath: "paymentApi",
-  baseQuery: fetchBaseQuery({ baseUrl: `${urls.server}/api/v1/client_new/` }),
+  baseQuery: fetchBaseQuery({
+    baseUrl: `${urls.server}/payment`,
+    prepareHeaders: (headers, { getState }) => {
+      const token = (getState() as any)?.user?.accessToken;
+      console.log(token, "TOKEN");
+      if (token) {
+        headers.set("Authorization", `Bearer ${token}`);
+      }
+      return headers;
+    },
+  }),
   endpoints: (builder) => ({
     payments: builder.mutation({
-      query: ({id}) => {
+      query: ({ id }) => {
+        console.log(id, "paymentsAPI");
         return {
-          url: `paymentballs/?job_card=${id}`,
+          // url: `/?projectId=${id || ''}`,
+          url: `/?projectId=${id || ""}`,
           method: "GET",
           headers: {
             "Content-type": "application/json; charset=UTF-8",
@@ -30,12 +42,12 @@ export const paymentApi = createApi({
       },
     }),
     updateTtasks: builder.mutation({
-      query: ({data , id }) => {
+      query: ({ data, id }) => {
         // console.log(data , "API")
         return {
           url: `tasks/${id}/`,
           method: "PUT",
-          body : data ,
+          body: data,
           headers: {
             "Content-type": "application/json; charset=UTF-8",
           },
@@ -46,7 +58,7 @@ export const paymentApi = createApi({
       query: (data) => {
         // console.log(data , "API")
         return {
-          url: "paymentballs/",
+          url: "/",
           method: "POST",
           body: data.data,
           headers: {
@@ -55,22 +67,9 @@ export const paymentApi = createApi({
         };
       },
     }),
-    createTask: builder.mutation({
-      query: (data) => {
-        // console.log(data , "API")
-        return {
-          url: "tasks/",
-          method: "POST",
-          body: data.data,
-          headers: {
-            "Content-type": "application/json; charset=UTF-8",
-          },
-        };
-      },
-    }),
+
     deleteTask: builder.mutation({
-      query: ({id , token}) => {
-  
+      query: ({ id, token }) => {
         return {
           url: `tasks/${id}/`,
           method: "DELETE",
@@ -94,44 +93,17 @@ export const paymentApi = createApi({
         };
       },
     }),
-    jobDetails: builder.mutation({
-      query: (data) => {
-        return {
-          url: `paymentballs/${data.id}/`,
-          method: "GET",
-          headers: {
-            "Content-type": "application/json; charset=UTF-8",
-            authorization: `bearer ${data.token}`,
-          },
-        };
-      },
-    }),
-    patchClient: builder.mutation({
-      query: (data) => {
-        return {
-          url: `paymentballs/${data.id}/`,
-          method: "PATCH",
-          body: data.details,
-          headers: {
-            "Content-type": "application/json; charset=UTF-8",
-            authorization: `bearer ${data.token}`,
-          },
-        };
-      },
-    }),
   }),
 });
 
 // Export hooks for usage in functional components, which are
 // auto-generated based on the defined endpoints
 export const {
-  useJobDetailsMutation,
   usePaymentsMutation,
   useTasksMutation,
-  useCreateTaskMutation,
+
   useDeletePaymentBallMutation,
-  usePatchClientMutation,
   useCreateBallMutation,
   useUpdateTtasksMutation,
-  useDeleteTaskMutation
+  useDeleteTaskMutation,
 } = paymentApi;

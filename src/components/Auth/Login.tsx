@@ -1,17 +1,19 @@
 import Image from "next/image";
-import React from "react";
-
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import React, { useEffect } from "react";
 import Link from "next/link";
-import { Button } from "../ui/button";
-
 import { useForm } from "react-hook-form";
 import { LoaderCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
-
 import { z } from "zod";
+import { useLoginMutation } from "@/redux/query/authApi";
+import { toast } from "sonner";
+import { useDispatch } from "react-redux";
+import {
+  setAccessToken,
+  setRefreshToken,
+  setUser,
+} from "@/redux/slice/profileSlice";
 
 export default function Login() {
   const LoginSchema = z.object({
@@ -25,133 +27,169 @@ export default function Login() {
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm({ resolver: zodResolver(LoginSchema) });
-  console.log(errors);
+
+  const [loginApi, { data, isSuccess, error, isError, isLoading }] =
+    useLoginMutation();
+
+  const dispatch = useDispatch();
   async function onSubmit(data: any) {
-    await new Promise((resolve) => setTimeout(resolve, 5000));
-    router.push("/dashboard");
-    console.log("data submited", data, errors);
+    const res = await loginApi(data);
   }
 
+  useEffect(() => {
+    if (isSuccess) {
+      console.log(data);
+      dispatch(setAccessToken(data.accessToken));
+      dispatch(setRefreshToken(data.refreshToken));
+      dispatch(setUser({...data.user , ...data.employee}));
+
+      router.push("/dashboard");
+    }
+  }, [isSuccess]);
+
+  useEffect(() => {
+    if (isError) {
+      console.log(error);
+      toast( error?.data?.message || "Please provide the credentials", {
+        description: error?.data?.message,
+      });
+    }
+  }, [isError]);
+
   return (
-    <div className="w-full h-screen overflow-hidden flex justify-center items-center shadow-lg px-5">
-      <div className=" md:w-[75%] lg:w-[75%] px-4 md:p-0 lg:p-0 sm:p-0 lg:grid lg:grid-cols-2 rounded-md overflow-hidden shadow-2xl shadow-blue-200">
-        <div className="flex-1">
-          <div className="flex items-center justify-center py-12">
-            <div className="mx-auto grid w-[350px] gap-6">
-              <div className="grid gap-2 text-center">
-                <h1 className="text-3xl font-bold">Login</h1>
-                <p className="text-balance text-muted-foreground">
-                  Enter your email below to login to your account.
-                </p>
-              </div>
-              <form onSubmit={handleSubmit(onSubmit)}>
-                <div className="grid gap-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="text"
-                    className={
-                      errors.email &&
-                      "border-destructive/80 text-destructive focus-visible:border-destructive/80 focus-visible:ring-destructive/30"
-                    }
-                    placeholder="m@example.com"
-                    {...register("email", {
-                      required: { value: true, message: "Email is required." },
-                    })}
-                  />
-                  {errors.email && (
-                    <p
-                      className="mt-1 text-xs text-destructive"
-                      role="alert"
-                      aria-live="polite"
-                    >
-                      {errors?.email?.message?.toString()}
-                    </p>
-                  )}
-                </div>
-                <div className="grid gap-2 mt-2 ">
-                  <div className="flex items-center">
-                    <Label htmlFor="password">Password</Label>
-                    <Link
-                      href="/forgot-password"
-                      className="ml-auto inline-block text-sm underline"
-                    >
-                      Forgot your password?
-                    </Link>
-                  </div>
-                  <Input
-                    id="password"
-                    type="password"
-                    className={
-                      errors.password &&
-                      "border-destructive/80 text-destructive focus-visible:border-destructive/80 focus-visible:ring-destructive/30"
-                    }
-                    {...register("password", {
-                      minLength: {
-                        value: 4,
-                        message: "password should be greater then 4 charector.",
-                      },
-                      required: {
-                        value: true,
-                        message: "Password is required.",
-                      },
-                    })}
-                  />
-                  {errors.password && (
-                    <p
-                      className="mt-1 text-xs text-destructive"
-                      role="alert"
-                      aria-live="polite"
-                    >
-                      {errors?.password?.message?.toString()}
-                    </p>
-                  )}
-                </div>
-                <Button
-                  disabled={isSubmitting}
-                  type="submit"
-                  className="w-full mt-4"
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 p-4 sm:p-6">
+      <div className="w-full max-w-5xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col lg:flex-row">
+        {/* Form Section */}
+        <div className="w-full lg:w-1/2 p-6 sm:p-8 lg:p-12 flex items-center justify-center">
+          <div className="w-full max-w-sm space-y-8">
+            <div className="text-center space-y-3">
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">
+                Sign In
+              </h1>
+              <p className="text-sm text-gray-500">
+                Access your account with your credentials
+              </p>
+            </div>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              <div className="space-y-2">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-700"
                 >
-                  {isSubmitting && (
+                  Email
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  className={`w-full px-4 py-3 rounded-lg border ${
+                    errors.email
+                      ? "border-red-500 focus:ring-red-200"
+                      : "border-gray-300 focus:ring-blue-200"
+                  } focus:outline-none focus:ring-2 transition-colors text-gray-900 placeholder-gray-400`}
+                  {...register("email", {
+                    required: { value: true, message: "Email is required." },
+                  })}
+                />
+                {errors.email && (
+                  <p
+                    className="text-xs text-red-500"
+                    role="alert"
+                    aria-live="polite"
+                  >
+                    {errors.email.message?.toString()}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label
+                    htmlFor="password"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Password
+                  </label>
+                  <Link
+                    href="/forgot-password"
+                    className="text-sm text-blue-600 hover:text-blue-700 transition-colors"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+                <input
+                  id="password"
+                  type="password"
+                  className={`w-full px-4 py-3 rounded-lg border ${
+                    errors.password
+                      ? "border-red-500 focus:ring-red-200"
+                      : "border-gray-300 focus:ring-blue-200"
+                  } focus:outline-none focus:ring-2 transition-colors text-gray-900 placeholder-gray-400`}
+                  {...register("password", {
+                    minLength: {
+                      value: 4,
+                      message: "Password must be at least 4 characters.",
+                    },
+                    required: {
+                      value: true,
+                      message: "Password is required.",
+                    },
+                  })}
+                />
+                {errors.password && (
+                  <p
+                    className="text-xs text-red-500"
+                    role="alert"
+                    aria-live="polite"
+                  >
+                    {errors.password.message?.toString()}
+                  </p>
+                )}
+              </div>
+              <button
+                disabled={isSubmitting}
+                type="submit"
+                className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center transition-colors font-medium"
+              >
+                {isSubmitting ||
+                  (isLoading && (
                     <LoaderCircle
-                      className="-ms-1 me-2 animate-spin"
+                      className="mr-2 animate-spin"
                       size={16}
                       strokeWidth={2}
                       aria-hidden="true"
                     />
-                  )}
-                  Login
-                </Button>
-              </form>
-            </div>
+                  ))}
+                Sign In
+              </button>
+            </form>
+            <p className="text-center text-sm text-gray-600">
+              Don't have an account?{" "}
+              <Link
+                href="/signup"
+                className="text-blue-600 hover:text-blue-700 transition-colors"
+              >
+                Sign up
+              </Link>
+            </p>
           </div>
         </div>
-        <div className="hidden sm:block border w-full h-full overflow-hidden">
+        {/* Image Section */}
+        <div className="hidden lg:block w-full lg:w-1/2 relative">
           <Image
             src="/login.jpg"
-            alt="Image"
-            width="1920"
-            height="1080"
+            alt="Login illustration"
+            width={1920}
+            height={1080}
             priority
-            className="h-[80vh] object-fill dark:brightness-[0.2] dark:grayscale"
-            // loading="lazy"
+            className="h-full w-full object-cover brightness-90"
           />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent flex items-end p-8">
+            <h2 className="text-white text-xl font-semibold">
+              Securely Access Your Dashboard
+            </h2>
+          </div>
         </div>
       </div>
     </div>
   );
 }
-
-// <div className="space-y-2">
-//   <Label htmlFor="input-06">Input with error</Label>
-//   <Input
-//     id="input-06"
-//     className="border-destructive/80 text-destructive focus-visible:border-destructive/80 focus-visible:ring-destructive/30"
-//     placeholder="Email"
-//     type="email"
-//     defaultValue="invalid@email.com"
-//   />
-//   <p className="mt-2 text-xs text-destructive" role="alert" aria-live="polite">
-//     Email is invalid
-//   </p>
-// </div>

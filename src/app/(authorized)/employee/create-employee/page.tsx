@@ -34,11 +34,11 @@ export default function CreateEmployee() {
   // Define access levels
   const accessLevels = [
     { id: "admin", label: "Admin"  },
-    { id: "team_lead", label: "Team Lead" },
+    { id: "team lead", label: "Team Lead" },
     { id: "sales", label: "Sales" },
-    { id: "sub-contractor", label: "Sub Contractor" },
+    { id: "subcontractor", label: "Sub Contractor" },
     { id: "accounts", label: "Accounts" },
-    { id: "hr", label: "HR" },
+    { id: "team member", label: "Team Member" },
   ];
 
   // Update the zod schema to include the access field
@@ -112,17 +112,20 @@ export default function CreateEmployee() {
   useEffect(() => {
     if (companiesIsSuccess) {
       if (comapniesData) {
-        setCompanies(comapniesData.results);
+        setCompanies(comapniesData?.data);
       }
     }
   }, [companiesIsSuccess]);
 
   async function onSubmit(data: any) {
-    await createEmployeeApi({ ...data, hourly_rate });
+    const res = await createEmployeeApi({ ...data, costPerHour :hourly_rate });
+    console.log(res , "response createEmployeeApi")
   }
 
   const salary = watch("salary", "");
   const hourly_rate = (salary / 207).toFixed(2);
+
+  console.log(errors)
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -291,13 +294,13 @@ export default function CreateEmployee() {
                                 <SelectContent>
                                   {companies.map(
                                     (
-                                      data: { name: string; url: string },
+                                      data: { name: string; _id: string },
                                       index
                                     ) => {
                                       return (
                                         <SelectItem
                                           key={index}
-                                          value={data?.url}
+                                          value={data?._id}
                                         >
                                           {data?.name}
                                         </SelectItem>

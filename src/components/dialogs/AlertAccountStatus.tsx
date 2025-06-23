@@ -38,19 +38,17 @@ export default function AlertAccountStatus({
   const router = useRouter();
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
+  const [verifyPaymentStatus, { isSuccess, isError, isLoading }] =
+    useVerifyPaymentStatusMutation();
 
   const LPOSchema = z.object({
-    amount: z.number().default(item?.amount || 0),
+    amount: z.number().min(0, "Amount must be positive"),
     status: z.string().default("Pending"),
-    verification_status: z
-      .string()
-      .default(item?.verification_status || "unverified"),
-    VAT: z.number().default(0),
-    charity: z.number().default(0), // Default charity amount
-    total_amount: z.number().default(0),
-    project_status: z.string().default(item?.status || "Pending"),
-    // project_percentage: z.string().default(item?.project_percentage || "0"),
-    // invoice_number: z.string().default(item?.invoice_number || "-"),
+    verification_status: z.string().default("unverified"),
+    VAT: z.number().min(0),
+    charity: z.number().min(0),
+    total_amount: z.number().min(0),
+    project_status: z.string().default("Pending"),
     notes: z.string().default(""),
   });
 
@@ -58,45 +56,44 @@ export default function AlertAccountStatus({
     register,
     handleSubmit,
     control,
+    reset,
     setValue,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(LPOSchema),
-    defaultValues: {
-      amount: item?.amount ? String(item.amount) : "0",
-      VAT: item?.amount ? (Number(item.amount) * 0.05).toFixed(2) : "0.00",
-      charity: "0",
-      total_amount: item?.amount
-        ? (Number(item.amount) + Number(item.amount) * 0.05).toFixed(2)
-        : "0.00",
-      // invoice_number: item?.invoice_number || "-",
-      verification_status: item?.verification_status || "unverified",
-      project_percentage: item?.project_percentage || 100,
-      notes: "",
-      project_status: item?.status || "Pending",
-    },
   });
 
-  const [verifyPaymentStatus, { data, isSuccess, error, isError, isLoading }] =
-    useVerifyPaymentStatusMutation();
-
-  // Watch amount and charity fields for changes
+  // Watch amount field for changes
   const amount = useWatch({ control, name: "amount" });
-  const charity = useWatch({ control, name: "charity" });
 
-  // Calculate VAT and total amount whenever amount or charity changes
+  // Reset form when item changes or dialog opens/closes
   useEffect(() => {
-    const amountValue = Number(amount) || 0;
-    const charityValue = Number(charity) || 0;
+    if (isDialogOpen && item) {
+      reset({
+        amount: item?.amount ? Number(item.amount) : 0,
+        VAT: item?.vat_amount ? Number(item.vat_amount) : 0,
+        charity: item?.charity_amount ? Number(item.charity_amount) : 0,
+        total_amount: item?.net_amount ? Number(item.net_amount) : 0,
+        verification_status: item?.verification_status || "unverified",
+        notes: item?.notes || "",
+        project_status: item?.status || "Pending",
+      });
+    }
+  }, [isDialogOpen, item, reset]);
 
-    // Calculate VAT (5% of amount)
-    const vatValue = amountValue * 0.05;
-    setValue("VAT", vatValue.toFixed(2));
+  // Calculate VAT (5%) and charity (2.5%) whenever amount changes
+  useEffect(() => {
+    if (isDialogOpen) {
+      const amountValue = Number(amount) || 0;
+      const vatValue = amountValue * 0.05;
+      const charityValue = amountValue * 0.025;
+      const totalAmount = amountValue + vatValue - charityValue;
 
-    // Calculate total amount (amount + VAT - charity)
-    const totalAmountValue = amountValue + vatValue - charityValue;
-    setValue("total_amount", totalAmountValue.toFixed(2));
-  }, [amount, charity, setValue]);
+      setValue("VAT", vatValue);
+      setValue("charity", charityValue);
+      setValue("total_amount", totalAmount);
+    }
+  }, [amount, setValue, isDialogOpen]);
 
   async function onSubmit(data: any) {
     try {
@@ -108,12 +105,13 @@ export default function AlertAccountStatus({
         },
         id: item.payment_id,
       });
-      console.log(response, ">>>>");
+
       if (response.error) {
         setWarningMessage("Failed to submit the form. Please try again.");
       } else {
         setSuccessMessage("Form submitted successfully!");
         setIsDialogOpen(false);
+        reset(); // Reset form after successful submission
       }
     } catch (err) {
       setWarningMessage("An error occurred. Please try again.");
@@ -131,42 +129,32 @@ export default function AlertAccountStatus({
   }, [isSuccess, isError, setIsDialogOpen]);
 
   return (
-    <Dialog open={isDialogOpen} onOpenChange={() => setIsDialogOpen(false)}>
-      <DialogContent className=" overflow-x-scroll no-scrollbar border border-black rounded-lg w-[90%] max-h-[90%]  scroll-smooth lg:w-[1200px] md:w-[1200px]">
+    <Dialog open={isDialogOpen} onOpenChange={(open) => {
+      setIsDialogOpen(open);
+      if (!open) {
+        reset(); // Reset form when dialog closes
+      }
+    }}>
+      <DialogContent className="overflow-x-scroll no-scrollbar border border-black rounded-lg w-[90%] max-h-[90%] scroll-smooth lg:w-[1200px] md:w-[1200px]">
         <DialogHeader>
           <DialogTitle>Verify</DialogTitle>
           <DialogDescription>Fill the form.</DialogDescription>
         </DialogHeader>
 
         {warningMessage && (
-          <div
-            className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4"
-            role="alert"
-          >
+          <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4" role="alert">
             <p>{warningMessage}</p>
           </div>
         )}
 
         {successMessage && (
-          <div
-            className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4"
-            role="alert"
-          >
+          <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4" role="alert">
             <p>{successMessage}</p>
           </div>
         )}
 
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-4 border p-5 rounded-lg shadow-lg">
-            {/* <div>
-              <Label htmlFor="job_card">Job Id</Label>
-              <Input
-                id="job_card"
-                type="text"
-                disabled
-                value={item?.job_card}
-              />
-            </div> */}
             <div>
               <Label htmlFor="job_card">Job Id</Label>
               <Input
@@ -176,30 +164,23 @@ export default function AlertAccountStatus({
                 value={item?.job_number}
               />
             </div>
-            {/* <div>
-              <Label htmlFor="invoice_number">Invoice</Label>
-              <Input
-                id="invoice_number"
-                type="text"
-                defaultValue={item?.invoice_number || "-"}
-                {...register("invoice_number")}
-              />
-              {errors?.invoice_number && (
-                <ErrorMessage message={errors?.invoice_number.message} />
-              )}
-            </div> */}
+           
             <div>
               <Label htmlFor="amount">Amount</Label>
               <Input
                 id="amount"
                 type="number"
-                defaultValue={item?.amount || "0"}
-                {...register("amount", { valueAsNumber: true })}
+                {...register("amount", { 
+                  valueAsNumber: true,
+                  onChange: (e) => {
+                    const value = Number(e.target.value);
+                    setValue("amount", value);
+                  }
+                })}
               />
-              {errors.amount && (
-                <ErrorMessage message={errors.amount.message} />
-              )}
+              {errors.amount && <ErrorMessage message={errors.amount.message} />}
             </div>
+            
             <div>
               <Label htmlFor="VAT">VAT (5%)</Label>
               <Input
@@ -210,18 +191,18 @@ export default function AlertAccountStatus({
               />
               {errors.VAT && <ErrorMessage message={errors.VAT.message} />}
             </div>
+            
             <div>
-              <Label htmlFor="charity">Charity</Label>
+              <Label htmlFor="charity">Charity (2.5%)</Label>
               <Input
                 id="charity"
                 type="number"
-                defaultValue="0"
+                disabled
                 {...register("charity", { valueAsNumber: true })}
               />
-              {errors.charity && (
-                <ErrorMessage message={errors.charity.message} />
-              )}
+              {errors.charity && <ErrorMessage message={errors.charity.message} />}
             </div>
+            
             <div>
               <Label htmlFor="total_amount">Total Amount</Label>
               <Input
@@ -230,9 +211,7 @@ export default function AlertAccountStatus({
                 disabled
                 {...register("total_amount", { valueAsNumber: true })}
               />
-              {errors.total_amount && (
-                <ErrorMessage message={errors.total_amount.message} />
-              )}
+              {errors.total_amount && <ErrorMessage message={errors.total_amount.message} />}
             </div>
 
             <div className="grid gap-3">
@@ -240,24 +219,15 @@ export default function AlertAccountStatus({
               <Controller
                 name="verification_status"
                 control={control}
-                defaultValue={item?.verification_status || "unverified"}
                 render={({ field }) => (
-                  <Select
-                    onValueChange={(value) => field.onChange(value)}
-                    value={field.value}
-                  >
-                    <SelectTrigger
-                      id="verification_status"
-                      aria-label="Select Type"
-                    >
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <SelectTrigger id="verification_status" aria-label="Select Type">
                       <SelectValue placeholder="Select Status" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value={"unverified"}>
-                        Ready to invoice
-                      </SelectItem>
-                      <SelectItem value={"invoiced"}>{"Invoiced"}</SelectItem>
-                      <SelectItem value={"paid"}>{"Paid"}</SelectItem>
+                      <SelectItem value="unverified">Ready to invoice</SelectItem>
+                      <SelectItem value="invoiced">Invoiced</SelectItem>
+                      <SelectItem value="paid">Paid</SelectItem>
                     </SelectContent>
                   </Select>
                 )}
@@ -266,18 +236,7 @@ export default function AlertAccountStatus({
                 <ErrorMessage message={errors.verification_status.message} />
               )}
             </div>
-            {/* <div>
-              <Label htmlFor="project_percentage">Project Percentage</Label>
-              <Input
-                id="project_percentage"
-                type="text"
-                defaultValue={item?.project_percentage || "0"}
-                {...register("project_percentage")}
-              />
-              {errors.project_percentage && (
-                <ErrorMessage message={errors.project_percentage.message} />
-              )}
-            </div> */}
+
             <div className="grid gap-3">
               <Label htmlFor="notes">Notes</Label>
               <Textarea
@@ -290,15 +249,18 @@ export default function AlertAccountStatus({
           </div>
 
           <DialogFooter className="pt-6">
-            <Button
-              variant={"secondary"}
-              onClick={() => setIsDialogOpen(false)}
+            <Button 
+              variant="secondary" 
+              type="button"
+              onClick={() => {
+                setIsDialogOpen(false);
+                reset();
+              }}
             >
               Cancel
             </Button>
-
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Submitting..." : "Create"}
+              {isSubmitting ? "Submitting..." : "Submit"}
             </Button>
           </DialogFooter>
         </form>

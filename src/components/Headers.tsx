@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  CircleUser,
-  Menu,
-  Package2,
-} from "lucide-react";
+import { CircleUser, Menu, Package2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,11 +13,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { usePathname, useRouter } from "next/navigation";
+import { useSelector } from "react-redux";
+import { hasCommon } from "@/utils/checkAccess";
 
 function Headers() {
   const path = usePathname();
   const router = useRouter();
   const currentPath = path.split("/")[1]; // Store the current path segment
+
+  const accesses = useSelector((state: any) => state?.user?.user?.access);
+  console.log(accesses, ">>>>>");
 
   const logout = async () => {
     router.replace("/");
@@ -29,15 +30,29 @@ function Headers() {
 
   // Define navigation links
   const navLinks = [
-    { href: "/dashboard", label: "Dashboard" },
-    { href: "/rfqs", label: "RFQ's" },
-    { href: "/projects", label: "Projects" },
-    { href: "/accounts", label: "Accounts" },
-    { href: "/expenses", label: "Expenses" },
-    { href: "/clients", label: "Clients" },
-    { href: "/employee", label: "Employee" },
-    { href: "/companies", label: "Companies" },
-    { href: "/timesheet", label: "Timecard" },
+    { href: "/dashboard", label: "Dashboard", access: ["admin", "sales"] },
+    {
+      href: "/rfqs",
+      label: "RFQ's",
+      access: ["admin", "sales"],
+    },
+    {
+      href: "/projects",
+      label: "Projects",
+      access: ["admin", "team member", "Team Leads", "accounts", "sales"],
+    },
+    { href: "/accounts", label: "Accounts", access: ["admin", "accounts"] },
+    { href: "/expenses", label: "Expenses", access: ["admin", "accounts"] },
+
+    { href: "/clients", label: "Clients", access: ["admin"] },
+    { href: "/employee", label: "Employee", access: ["admin"] },
+    { href: "/companies", label: "Companies", access: ["admin"] },
+
+    {
+      href: "/timesheet",
+      label: "Timecard",
+      access: ["admin", "sales", "Team Lead"],
+    },
     // { href: "#", label: "Analytics" },
   ];
 
@@ -50,21 +65,24 @@ function Headers() {
           className="flex items-center gap-2 text-lg font-semibold md:text-base"
         >
           <Package2 className="h-6 w-6" />
-          <span className="sr-only">Acme Inc</span>
+          <span className="sr-only">LOPS</span>
         </Link>
-        {navLinks.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className={`${
-              currentPath !== link.href.split("/")[1]
-                ? "text-muted-foreground"
-                : "text-foreground"
-            } transition-colors hover:text-foreground`}
-          >
-            {link.label}
-          </Link>
-        ))}
+        {navLinks.map(
+          (link: any) =>
+            hasCommon(link?.access, accesses) && (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`${
+                  currentPath !== link.href.split("/")[1]
+                    ? "text-muted-foreground"
+                    : "text-foreground"
+                } transition-colors hover:text-foreground`}
+              >
+                {link.label}
+              </Link>
+            )
+        )}
       </nav>
 
       {/* Mobile Navigation */}
@@ -82,7 +100,7 @@ function Headers() {
               className="flex items-center gap-2 text-lg font-semibold"
             >
               <Package2 className="h-6 w-6" />
-              <span className="sr-only">Acme Inc</span>
+              <span className="sr-only">LOPS</span>
             </Link>
             {navLinks.map((link) => (
               <Link

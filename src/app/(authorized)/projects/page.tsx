@@ -108,7 +108,7 @@ function Projects() {
     if (isSuccess) {
    
       if (data) {
-        setJobs(data.results);
+        setJobs(data.data);
         setLoading(false); // Set loading to false after data is fetched
       }
     }
@@ -116,7 +116,7 @@ function Projects() {
 
   const deleteJobCard = async () => {
     const res = await deleteJobCardApi({
-      id: itemToDelete.job_id,
+      id: itemToDelete._id,
       token: "",
     });
 
@@ -126,7 +126,7 @@ function Projects() {
   // Pagination logic
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = jobs.slice(indexOfFirstItem, indexOfLastItem);
+  const currentItems = jobs?.slice(indexOfFirstItem, indexOfLastItem) || [];
 
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
@@ -217,7 +217,7 @@ function Projects() {
                             </TableCell>
                           </TableRow>
                         ))
-                      ) : currentItems.length === 0 ? (
+                      ) : jobs?.length === 0 ? (
                         // No data message
                         <TableRow>
                           <TableCell colSpan={7} className="text-center py-10">
@@ -226,20 +226,20 @@ function Projects() {
                         </TableRow>
                       ) : (
                         // Display data
-                        currentItems.map((data: any, index: number) => (
+                        jobs?.map((data: any, index: number) => (
                           <TableRow key={index} className="cursor-pointer">
                             <TableCell
                               className="hidden sm:table-cell"
                               onClick={() =>
-                                router.push(`/projects/${data.job_id}`)
+                                router.push(`/projects/${data._id}`)
                               }
                             >
-                              {data?.job_number}
+                              {data?.projectId}
                             </TableCell>
                             <TableCell
                               className="font-medium"
                               onClick={() =>
-                                router.push(`/projects/${data.job_id}`)
+                                router.push(`/projects/${data._id}`)
                               }
                             >
                               {data?.client_name || "-"}
@@ -247,7 +247,7 @@ function Projects() {
                             {/* <TableCell
                               className="font-medium"
                               onClick={() =>
-                                router.push(`/projects/${data.job_id}`)
+                                router.push(`/projects/${data._id}`)
                               }
                             >
                               {data?.project_name || "-"}
@@ -255,14 +255,14 @@ function Projects() {
                             <TableCell
                               className="font-medium"
                               onClick={() =>
-                                router.push(`/projects/${data.job_id}`)
+                                router.push(`/projects/${data._id}`)
                               }
                             >
                               {data?.scope_of_work}
                             </TableCell>
                             <TableCell
                               onClick={() =>
-                                router.push(`/projects/${data.job_id}`)
+                                router.push(`/projects/${data._id}`)
                               }
                             >
                               <Badge variant="outline">
@@ -272,13 +272,13 @@ function Projects() {
                             <TableCell
                               className="hidden md:table-cell"
                               onClick={() =>
-                                router.push(`/projects/${data.job_id}`)
+                                router.push(`/projects/${data._id}`)
                               }
                             >
                               {data?.profit}
                             </TableCell>
                             <TableCell className="hidden md:table-cell">
-                              {formatDate(data?.delivery_timelines)}
+                              {data?.delivery_timelines}
                             </TableCell>
                             <TableCell>
                               <DropdownMenu>
@@ -304,7 +304,7 @@ function Projects() {
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={() =>
-                                      router.push(`/projects/${data.job_id}`)
+                                      router.push(`/projects/${data._id}`)
                                     }
                                   >
                                     Edit

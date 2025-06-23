@@ -1,17 +1,23 @@
 import { urls } from '@/constants/urls';
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
+import { createApi, fetchBaseQuery, RootState } from '@reduxjs/toolkit/query/react'
 
 
 
 // Define a service using a base URL and expected endpoints
 export const clientsApi = createApi({
   reducerPath: 'clientsApi',
-  baseQuery: fetchBaseQuery({ baseUrl: `${urls.server}/api/v1/client_new/` }),
+  baseQuery: fetchBaseQuery({ baseUrl: `${urls.server}/client` , 
+  prepareHeaders :(headers, { getState }) =>{
+     const token = (getState() as any);
+     console.log(token , "TOKEN")
+  }
+  }),
+  
   endpoints: (builder) => ({
     clients: builder.mutation({
         query: ({page}) => {
           return {
-            url: `clients/?page=${page || 1}`,
+            url: `/?page=${page || 1}`,
             method: "GET",
             headers: {
               "Content-type": "application/json; charset=UTF-8",
@@ -22,7 +28,7 @@ export const clientsApi = createApi({
     createClient: builder.mutation({
         query: (data) => {
           return {
-            url: "clients/",
+            url: "/",
             method: "POST",
             body: data.data,
             headers: {
@@ -35,7 +41,7 @@ export const clientsApi = createApi({
         query: (data) => {
           console.log("delet client ",data)
           return {
-            url: `clients/${data?.id}/`,
+            url: `/${data?.id}/`,
             method: "DELETE",
             headers: {
               "Content-type": "application/json; charset=UTF-8",
@@ -47,7 +53,7 @@ export const clientsApi = createApi({
       clientDetails: builder.mutation({
         query: (data) => {
           return {
-            url: `clients/${data.id}/`,
+            url: `/${data.id}/`,
             method: "GET",
             headers: {
               "Content-type": "application/json; charset=UTF-8",
@@ -59,8 +65,8 @@ export const clientsApi = createApi({
       patchClient: builder.mutation({
         query: (data) => {
           return {
-            url: `clients/${data.id}/`,
-            method: "PATCH",
+            url: `/${data.id}/`,
+            method: "PUT",
             body : data.details,
             headers: {
               "Content-type": "application/json; charset=UTF-8",

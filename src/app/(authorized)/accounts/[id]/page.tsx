@@ -250,7 +250,7 @@ function AccountsDetails() {
                                   {data?.amount} AED
                                 </div>
                                 <div className="text-sm tracking-wider font-light text-white text-center">
-                                  {data?.verification_status}
+                                {data?.verification_status == 'unverified' ? "Raedy to invoice" : data?.verification_status}
                                 </div>
                               </CardContent>
                             </div>
@@ -267,7 +267,7 @@ function AccountsDetails() {
           <AlertAccountStatus
             isDialogOpen={isDialogOpen}
             setIsDialogOpen={setIsDialogOpen}
-            item={item}
+            item={accountsDetails}
           />
         </div>
       </div>
@@ -299,6 +299,7 @@ function AccountsDetails() {
                     <Button
                       size="sm"
                       className="bg-red-200 text-red-700 hover:bg-red-300"
+                     
                       onClick={() => setIsDialogOpen(true)}
                     >
                       Delete

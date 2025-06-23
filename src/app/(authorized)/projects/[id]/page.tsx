@@ -1,5 +1,11 @@
 "use client";
 import Bubble from "@/components/Bubbles/Bubble";
+import ExpensesCard from "@/components/cards/ExpensesCard";
+import MyTaskCard from "@/components/cards/MyTaskCard";
+import PaymentCard from "@/components/cards/PaymentCard";
+import ProjectCard from "@/components/cards/ProjectCard";
+import TaskCard from "@/components/cards/TaskCard";
+import TimeSheetCard from "@/components/cards/TimeSheetCard";
 import AlertDialogAlert from "@/components/dialogs/AlertDialog";
 import ApproveProjectDilog from "@/components/dialogs/ApproveProjectDilog";
 import CreateExpense from "@/components/dialogs/CreateExpenses";
@@ -21,17 +27,26 @@ import {
 import { Label } from "@/components/ui/label";
 import { date, formatDate, isDateGreaterThanToday } from "@/lib/dateFormat";
 import { usePaymentBallsListMutation } from "@/redux/query/accountsApi";
+import { useProjectEmployeeMutation } from "@/redux/query/employee";
 
 import { useExpensesMutation } from "@/redux/query/expensesApi";
 import { useJobDetailsMutation } from "@/redux/query/jobApi";
 import {
   useDeletePaymentBallMutation,
   usePaymentsMutation,
-  useTasksMutation,
   useDeleteTaskMutation,
 } from "@/redux/query/paymentApi";
 import { useRFQDetailsMutation } from "@/redux/query/rfqsApi";
+import { useTasksMutation } from "@/redux/query/taskApi";
 import { useTimesheetMutation } from "@/redux/query/timesheet";
+import {
+  adminAndAccountsAndSalesCanAccess,
+  adminAndAccountsCanAccess,
+  adminAndSalesAndTeamLeadCanAccess,
+  adminAndTeamLeadAndTeamMemberAndSubcontractorCanAccess,
+  adminAndTeamLeadCanAccess,
+} from "@/utils/accessArrays";
+import { hasCommon } from "@/utils/checkAccess";
 import {
   Activity,
   Blocks,
@@ -41,13 +56,14 @@ import {
   Trash2,
   Users,
 } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
 import Wave from "react-wavify";
 
 function ProjectDetails() {
   const path = usePathname();
-  const router = useRouter();
+  const { id } = useParams();
 
   const [tab, setTab] = useState("Progress");
   const [updateView, setUpdateView] = useState(false);
@@ -73,8 +89,15 @@ function ProjectDetails() {
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [more, setMore] = useState(false);
   const [paymentBallId, setPaymentBallId] = useState<number | undefined>();
+
+  const access = useSelector((state: any) => state?.user?.user.access);
+
   const [jobDetailsApi, { data, isSuccess, error, isError }] =
     useJobDetailsMutation();
+  const [
+    projectEmployeeApi,
+    { data: projectEmployeeData, isSuccess: isSccessProjectEmployee },
+  ] = useProjectEmployeeMutation();
   const [
     taskApi,
     {
@@ -85,6 +108,17 @@ function ProjectDetails() {
     },
   ] = useTasksMutation();
 
+  const getProjectEmployee = async () => {
+    const res = await projectEmployeeApi({ id });
+    console.log(res, ">>>>>");
+  };
+
+  useEffect(() => {
+    if (tab == "Hours") {
+      getProjectEmployee()
+    }
+  }, [tab]);
+
   const [daleteTaskApi] = useDeleteTaskMutation();
   const [
     paymentApi,
@@ -94,7 +128,7 @@ function ProjectDetails() {
       error: paymentError,
       isError: paymentIsError,
     },
-  ] = usePaymentBallsListMutation();
+  ] = usePaymentsMutation();
   const [deletePaymentBallApi, {}] = useDeletePaymentBallMutation();
 
   const [
@@ -108,10 +142,9 @@ function ProjectDetails() {
   ] = useTimesheetMutation();
 
   const getTimeSheetData = async () => {
-    const res = await timeSheetApi({ job_car: path?.split("/")?.reverse()[0] });
+    const res = await timeSheetApi({ job_car: id });
     // console.log(res, "Time Sheet data ");
   };
-
 
   useEffect(() => {
     if (isSuccess) {
@@ -125,27 +158,27 @@ function ProjectDetails() {
     if (paymentIsError) {
       // console.log(data, "response from server");
       if (timeSheetData) {
-        console.log(paymentError , "paymentError")
+        console.log(paymentError, "paymentError");
       }
     }
   }, [paymentIsError]);
   const getJobDetails = async () => {
-    const res = await jobDetailsApi({ id: path?.split("/")?.reverse()[0] });
-    // console.log(res, ">>>>>>>>>>>>");
+    const res = await jobDetailsApi({ id: id });
+    console.log(res, ">>>>>>>>>>>>");
   };
 
-  const getPaymentBals = async () => {
-    const res = await paymentApi({ page : 1,id: path?.split("/")?.reverse()[0] });
-    console.log(res, "PAYMENTBALLS");
+  const getPaymentBalls = async () => {
+    await paymentApi({ page: 1, id: id });
   };
 
   let sum = Number(job?.completion_percentage || 0);
 
-  const getTasks = async (id: number) => {
+  const getTasks = async (id: string) => {
     const res = await taskApi({ id });
+    console.log(res, "....");
 
     if (res?.data) {
-      setPaymentBallTask(res?.data?.results);
+      setPaymentBallTask(res?.data?.data);
     }
   };
 
@@ -155,20 +188,20 @@ function ProjectDetails() {
 
   useEffect(() => {
     if (paymentIsSuccess) {
-      console.log(payementData?.results , "payementData?.results")
-      setPaymentBalls(payementData?.results);
+      // console.log(payementData, "payementData?.results");
+      setPaymentBalls(payementData?.data);
     }
   }, [paymentIsSuccess]);
 
   useEffect(() => {
     getJobDetails();
-    getPaymentBals();
+    getPaymentBalls();
   }, []);
   useEffect(() => {
-    if (!isPaymentDialogOpen || !isPaymentDeleteDialogOpen  || !more) {
-      getPaymentBals();
+    if (!isPaymentDialogOpen || !isPaymentDeleteDialogOpen || !more) {
+      getPaymentBalls();
     }
-  }, [isPaymentDialogOpen, isPaymentDeleteDialogOpen , more]);
+  }, [isPaymentDialogOpen, isPaymentDeleteDialogOpen, more]);
 
   useEffect(() => {
     if (isSuccess) {
@@ -192,54 +225,50 @@ function ProjectDetails() {
   ] = useExpensesMutation();
 
   const getExpenses = async () => {
-    const res = await expenseApi({ job_card: path?.split("/")?.reverse()[0] });
+    const res = await expenseApi({ job_card: id });
     // console.log(res, "EXPENSES BY PROJECT ID");
   };
 
-  useEffect(() => {
-    if (!isCreateExpensesDialogOpen) {
-      getExpenses();
-    }
-  }, [isCreateExpensesDialogOpen]);
-  useEffect(() => {
-    getExpenses();
-  }, []);
-  useEffect(() => {
-    if (!isTaskDialogOpen) {
-      if (taskDetails?.task_id) {
-        getTasks(taskDetails?.task_id);
-      }
-    }
-  }, [isTaskDialogOpen]);
+  // useEffect(() => {
+  //   if (!isCreateExpensesDialogOpen) {
+  //     // getExpenses();
+  //   }
+  // }, [isCreateExpensesDialogOpen]);
+  // useEffect(() => {
+  //   // getExpenses();
+  // }, []);
+  // useEffect(() => {
+  //   if (!isTaskDialogOpen) {
+  //     if (taskDetails?.task_id) {
+  //       // getTasks(taskDetails?.task_id);
+  //     }
+  //   }
+  // }, [isTaskDialogOpen]);
 
   let totalAmount = 0;
 
-  useEffect(() => {
-    if (isExpenseSuccess) {
-      // console.log(expensesData, "expenses response from server");
-      if (expensesData) {
-        setExpenses(expensesData.results);
-      }
-    }
-  }, [isExpenseSuccess]);
-  const totalHours = timesheet?.reduce(
-    (sum, entry: any) => sum + Number(entry?.hours_logged),
-    0
-  );
+  // useEffect(() => {
+  //   if (isExpenseSuccess) {
+  //     // console.log(expensesData, "expenses response from server");
+  //     if (expensesData) {
+  //       // setExpenses(expensesData.results);
+  //     }
+  //   }
+  // }, [isExpenseSuccess]);
+
   // console.log(job?.payment_terms_display, ">>>>");
 
   const [paymentBallToDelete, setPaymentBallToDelete] = useState();
 
   const deletePaymentBall = async () => {
-    const res = await deletePaymentBallApi({
-      id: paymentBallsDetails.payment_id,
-    });
-    console.log(res, "RESPONSE");
+    // const res = await deletePaymentBallApi({
+    //   id: paymentBallsDetails.payment_id,
+    // });
+    // console.log(res, "RESPONSE");
   };
 
   const deleteTask = async () => {
-    const res = await daleteTaskApi({ id: taskDetails?.task_id });
-    console.log(res, ">>>>>>>");
+    // const res = await daleteTaskApi({ id: taskDetails?.task_id });
   };
 
   return (
@@ -261,13 +290,13 @@ function ProjectDetails() {
               <ClipboardCheck />
               Approve
             </Button> */}
-            <Button
+            {/* <Button
               className="text-sm gap-3 tracking-wide float-right"
               onClick={() => setIsTaskDialogOpen(true)}
             >
               <ClipboardCheck />
               Task
-            </Button>
+            </Button> */}
             {/* <Button
               variant={"secondary"}
               className="text-sm gap-3 tracking-wide float-right mr-4"
@@ -277,67 +306,80 @@ function ProjectDetails() {
               Add Expenses
             </Button> */}
           </div>
-          <div className="flex justify-between  gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-5  p-4 bg-white rounded-lg shadow-md">
-            <Bubble
-              color={
-                !isDateGreaterThanToday(job?.delivery_timelines)
-                  ? "#D2122E"
-                  : sum < 100
-                  ? "#5D6166"
-                  : "#662d91"
-              }
-              // color={
-              //   sum > 0 && sum < 20
-              //     ? "#c7c4bf"
-              //     : sum < 20 && sum < 40
-              //     ? "#7CB9E8"
-              //     : sum > 40 && sum < 60
-              //     ? "#7F00FF"
-              //     : sum > 60 && sum < 80
-              //     ? "#FF69B4"
-              //     : "#32de84"
-              // }
-              title={"Progress"}
-              value={`${sum || 0}%`}
-              setTab={setTab}
-              btn={true}
-              sum={sum}
-            />
-            <Bubble
-              color={sum < 100 ? "#5D6166" : "#662d91"}
-              title={"Payment"}
-              value={`${sum || 0}%`}
-              setTab={setTab}
-              btn={true}
-              sum={sum}
-            />
-            <Bubble
-              color={"#f87171"}
-              title={"Hours"}
-              value={`${totalHours.toFixed(2)} Hr`}
-              setTab={setTab}
-              btn={true}
-            />
-            <Bubble
-              color={"#c084fc"}
-              title={"Expenses"}
-              value={`${
-                expenses?.reduce(
-                  (sum: any, item: any) => Number(sum) + Number(item.amount),
-                  0
-                ) || 0
-              } AED`}
-              setTab={setTab}
-              btn={true}
-            />
-            <Bubble
-              color={"#60a5fa"}
-              title={"Profit"}
-              value={`${Number(job?.gross_profit).toFixed(2)} AED`}
-              // setTab={setTab}
-              // btn={true}
-            />
-          </div>
+          {hasCommon(access, adminAndSalesAndTeamLeadCanAccess) && (
+            <div className="flex justify-between  gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-5  p-4 bg-white rounded-lg shadow-md">
+              {hasCommon(access, adminAndSalesAndTeamLeadCanAccess) && (
+                <Bubble
+                  color={
+                    !isDateGreaterThanToday(job?.delivery_timelines)
+                      ? "#D2122E"
+                      : sum < 100
+                      ? "#5D6166"
+                      : "#662d91"
+                  }
+                  // color={
+                  //   sum > 0 && sum < 20
+                  //     ? "#c7c4bf"
+                  //     : sum < 20 && sum < 40
+                  //     ? "#7CB9E8"
+                  //     : sum > 40 && sum < 60
+                  //     ? "#7F00FF"
+                  //     : sum > 60 && sum < 80
+                  //     ? "#FF69B4"
+                  //     : "#32de84"
+                  // }
+                  title={"Progress"}
+                  value={`${sum || 0}%`}
+                  setTab={setTab}
+                  btn={true}
+                  sum={sum}
+                />
+              )}
+              {hasCommon(access, adminAndAccountsAndSalesCanAccess) && (
+                <Bubble
+                  color={sum < 100 ? "#5D6166" : "#662d91"}
+                  title={"Payment"}
+                  value={`${sum || 0}%`}
+                  setTab={setTab}
+                  btn={true}
+                  sum={sum}
+                />
+              )}
+              {hasCommon(access, adminAndTeamLeadCanAccess) && (
+                <Bubble
+                  color={"#f87171"}
+                  title={"Hours"}
+                  value={`${job?.totalHours?.toFixed(2)} Hr`}
+                  setTab={setTab}
+                  btn={true}
+                />
+              )}
+              {hasCommon(access, adminAndAccountsCanAccess) && (
+                <Bubble
+                  color={"#c084fc"}
+                  title={"Expenses"}
+                  value={`${(job?.employee_cost + job?.total_expenses).toFixed(
+                    3
+                  )} AED`}
+                  setTab={setTab}
+                  btn={true}
+                />
+              )}
+              {hasCommon(access, adminAndAccountsCanAccess) && (
+                <Bubble
+                  color={"#60a5fa"}
+                  title={"Profit"}
+                  value={`${Number(
+                    Number(job?.final_amount) -
+                      job?.employee_cost +
+                      job?.total_expenses
+                  )?.toFixed(2)} AED`}
+                  // setTab={setTab}
+                  // btn={true}
+                />
+              )}
+            </div>
+          )}
           <div className="mx-auto w-full flex-1 auto-rows-max gap-4">
             <div className="flex items-center gap-4">
               <h1 className="flex-1 shrink-0 whitespace-nowrap text-xl font-semibold tracking-tight sm:grow-0">
@@ -349,430 +391,58 @@ function ProjectDetails() {
             <div className="gap-4  lg:gap-8">
               <div className=" w-full auto-rows-max items-start gap-4  lg:gap-8">
                 {tab == "Progress" ? (
-                  <Card x-chunk="dashboard-07-chunk-0">
-                    <CardHeader>
-                      <div className="flex  justify-between">
-                        <CardTitle>Project Details</CardTitle>
-                        <Button
-                          className="text-sm gap-3 tracking-wide float-right mx-4"
-                          variant={"outline"}
-                          onClick={() => setIsUpdateDialogOpen(true)}
-                        >
-                          <ClipboardCheck />
-                          Update
-                        </Button>
-                      </div>
-                      <CardDescription>
-                        {/* Enter the employee details and thier performance */}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid gap-6">
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="grid gap-3">
-                            <Label className="underline" htmlFor="name">
-                              Job Id
-                            </Label>
-
-                            <h4 className="font-semibold text-lg">
-                              {job?.job_number}
-                            </h4>
-                          </div>
-                          <div className="grid gap-3">
-                            <Label className="underline" htmlFor="name">
-                              LPO Id
-                            </Label>
-
-                            <h4 className="font-semibold text-lg">
-                              {job?.lpo_number}
-                            </h4>
-                          </div>
-                          <div className="grid gap-3">
-                            <Label className="underline" htmlFor="name">
-                              Status
-                            </Label>
-
-                            <h4 className="font-semibold text-lg">
-                              {job?.status}
-                            </h4>
-                          </div>
-                        </div>
-                        <div className="grid gap-3">
-                          <Label className="underline" htmlFor="name">
-                            Delivry Timeline
-                          </Label>
-
-                          <h4 className="font-semibold text-lg">
-                            {date(job?.delivery_timelines)}
-                          </h4>
-                        </div>
-                        <div className="grid gap-3">
-                          <Label className="underline" htmlFor="name">
-                            Scop of Work
-                          </Label>
-
-                          <h4 className="font-semibold text-lg">
-                            {job?.scope_of_work}
-                          </h4>
-                        </div>
-                        {/* <div className="grid gap-3">
-                          <Label htmlFor="name">Remark</Label>
-
-                          <h4 className="font-semibold text-lg">
-                            {job?.remarks}
-                          </h4>
-                        </div> */}
-
-                        {job?.payment_terms_display && (
-                          <div className="grid gap-3">
-                            <Label htmlFor="name" className="underline">
-                              Payment Terms{" "}
-                            </Label>
-
-                            {Object.entries(job?.payment_terms_display).map(
-                              ([key, value]: any) => {
-                                // console.log(key);
-                                return (
-                                  <div key={key}>
-                                    <p>Description: {value.description}</p>
-                                    <p>Milestone: {value.milestone}</p>
-                                    <p>Percentage: {value.percentage}%</p>
-                                  </div>
-                                );
-                              }
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <ProjectCard
+                    job={job}
+                    setIsUpdateDialogOpen={setIsUpdateDialogOpen}
+                  />
                 ) : tab == "Payment" ? (
                   <>
-                    <Card x-chunk="dashboard-07-chunk-0" className="min-h-64">
-                      <CardHeader className="flex-">
-                        <CardTitle>Payments</CardTitle>
-                        <CardDescription>
-                          {paymentBallsDetails && (
-                            <Button
-                              className="text-sm gap-3 ml-5 tracking-wide float-right border border-red-30 hover:border-red-600 hover:bg-red-100 hover:text-red-600"
-                              variant={"outline"}
-                              onClick={() => {
-                                setIsPaymentDeleteDialogOpen(true);
-                              }}
-                            >
-                              <Trash2 size={18} />
-                              Delete
-                            </Button>
-                          )}
-                          <Button
-                            className="text-sm gap-3 ml-5 tracking-wide float-right"
-                            onClick={() => {
-                              setIsPaymentDialogOpen(true);
-                            }}
-                          >
-                            <ClipboardCheck size={18} />
-                            Payment Ball
-                          </Button>
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="flex  items-center">
-                        <div className="flex gap-5">
-                          {/* {paymentBalls?.map((data, index) => ( */}
+                    {hasCommon(access, adminAndSalesAndTeamLeadCanAccess) && (
+                      <PaymentCard
+                        setIsPaymentDeleteDialogOpen={
+                          setIsPaymentDeleteDialogOpen
+                        }
+                        setIsPaymentDialogOpen={setIsPaymentDialogOpen}
+                        paymentBallsDetails={paymentBallsDetails}
+                        paymentBalls={paymentBalls}
+                        getTasks={getTasks}
+                        setPaymentBallsDetails={setPaymentBallsDetails}
+                      />
+                    )}
 
-                          {paymentBalls?.map((ballData: any, index: number) => {
-                            // console.log(isDateGreaterThanToday(ballData?.delivery_timelines), " 11111>>>>>>>>");
-
-                            return (
-                              <div
-                                key={index}
-                                className={`border-2 ${
-                                  paymentBallsDetails?.payment_id ===
-                                  ballData?.payment_id
-                                    ? "border-blue-600"
-                                    : ""
-                                } cursor-pointer size-40 hover:scale-105 duration-200 shadow-lg hover:shadow-slate-400 rounded-full overflow-hidden relative flex justify-center items-center`}
-                                onClick={() => {
-                                  getTasks(ballData?.payment_id);
-                                  setPaymentBallsDetails(ballData);
-                                  // console.log("Selected Ball Data:", ballData);
-                                }}
-                              >
-                                <Wave
-                                  fill={
-                                    isDateGreaterThanToday(
-                                      ballData?.delivery_timelines
-                                    )
-                                      ? "#D2122E"
-                                      : "#4ade80"
-                                  }
-                                  paused={true}
-                                  style={{
-                                    display: "flex",
-                                    position: "absolute",
-                                    bottom: 0,
-                                    height: `${
-                                      ballData?.project_percentage || 0
-                                    }%`,
-                                  }}
-                                  options={{
-                                    height: -20,
-                                    amplitude: 2,
-                                  }}
-                                ></Wave>
-                                <Card
-                                  x-chunk="dashboard-01-chunk-0"
-                                  className="rounded-full size-64 flex justify-center items-center"
-                                >
-                                  <div className="z-30">
-                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                      <CardTitle className="text-md text-center font-medium">
-                                        {ballData?.project_status}
-                                      </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                      <div className="text-2xl font-bold text-center">
-                                        {ballData?.project_percentage}%
-                                      </div>
-                                      <div className="text-xs font-light text-gray-600 text-center">
-                                        {ballData?.notes}
-                                      </div>
-                                    </CardContent>
-                                  </div>
-                                </Card>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </CardContent>
-                    </Card>
-                    {
-                      <Card
-                        x-chunk="dashboard-07-chunk-0"
-                        className="min-h-64 mt-5"
-                      >
-                        <CardHeader>
-                          <CardTitle>
-                            Task in this payment ball
-                            <Button
-                              className="text-sm gap-3 tracking-wide float-right"
-                              onClick={() => setIsTaskDialogOpen(true)}
-                            >
-                              <ClipboardCheck />
-                              Task
-                            </Button>
-                          </CardTitle>
-                          <CardDescription>
-                            {/* Enter the employee details and thier performance */}
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className="flex  items-center gap-x-5">
-                          {payemetBallTask.map((data: any, index: number) => {
-                            return (
-                              <div
-                                key={index}
-                                className={`border cursor-pointer  size-40 hover:scale-105 duration-200 shadow-lg hover:shadow-slate-400 rounded-full overflow-hidden relative flex justify-center items-center`}
-                                onClick={() => {
-                                  // getTasks(paymentBalls.job_card);
-                                  setTaskDetails(data);
-                                  setMore(true);
-                                }}
-                              >
-                                <Wave
-                                  // fill="#60a5fa"
-                                  fill={"#4ade80"}
-                                  paused={true}
-                                  style={{
-                                    display: "flex",
-                                    position: "absolute",
-                                    bottom: 0,
-                                    flex: 1,
-                                    height: `${data?.completion_percentage}%`,
-                                  }}
-                                  options={{
-                                    height: -20,
-
-                                    amplitude: 2,
-                                    // speed: 0.15,
-                                    // points: 3,
-                                  }}
-                                ></Wave>
-
-                                <Card
-                                  x-chunk="dashboard-01-chunk-0"
-                                  className="rounded-full size-64 flex justify-center items-center "
-                                >
-                                  <div className="z-30">
-                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                      <CardTitle className="text-md text-center font-medium">
-                                        {data?.assignee_name}
-                                      </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                      <div className="text-xl font-bold text-center">
-                                        {data?.completion_percentage}%
-                                      </div>
-                                      <div className="text-sm font-medium text-center">
-                                        {data?.status}
-                                      </div>
-                                      <div className="text-xs font-light text-gray-600 text-center">
-                                        {data?.remarks?.length < 30
-                                          ? data?.remarks
-                                          : `${data?.remarks?.substring(
-                                              0,
-                                              40
-                                            )} ...`}
-                                      </div>
-                                    </CardContent>
-                                  </div>
-                                </Card>
-                              </div>
-                            );
-                          })}
-                        </CardContent>
-                      </Card>
-                    }
+                    {hasCommon(
+                      access,
+                      adminAndTeamLeadAndTeamMemberAndSubcontractorCanAccess
+                    ) && (
+                      <TaskCard
+                        setIsTaskDialogOpen={setIsTaskDialogOpen}
+                        payemetBallTask={payemetBallTask}
+                        setTaskDetails={setTaskDetails}
+                        setMore={setMore}
+                      />
+                    )}
                   </>
                 ) : tab == "Expenses" ? (
-                  <Card x-chunk="dashboard-07-chunk-0" className="min-h-64">
-                    <CardHeader>
-                      <CardTitle>Expenses</CardTitle>
-                      <CardDescription className="flex  gap-5 flex-wrap">
-                        {expenses?.map((data: any, index: number) => {
-                          // console.log(data, "EXP");
-                          return (
-                            <div
-                              // onDoubleClick={()=>{
-                              //   setExpenseDetails(data)
-                              //   setIsExpensesDialogOpen(true)
-                              // }}
-                              key={index}
-                              className={`border cursor-pointer  size-40 hover:scale-105 duration-200 shadow-lg hover:shadow-slate-400 rounded-full overflow-hidden relative flex justify-center items-center`}
-                              onClick={() => {
-                                // getTasks(paymentBalls.job_card);
-                                setExpenseDetails(data);
-                                setIsExpensesDialogOpen(true);
-                              }}
-                            >
-                              <Wave
-                                // fill="#60a5fa"
-                                fill={"#4ade80"}
-                                paused={true}
-                                style={{
-                                  display: "flex",
-                                  position: "absolute",
-                                  bottom: 0,
-                                  height: "100%",
-                                }}
-                                options={{
-                                  height: -20,
-
-                                  amplitude: 2,
-                                  // speed: 0.15,
-                                  // points: 3,
-                                }}
-                              ></Wave>
-
-                              <Card
-                                x-chunk="dashboard-01-chunk-0"
-                                className="rounded-full size-64 flex justify-center items-center "
-                              >
-                                <div className="z-30">
-                                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-md text-center font-medium">
-                                      {data?.assignee_name}
-                                    </CardTitle>
-                                  </CardHeader>
-                                  <CardContent>
-                                    <div className="text-xl font-bold text-center">
-                                      {data?.amount} AED
-                                    </div>
-                                    <div className="text-sm font-medium text-center">
-                                      {data?.category_name}
-                                    </div>
-                                    <div className="text-xs font-light text-gray-600 text-center">
-                                      {data?.expense_type?.length < 30
-                                        ? data?.expense_type
-                                        : `${data?.expense_type?.substring(
-                                            0,
-                                            40
-                                          )} ...`}
-                                    </div>
-                                  </CardContent>
-                                </div>
-                              </Card>
-                            </div>
-                          );
-                        })}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex  items-center"></CardContent>
-                  </Card>
+                  <ExpensesCard
+                    expenses={expenses}
+                    setExpenseDetails={setExpenseDetails}
+                    setIsExpensesDialogOpen={setIsExpensesDialogOpen}
+                  />
                 ) : (
-                  <Card x-chunk="dashboard-07-chunk-0" className="min-h-64">
-                    <CardHeader>
-                      <CardTitle>Working Empolyees</CardTitle>
-                      <CardDescription>
-                        {/* Enter the employee details and thier performance */}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex  items-center gap-5">
-                      {timesheet?.map((data: any, index: number) => {
-                        // console.log(data, "data ....");
-                        return (
-                          <div
-                            key={index}
-                            className={`border cursor-pointer  size-40 hover:scale-105 duration-200 shadow-lg hover:shadow-slate-400 rounded-full overflow-hidden relative flex justify-center items-center`}
-                            onClick={() => {
-                              router.push(`/timesheet/${data.timesheet_id}`);
-                            }}
-                          >
-                            <Wave
-                              // fill="#60a5fa"
-                              fill={"#4ade80"}
-                              paused={true}
-                              style={{
-                                display: "flex",
-                                position: "absolute",
-                                bottom: 0,
-                                height: "100%",
-                              }}
-                              options={{
-                                height: -20,
+                  <TimeSheetCard timesheet={timesheet} />
+                )}
 
-                                amplitude: 2,
-                                // speed: 0.15,
-                                // points: 3,
-                              }}
-                            ></Wave>
-
-                            <Card
-                              x-chunk="dashboard-01-chunk-0"
-                              className="rounded-full size-64 flex justify-center items-center "
-                            >
-                              <div className="z-30">
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                  <CardTitle className="text-md text-center font-medium">
-                                    {data?.employee_name}
-                                  </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                  <div className="text-xl font-bold text-center">
-                                    {data?.hours_logged} hr
-                                  </div>
-                                  <div className="text-sm font-medium text-center">
-                                    {data?.date_logged}
-                                  </div>
-                                  <div className="text-xs font-light text-gray-600 text-center">
-                                    {data?.total_amount} AED
-                                  </div>
-                                </CardContent>
-                              </div>
-                            </Card>
-                          </div>
-                        );
-                      })}
-                    </CardContent>
-                  </Card>
+                {hasCommon(
+                  access,
+                  adminAndTeamLeadAndTeamMemberAndSubcontractorCanAccess
+                ) && (
+                  <MyTaskCard
+                    setIsTaskDialogOpen={setIsTaskDialogOpen}
+                    payemetBallTask={payemetBallTask}
+                    setTaskDetails={setTaskDetails}
+                    setMore={setMore}
+                    projectId={id}
+                  />
                 )}
               </div>
             </div>

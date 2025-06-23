@@ -4,12 +4,19 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 // Define a service using a base URL and expected endpoints
 export const jobApi = createApi({
   reducerPath: "jobApi",
-  baseQuery: fetchBaseQuery({ baseUrl: `${urls.server}/api/v1/client_new/` }),
+  baseQuery: fetchBaseQuery({ baseUrl: `${urls.server}/project`,    prepareHeaders: (headers, { getState }) => {
+      const token = (getState() as any)?.user?.accessToken;
+      console.log(token, "TOKEN");
+      if (token) {
+        headers.set("Authorization", `Bearer ${token}`);
+      }
+      return headers;
+    }, }),
   endpoints: (builder) => ({
     jobs: builder.mutation({
       query: ({page}) => {
         return {
-          url: `jobcards/?page=${page || 1 }`,
+          url: `/?page=${page || 1 }`,
           method: "GET",
           headers: {
             "Content-type": "application/json; charset=UTF-8",
@@ -20,7 +27,7 @@ export const jobApi = createApi({
     createJob: builder.mutation({
       query: (data) => {
         return {
-          url: "jobcards/",
+          url: "/",
           method: "POST",
           body: data.data,
           headers: {
@@ -33,7 +40,7 @@ export const jobApi = createApi({
       query: ({data , id }) => {
         console.log("delet client ", data);
         return {
-          url: `jobcards/${id}/`,
+          url: `/${id}/`,
           method: "DELETE",
           headers: {
             "Content-type": "application/json; charset=UTF-8",
@@ -45,7 +52,7 @@ export const jobApi = createApi({
     jobDetails: builder.mutation({
       query: (data) => {
         return {
-          url: `jobcards/${data.id}/`,
+          url: `/${data.id}/`,
           method: "GET",
           headers: {
             "Content-type": "application/json; charset=UTF-8",
@@ -57,7 +64,7 @@ export const jobApi = createApi({
     patchClient: builder.mutation({
       query: (data) => {
         return {
-          url: `clients/${data.id}/`,
+          url: `/${data.id}/`,
           method: "PATCH",
           body: data.details,
           headers: {

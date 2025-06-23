@@ -39,12 +39,12 @@ function AlertDialogAlert({
     // Add your deletion logic here
     // console.log(`Deleting at ${url}`);
     if(deleteCompany){
-      const res = await deleteCompanyApi({ id: url.split("/")[6] });
+      const res = await deleteCompanyApi({ id : URLSearchParams});
       // console.log(res, ">>>>");
       router.replace("/companies");
 
     }else{
-      const res = await deleteEmployeeApi({ id: url.split("/")[6] });
+      const res = await deleteEmployeeApi({ id: url});
       // console.log(res, ">>>>");
       router.replace("/employee");
     }
