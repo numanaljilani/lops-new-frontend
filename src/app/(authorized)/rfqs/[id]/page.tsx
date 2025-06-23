@@ -52,7 +52,7 @@ function RFQDetails() {
     },
   ] = useRFQDetailsMutation();
   const rfqSchema = z.object({
-    rfq_id: z.optional(),
+    rfq_id: z.string().optional(),
     client: z
       .string()
       .min(1, "Client ID is required and must be a positive number"),
@@ -72,7 +72,7 @@ function RFQDetails() {
     handleSubmit,
     reset,
     formState: { isSubmitting, errors },
-  } = useForm<RFQFormData>({
+  } :any = useForm<RFQFormData>({
     resolver: zodResolver(rfqSchema),
     defaultValues: {
       client: rfqData?.client_id?.toString(), // Ensure client_id is a string

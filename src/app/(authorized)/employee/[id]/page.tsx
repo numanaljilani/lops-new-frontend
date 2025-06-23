@@ -67,18 +67,17 @@ function Employee() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const [employeeDetails, setEmployeeDetails] = useState({
-    userId: { name: "", email: "" },
+  const [employeeDetails, setEmployeeDetails] = useState<any>({
+    userId: { name: "", email: "", access: []},
     contact: "",
     description: "",
     location: "",
-    company: "",
+    company: {_id : ""},
     position: "",
     salary: 0,
     costPerHour: 0,
     Currency: "",
     status: false,
-    access: [],
   });
 
   const [employeeApi, { data, isSuccess, isLoading: isEmployeeLoading }] =
@@ -104,7 +103,7 @@ function Employee() {
     control,
     setValue,
     formState: { errors },
-  } = useForm({
+  } :any = useForm({
     resolver: zodResolver(employeeSchema),
     defaultValues: {
       name: "",

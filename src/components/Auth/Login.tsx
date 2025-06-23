@@ -26,9 +26,9 @@ export default function Login() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm({ resolver: zodResolver(LoginSchema) });
+  }:any = useForm({ resolver: zodResolver(LoginSchema) });
 
-  const [loginApi, { data, isSuccess, error, isError, isLoading }] =
+  const [loginApi, { data, isSuccess, error, isError, isLoading }] :any =
     useLoginMutation();
 
   const dispatch = useDispatch();
