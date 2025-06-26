@@ -27,13 +27,16 @@ import {
   useExpensescategoriesMutation,
   useGetExpenseByIdMutation,
 } from "@/redux/query/expensesApi";
-import { usePathname, useRouter } from "next/navigation";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast, Toaster } from "sonner";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useAccountsDetailsMutation } from "@/redux/query/accountsApi";
+import {
+  useAccountsDetailsMutation,
+  usePaymentBallsDetailsListMutation,
+} from "@/redux/query/accountsApi";
 import { formatDate } from "@/lib/dateFormat";
 
 import { File, ListFilter, MoreHorizontal, PlusCircle } from "lucide-react";
@@ -63,7 +66,7 @@ import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton componen
 import { PaginationComponent } from "@/components/PaginationComponent";
 
 // Define Zod schema for form validation
-const employeeSchema = z.object({
+const accountsSchema = z.object({
   date: z.string().min(1, "Date is required"),
   job_number: z.string().min(1, "Job number is required"),
   category: z.string().min(1, "Category is required"),
@@ -73,15 +76,15 @@ const employeeSchema = z.object({
   description: z.string().min(1, "Description is required"),
 });
 
-type EmployeeFormValues = z.infer<typeof employeeSchema>;
+type AccountsForm = z.infer<typeof accountsSchema>;
 
 function AccountsDetails() {
   const path = usePathname();
+  const { id } = useParams();
   const [updateView, setUpdateView] = useState(false);
   const [accountsDetails, setAccountsDetails] = useState<any>();
   const [categories, setCategories] = useState([]);
 
-  const router = useRouter();
   // const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [paymentBalls, setPaymentBalls] = useState<any>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -91,7 +94,7 @@ function AccountsDetails() {
   const itemsPerPage = 5; // Number of items per page
 
   const [accountsDetailsApi, { data, isSuccess, error, isError }] =
-    useAccountsDetailsMutation();
+    usePaymentBallsDetailsListMutation();
   const [
     updateExpensesApi,
     {
@@ -108,8 +111,8 @@ function AccountsDetails() {
     control,
     formState: { errors, isSubmitting },
     reset,
-  } = useForm<EmployeeFormValues>({
-    resolver: zodResolver(employeeSchema),
+  } = useForm<AccountsForm>({
+    resolver: zodResolver(accountsSchema),
     defaultValues: {
       date: "",
       job_number: "",
@@ -121,10 +124,11 @@ function AccountsDetails() {
     },
   });
 
-  const getAccountsDetails = async (id: any) => {
+  const getAccountsDetails = async (ball_id: any) => {
     const res = await accountsDetailsApi({
-      id,
+      id: ball_id,
     });
+    console.log(res, "BALL DETAILS");
   };
 
   useEffect(() => {
@@ -145,13 +149,13 @@ function AccountsDetails() {
 
   const getPaymentBalls = async () => {
     setLoading(true); // Set loading to true before fetching data
-    await paymentApi({ page, id: path?.split("/")?.reverse()[0],percentage : 100 });
+    await paymentApi({ page, id, percentage: 100 });
   };
 
   useEffect(() => {
     if (paymentIsSuccess) {
       console.log(payementData);
-      setPaymentBalls(payementData.results);
+      setPaymentBalls(payementData.data);
       setLoading(false); // Set loading to false after data is fetched
     }
   }, [paymentIsSuccess]);
@@ -165,7 +169,8 @@ function AccountsDetails() {
   useEffect(() => {
     if (isSuccess && data) {
       reset(data); // Reset form with fetched data
-      setAccountsDetails(data);
+      console.log(data, "DATA");
+      setAccountsDetails(data.data);
     }
   }, [isSuccess, data, reset]);
 
@@ -210,9 +215,9 @@ function AccountsDetails() {
                       paymentBalls?.map((data: any, index: number) => (
                         <div
                           key={index}
-                          onClick={() => getAccountsDetails(data?.payment_id)}
+                          onClick={() => getAccountsDetails(data?._id)}
                           className={`border-2 ${
-                            data?.payment_id == accountsDetails?.payment_id
+                            data?._id == accountsDetails?._id
                               ? "border-blue-600"
                               : ""
                           } cursor-pointer size-40 hover:scale-105 duration-200 shadow-lg hover:shadow-slate-400 rounded-full overflow-hidden relative flex justify-center items-center`}
@@ -250,7 +255,9 @@ function AccountsDetails() {
                                   {data?.amount} AED
                                 </div>
                                 <div className="text-sm tracking-wider font-light text-white text-center">
-                                {data?.verification_status == 'unverified' ? "Raedy to invoice" : data?.verification_status}
+                                  {data?.verification_status == "unverified"
+                                    ? "Raedy to invoice"
+                                    : data?.verification_status}
                                 </div>
                               </CardContent>
                             </div>
@@ -299,7 +306,6 @@ function AccountsDetails() {
                     <Button
                       size="sm"
                       className="bg-red-200 text-red-700 hover:bg-red-300"
-                     
                       onClick={() => setIsDialogOpen(true)}
                     >
                       Delete
@@ -553,49 +559,39 @@ function AccountsDetails() {
                             <div className="grid gap-3">
                               <Label htmlFor="date">Invoice No. </Label>
                               <h4 className="font-semibold text-lg">
-                                {accountsDetails?.invoice_number}
+                                {accountsDetails?.invoice_number || "-"}
                               </h4>
                             </div>
 
                             <div className="grid gap-3">
                               <Label htmlFor="job_number">Job Id</Label>
                               <h4 className="font-semibold text-lg">
-                                {accountsDetails?.job_number}
+                                {accountsDetails?.projectId?.projectId}
                               </h4>
                             </div>
                             <div className="grid gap-3">
                               <Label htmlFor="category_name">Status</Label>
                               <h4 className="font-semibold text-lg">
-                                {accountsDetails?.verification_status == 'unverified' ? "Raedy to invoice" : accountsDetails?.verification_status}
+                                {accountsDetails?.verification_status ==
+                                "unverified"
+                                  ? "Raedy to invoice"
+                                  : accountsDetails?.verification_status}
                               </h4>
                             </div>
                             <div className="grid gap-3">
                               <Label htmlFor="amount">Completion</Label>
                               <h4 className="font-semibold text-lg">
-                                {accountsDetails?.project_status}
+                                {accountsDetails?.completionPercentage}%
                               </h4>
                             </div>
                             <div className="grid gap-3">
                               <Label htmlFor="vat_amount">Date</Label>
                               <h4 className="font-semibold text-lg">
-                                {formatDate(accountsDetails?.verification_date)}
+                                {formatDate(accountsDetails?.createdAt)}
                               </h4>
                             </div>
                             <div className="grid gap-3"></div>
-                            <div className="grid gap-3">
-                              <Label htmlFor="vat_amount">
-                                Total Amount without Tax
-                              </Label>
-                              <h4 className="font-semibold text-lg">
-                                {accountsDetails?.amount || "-"}
-                              </h4>
-                            </div>
-                            <div className="grid gap-3">
-                              <Label htmlFor="vat_amount">Total Amount</Label>
-                              <h4 className="font-semibold text-lg">
-                                {Number(Number(accountsDetails?.amount) + Number(accountsDetails?.vat_amount))|| "-"}
-                              </h4>
-                            </div>
+                            
                             <div className="grid gap-3">
                               <Label htmlFor="vat_amount">
                                 Charity pertage
@@ -608,13 +604,11 @@ function AccountsDetails() {
                             <div className="grid gap-3">
                               <Label htmlFor="vat_amount">Charity Amount</Label>
                               <h4 className="font-semibold text-lg">
-                                {accountsDetails?.charity_amount || "-"}
+                                {accountsDetails?.charity_amount+ " AED" || "-"}
                               </h4>
                             </div>
                             <div className="grid gap-3">
-                              <Label htmlFor="vat_amount">
-                                VAT pertage
-                              </Label>
+                              <Label htmlFor="vat_amount">VAT percentage</Label>
                               <h4 className="font-semibold text-lg">
                                 {accountsDetails?.vat_percentage + "%" || "-"}
                               </h4>
@@ -622,7 +616,36 @@ function AccountsDetails() {
                             <div className="grid gap-3">
                               <Label htmlFor="vat_amount">VAT Amount</Label>
                               <h4 className="font-semibold text-lg">
-                                {accountsDetails?.vat_amount || "-"}
+                                {accountsDetails?.vat_amount+ " AED" || "-"}
+                              </h4>
+                            </div>
+                            <div className="grid gap-3">
+                              <Label htmlFor="vat_amount">
+                                Total Amount without Tax
+                              </Label>
+                              <h4 className="font-semibold text-lg">
+                                {accountsDetails?.amount+ " AED" || "-"}
+                              </h4>
+                            </div>
+                            <div className="grid gap-3">
+                              <Label htmlFor="vat_amount">Total Amount</Label>
+                              <h4 className="font-semibold text-lg">
+                                {Number(
+                                  Number(accountsDetails?.amount) +
+                                    Number(accountsDetails?.vat_amount)
+                                )+ "AED" || "-"}
+                              </h4>
+                            </div>
+                            <div className="grid gap-3">
+                              <Label htmlFor="vat_amount">Balance Amount</Label>
+                              <h4 className="font-semibold text-lg">
+                                {accountsDetails?.balance_amount+ " AED"|| "-"}
+                              </h4>
+                            </div>
+                            <div className="grid gap-3">
+                              <Label htmlFor="vat_amount">Paid Amount</Label>
+                              <h4 className="font-semibold text-lg">
+                                {accountsDetails?.paid_amount + " AED" || "-"}
                               </h4>
                             </div>
 

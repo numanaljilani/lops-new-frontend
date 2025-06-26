@@ -4,10 +4,10 @@ import { urls } from '@/constants/urls';
 
 
 // Define a service using a base URL and expected endpoints
-export const authApi = createApi({
-  reducerPath: 'authApi',
+export const dashboardApi = createApi({
+  reducerPath: 'dashboardApi',
   // 192.168.242.213
-  baseQuery: fetchBaseQuery({ baseUrl: `${urls.server}/`,
+  baseQuery: fetchBaseQuery({ baseUrl: `${urls.server}/dashboard`,
     prepareHeaders: (headers, { getState }) => {
       const token = (getState() as any)?.user?.accessToken;
   
@@ -19,12 +19,11 @@ export const authApi = createApi({
   }),
   endpoints: (builder) => ({
   
-      login: builder.mutation({
+      adminDashboard: builder.mutation({
         query: (user) => {
           return {
-            url: "login",
-            method: "POST",
-            body: user,
+            url: "/admin",
+            method: "GET",
             headers: {
               "Content-type": "application/json; charset=UTF-8",
             },
@@ -61,4 +60,4 @@ export const authApi = createApi({
 
 // Export hooks for usage in functional components, which are
 // auto-generated based on the defined endpoints
-export const { useLoginMutation ,useProfileMutation , useChangePasswordMutation } = authApi
+export const { useAdminDashboardMutation ,useProfileMutation , useChangePasswordMutation } = dashboardApi

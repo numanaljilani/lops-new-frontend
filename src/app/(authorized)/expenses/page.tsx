@@ -51,7 +51,7 @@ function Expenses() {
   const router = useRouter();
   const [expenses, setExpenses] = useState([]);
   const [alljobs, setAllJobs] = useState([]);
-  const [page , setPage] = useState(1)
+  const [page, setPage] = useState(1);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCreateExpensesDialogOpen, setIsCreateExpensesDialogOpen] =
     useState(false);
@@ -70,14 +70,15 @@ function Expenses() {
 
   useEffect(() => {
     if (jobsIsSuccess) {
-      setAllJobs(jobs.results);
+      setAllJobs(jobs.data);
     }
   }, [jobsIsSuccess]);
 
   const getExpenses = async () => {
     setIsLoading(true);
     const res = await expenseApi({ page });
- 
+    console.log(res, "Expenses RESPONSE");
+
     setIsLoading(false);
   };
 
@@ -85,12 +86,12 @@ function Expenses() {
     if (!isCreateExpensesDialogOpen) {
       getExpenses();
     }
-  }, [isCreateExpensesDialogOpen , page]);
+  }, [isCreateExpensesDialogOpen, page]);
 
   useEffect(() => {
     if (isSuccess) {
       if (data) {
-        setExpenses(data.results);
+        setExpenses(data.data);
       }
     }
   }, [isSuccess]);
@@ -109,7 +110,6 @@ function Expenses() {
                 <TabsTrigger value="completed">Completed</TabsTrigger>
               </TabsList> */}
               <div className="ml-auto flex items-center gap-2">
-                
                 {/* <Button size="sm" variant="outline" className="h-7 gap-1">
                   <File className="h-3.5 w-3.5" />
                   <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
@@ -143,7 +143,7 @@ function Expenses() {
                         <Skeleton key={index} className="h-12 w-full" />
                       ))}
                     </div>
-                  ) : expenses.length === 0 ? (
+                  ) : expenses?.length === 0 ? (
                     <div className="flex items-center justify-center h-32">
                       <p className="text-muted-foreground">
                         No expenses found.
@@ -179,40 +179,41 @@ function Expenses() {
                               <TableCell
                                 className="font-medium cursor-pointer"
                                 onClick={() =>
-                                  router.push(`/expenses/${data.expense_id}`)
+                                  router.push(`/expenses/${data._id}`)
                                 }
                               >
-                                {data?.expense_id}
+                                {data?._id}
                               </TableCell>
                               <TableCell
-                              className=" cursor-pointer"
+                                className=" cursor-pointer"
                                 onClick={() =>
-                                  router.push(`/expenses/${data.expense_id}`)
+                                  router.push(`/expenses/${data._id}`)
                                 }
                               >
-                                {data?.job_number}
-                              </TableCell>
-                              <TableCell
-                                onClick={() =>
-                                  router.push(`/expenses/${data.expense_id}`)
-                                }
-                                   className=" cursor-pointer"
-                              >
-                                {data?.category_name}
+                                {data?.projectId?.projectId || "-"}
                               </TableCell>
                               <TableCell
                                 onClick={() =>
-                                  router.push(`/expenses/${data.expense_id}`)
+                                  router.push(`/expenses/${data._id}`)
                                 }
-                                   className=" cursor-pointer"
+                                className=" cursor-pointer"
+                              >
+                                {data?.category_display
+}
+                              </TableCell>
+                              <TableCell
+                                onClick={() =>
+                                  router.push(`/expenses/${data._id}`)
+                                }
+                                className=" cursor-pointer"
                               >
                                 {data?.expense_type}
                               </TableCell>
                               <TableCell
                                 onClick={() =>
-                                  router.push(`/expenses/${data.expense_id}`)
+                                  router.push(`/expenses/${data._id}`)
                                 }
-                                   className=" cursor-pointer"
+                                className=" cursor-pointer"
                               >
                                 {data?.amount}
                               </TableCell>
@@ -264,7 +265,11 @@ function Expenses() {
                     Showing <strong>1-{expenses.length}</strong> of{" "}
                     <strong>{data?.count}</strong> expenses
                   </div> */}
-                  <PaginationComponent setPage={setPage} numberOfPages={data?.count} page={page}/>
+                  <PaginationComponent
+                    setPage={setPage}
+                    numberOfPages={data?.count}
+                    page={page}
+                  />
                 </CardFooter>
               </Card>
             </TabsContent>

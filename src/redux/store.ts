@@ -19,6 +19,8 @@ import { expensesApi } from "./query/expensesApi";
 import { accountsApi } from "./query/accountsApi";
 import { subcontractorApi } from "./query/subcontractor";
 import { taskApi } from "./query/taskApi";
+import { transactionApi } from "./query/transactionApi";
+import { dashboardApi } from "./query/dashboardsApi";
 
 const persistConfig = {
   key: "root",
@@ -40,6 +42,8 @@ const reducer = combineReducers({
   [accountsApi.reducerPath]: accountsApi.reducer,
   [subcontractorApi.reducerPath]: subcontractorApi.reducer,
   [taskApi.reducerPath]: taskApi.reducer,
+  [transactionApi.reducerPath]: transactionApi.reducer,
+  [dashboardApi.reducerPath]: dashboardApi.reducer,
 });
 const persistedReducer = persistReducer(persistConfig, reducer);
 
@@ -62,7 +66,9 @@ export const store = configureStore({
       expensesApi.middleware,
       accountsApi.middleware,
       subcontractorApi.middleware,
-      taskApi.middleware
+      taskApi.middleware,
+      transactionApi.middleware,
+      dashboardApi.middleware
     ),
 });
 

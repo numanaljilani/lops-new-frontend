@@ -22,7 +22,7 @@ function Headers() {
   const currentPath = path.split("/")[1]; // Store the current path segment
 
   const accesses = useSelector((state: any) => state?.user?.user?.access);
-  console.log(accesses, ">>>>>");
+  // console.log(accesses, ">>>>>");
 
   const logout = async () => {
     router.replace("/");
@@ -51,7 +51,7 @@ function Headers() {
     {
       href: "/timesheet",
       label: "Timecard",
-      access: ["admin", "sales", "Team Lead"],
+      access: ["admin", "sales", "Team Lead", "team member"],
     },
     // { href: "#", label: "Analytics" },
   ];
@@ -134,7 +134,7 @@ function Headers() {
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Settings</DropdownMenuItem>
+            <DropdownMenuItem onClick={()=>router.push("/settings")}>Settings</DropdownMenuItem>
             <DropdownMenuItem>Support</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={logout}>Logout</DropdownMenuItem>
@@ -146,3 +146,10 @@ function Headers() {
 }
 
 export default Headers;
+
+
+
+
+
+// LETS-INV-1001
+// JN2506001

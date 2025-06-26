@@ -1,10 +1,15 @@
 "use client";
-
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import ErrorMessage from "@/components/errors/ErrorMessage";
 import {
   LayoutDashboard,
   LockKeyhole,
@@ -14,8 +19,9 @@ import {
   Briefcase,
   Building2,
 } from "lucide-react";
-import { useProfileMutation } from "@/redux/query/authApi";
+import { useProfileMutation, useChangePasswordMutation } from "@/redux/query/authApi";
 import { setUser } from "@/redux/slice/profileSlice";
+import { toast } from "sonner";
 
 type SettingSection =
   | "profile"
@@ -25,30 +31,75 @@ type SettingSection =
   | "employee"
   | "company";
 
+const passwordSchema = z
+  .object({
+    password: z.string().min(6, "Password must be at least 6 characters"),
+    confirm_password: z.string().min(6, "Confirm password must be at least 6 characters"),
+  })
+  .refine((data) => data.password === data.confirm_password, {
+    message: "Passwords do not match",
+    path: ["confirm_password"],
+  });
+
 export default function SettingsPage() {
   const user = useSelector((state: any) => state.user.user);
-  // console.log(user);
   const [activeSection, setActiveSection] = useState<SettingSection>("profile");
-const dispatch = useDispatch();
-  const [profileApi , {data , isSuccess , error , isError }] = useProfileMutation();
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const dispatch = useDispatch();
+  const [profileApi, { data, isSuccess, error, isError }] = useProfileMutation();
+  const [changePassword, { isLoading: isPasswordLoading, isSuccess: isPasswordSuccess, isError: isPasswordError, error: passwordError }] = useChangePasswordMutation();
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    reset,
+  } = useForm({
+    resolver: zodResolver(passwordSchema),
+  });
+
   const getProfileDetails = async () => {
     const res = await profileApi({});
     console.log(res, "PROFILE API");
   };
 
-  useEffect(()=>{
+  useEffect(() => {
     getProfileDetails();
-  },[])
-  useEffect(()=>{
-    if(isSuccess){
-        dispatch(setUser({...data.user , ...data.employee}));
-    }
+  }, []);
 
-  },[isSuccess])
+  useEffect(() => {
+    if (isSuccess) {
+      dispatch(setUser({ ...data.user, ...data.employee }));
+    }
+  }, [isSuccess, data, dispatch]);
+
+  useEffect(() => {
+    if (isPasswordSuccess) {
+      toast.success("Password changed successfully!");
+      setShowPasswordForm(false);
+      reset();
+    }
+    if (isPasswordError && passwordError) {
+      const errorMessage = (passwordError as any)?.data?.message || "Failed to change password. Please try again.";
+      toast.error(errorMessage);
+    }
+  }, [isPasswordSuccess, isPasswordError, passwordError, reset]);
 
   if (!user) {
     return <div>Loading user data...</div>;
   }
+
+  const onPasswordSubmit = async (data: any) => {
+    try {
+    const res = await changePassword({
+        password: data.password,
+        confirm_password: data.confirm_password,
+      }).unwrap();
+      console.log(res , "Password change response")
+    } catch (err) {
+      // Error is handled by useEffect
+    }
+  };
 
   const renderContent = () => {
     switch (activeSection) {
@@ -138,11 +189,45 @@ const dispatch = useDispatch();
         return (
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Change Password</h3>
-            {/* Add password change form here */}
             <p className="text-muted-foreground">
               Password last updated:{" "}
               {new Date(user.updatedAt).toLocaleDateString()}
             </p>
+            <Button
+              variant="secondary"
+              onClick={() => setShowPasswordForm(!showPasswordForm)}
+            >
+              {showPasswordForm ? "Cancel" : "Change Password"}
+            </Button>
+            {showPasswordForm && (
+              <form onSubmit={handleSubmit(onPasswordSubmit)} className="space-y-4">
+                <div>
+                  <Label htmlFor="password">New Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    {...register("password")}
+                  />
+                  {errors.password && (
+                    <ErrorMessage message={errors.password.message} />
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="confirm_password">Confirm Password</Label>
+                  <Input
+                    id="confirm_password"
+                    type="password"
+                    {...register("confirm_password")}
+                  />
+                  {errors.confirm_password && (
+                    <ErrorMessage message={errors.confirm_password.message} />
+                  )}
+                </div>
+                <Button type="submit" disabled={isSubmitting || isPasswordLoading}>
+                  {isSubmitting || isPasswordLoading ? "Submitting..." : "Update Password"}
+                </Button>
+              </form>
+            )}
           </div>
         );
       case "about":

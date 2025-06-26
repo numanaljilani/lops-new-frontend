@@ -5,10 +5,10 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 export const expensesApi = createApi({
   reducerPath: "expensesApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: `${urls.server}`,
+    baseUrl: `${urls.server}/expenses`,
     prepareHeaders: (headers, { getState }) => {
       const token = (getState() as any)?.user?.accessToken;
-      console.log(token, "TOKEN");
+  
       if (token) {
         headers.set("Authorization", `Bearer ${token}`);
       }
@@ -31,9 +31,7 @@ export const expensesApi = createApi({
       query: (data) => {
         console.log(data, "API");
         return {
-          url: `expenses/?page=${data?.page || 1}&${
-            data?.job_card && `job_card=` + data?.job_card
-          }`,
+          url: `/`,
           method: "GET",
           headers: {
             "Content-type": "application/json; charset=UTF-8",
@@ -45,9 +43,22 @@ export const expensesApi = createApi({
       query: (data) => {
         console.log(data, "API");
         return {
-          url: "expenses/",
+          url: "/",
           method: "POST",
           body: data.data,
+          headers: {
+            "Content-type": "application/json; charset=UTF-8",
+          },
+        };
+      },
+    }),
+    updateExpense: builder.mutation({
+      query: ({id,data}) => {
+        console.log(data, "API");
+        return {
+          url: `/${id}`,
+          method: "PUT",
+          body: data,
           headers: {
             "Content-type": "application/json; charset=UTF-8",
           },
@@ -57,7 +68,7 @@ export const expensesApi = createApi({
     getExpenseById: builder.mutation({
       query: ({ data, id }) => {
         return {
-          url: `expenses/${id}`,
+          url: `/${id}`,
           method: "GET",
           headers: {
             "Content-type": "application/json; charset=UTF-8",
@@ -75,4 +86,5 @@ export const {
   useExpensesMutation,
   useCreateExpenseMutation,
   useGetExpenseByIdMutation,
+  useUpdateExpenseMutation
 } = expensesApi;

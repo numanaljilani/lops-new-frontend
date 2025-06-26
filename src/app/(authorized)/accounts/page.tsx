@@ -66,7 +66,7 @@ function Accounts() {
   const [currentPage, setCurrentPage] = useState(1); // Pagination state
   const itemsPerPage = 5; // Number of items per page
 
-
+ const [jobApi, { data, isSuccess, error, isError }] = useJobsMutation();
   const [
     paymentApi,
     {
@@ -79,7 +79,8 @@ function Accounts() {
 
   const getPaymentBalls = async () => {
     setLoading(true); // Set loading to true before fetching data
-    await paymentApi({ page , percentage : 100});
+    const res = await paymentApi({ page , percentage : 100});
+    console.log(res , "RESPONSE")
   };
   useEffect(() => {
     getPaymentBalls();
@@ -87,11 +88,41 @@ function Accounts() {
 
   useEffect(() => {
     if (paymentIsSuccess) {
-      console.log(payementData.results, ">>>>>>>>");
-      setPayments(payementData.results);
+      console.log(payementData.data, ">>>>>>>>");
+      setPayments(payementData.data);
       setLoading(false)
     }
   }, [paymentIsSuccess]);
+
+
+
+    const getJobs = async () => {
+      setLoading(true); // Set loading to true before fetching data
+      const res = await jobApi({page });
+      console.log(res, "response ....");
+    };
+  
+    useEffect(() => {
+      getJobs();
+    }, []);
+  
+    useEffect(() => {
+      if (isDialogOpen) {
+        getJobs();
+      }
+    }, [isDialogOpen]);
+  
+    useEffect(() => {
+      if (isSuccess) {
+     
+        if (data) {
+          setJobs(data.data);
+          setLoading(false); // Set loading to false after data is fetched
+        }
+      }
+    }, [isSuccess]);
+  
+
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -122,25 +153,23 @@ function Accounts() {
                 </CardHeader>
                 <CardContent>
                   <Table>
-                    <TableHeader>
+                <TableHeader>
                       <TableRow>
                         <TableHead className="hidden w-[100px] sm:table-cell">
-                          Invoice Id
+                          Job No
                         </TableHead>
-                        <TableHead>Job Id</TableHead>
                         <TableHead>Client</TableHead>
-                        <TableHead>Project</TableHead>
-                        <TableHead>Brief</TableHead>
-                        <TableHead>Net Value without VAT</TableHead>
-                        <TableHead>2.5% chairity</TableHead>
-                        <TableHead>VAT</TableHead>
-                        <TableHead>Total</TableHead>
-                        {/* <TableHead className="hidden md:table-cell">
+                        {/* <TableHead>Project Name</TableHead> */}
+                        <TableHead>Brief of scope</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Profit</TableHead>
+                        <TableHead className="hidden md:table-cell">
                           Deadline at
-                        </TableHead> */}
+                        </TableHead>
+                      
                       </TableRow>
                     </TableHeader>
-                    <TableBody>
+  <TableBody>
                       {loading ? (
                         // Skeleton loading UI
                         Array.from({ length: itemsPerPage }).map((_, index) => (
@@ -169,77 +198,72 @@ function Accounts() {
                             <TableCell>
                               <Skeleton className="h-4 w-full" />
                             </TableCell>
-                            <TableCell>
-                              <Skeleton className="h-4 w-full" />
-                            </TableCell>
                           </TableRow>
                         ))
-                      ) : payemtes.length === 0 ? (
+                      ) : jobs?.length === 0 ? (
                         // No data message
                         <TableRow>
                           <TableCell colSpan={7} className="text-center py-10">
-                            <p className="text-muted-foreground">
-                              No data available.
-                            </p>
+                            <p className="text-muted-foreground">No data available.</p>
                           </TableCell>
                         </TableRow>
                       ) : (
                         // Display data
-                        payemtes?.map((data: any, index: number) => (
+                        jobs?.map((data: any, index: number) => (
                           <TableRow key={index} className="cursor-pointer">
                             <TableCell
-                              className="hidden sm:table-cell hover:underline"
+                              className="hidden sm:table-cell"
                               onClick={() =>
-                                router.push(`/accounts/${data.job_card}`)
+                                router.push(`/accounts/${data._id}`)
                               }
                             >
-                              {data?.invoice_number || "-"}
-                            </TableCell>
-                            <TableCell
-                              className="hidden sm:table-cell hover:underline"
-                              onClick={() =>
-                                router.push(`/accounts/${data.job_card}`)
-                              }
-                            >
-                              {data?.job_number}
+                              {data?.projectId}
                             </TableCell>
                             <TableCell
                               className="font-medium"
                               onClick={() =>
-                                router.push(`/accounts/${data.job_card}`)
+                                router.push(`/accounts/${data._id}`)
                               }
                             >
-                              {data?.client_name || "-"}
+                              {data?.rfq?.client?.client_name || "-"}
                             </TableCell>
-                            <TableCell
+                            {/* <TableCell
                               className="font-medium"
                               onClick={() =>
-                                router.push(`/accounts/${data.job_card}`)
+                                router.push(`/accounts/${data._id}`)
                               }
                             >
                               {data?.project_name || "-"}
+                            </TableCell> */}
+                            <TableCell
+                              className="font-medium"
+                              onClick={() =>
+                                router.push(`/accounts/${data._id}`)
+                              }
+                            >
+                              {data?.scope_of_work}
                             </TableCell>
                             <TableCell
                               onClick={() =>
-                                router.push(`/accounts/${data.job_card}`)
+                                router.push(`/accounts/${data._id}`)
                               }
                             >
-                              {data?.brief_scope || ""}
+                              <Badge variant="outline">
+                                {data?.completion_percentage}%
+                              </Badge>
                             </TableCell>
-
-                            <TableCell className="hidden md:table-cell hover:underline">
-                              {Number(data?.amount)}
+                            <TableCell
+                              className="hidden md:table-cell"
+                              onClick={() =>
+                                router.push(`/accounts/${data._id}`)
+                              }
+                            >
+                              {data?.profit}
                             </TableCell>
                             <TableCell className="hidden md:table-cell">
-                              {Number(data?.charity_amount)}
+                              {data?.delivery_timelines}
                             </TableCell>
-                            <TableCell className="hidden md:table-cell">
-                              {data?.vat_amount}
-                            </TableCell>
-                            <TableCell className="hidden md:table-cell">
-                              {Number(data?.amount) +
-                                Number(data?.amount) * 0.05}
-                            </TableCell>
+                           
                           </TableRow>
                         ))
                       )}

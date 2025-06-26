@@ -14,6 +14,7 @@ import {
   setRefreshToken,
   setUser,
 } from "@/redux/slice/profileSlice";
+import loginIllustration from "@/public/login.jpg"; 
 
 export default function Login() {
   const LoginSchema = z.object({
@@ -176,7 +177,7 @@ export default function Login() {
         {/* Image Section */}
         <div className="hidden lg:block w-full lg:w-1/2 relative">
           <Image
-            src="/login.jpg"
+             src={loginIllustration}
             alt="Login illustration"
             width={1920}
             height={1080}
