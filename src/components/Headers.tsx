@@ -51,7 +51,7 @@ function Headers() {
     {
       href: "/timesheet",
       label: "Timecard",
-      access: ["admin", "sales", "Team Lead", "team member"],
+      access: ["admin", "sales", "Team Lead", "team member", "accounts","subcontractor"],
     },
     // { href: "#", label: "Analytics" },
   ];
