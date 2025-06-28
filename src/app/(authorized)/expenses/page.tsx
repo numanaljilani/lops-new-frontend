@@ -1,5 +1,11 @@
 "use client";
-import { File, ListFilter, MoreHorizontal, PlusCircle } from "lucide-react";
+import {
+  File,
+  ListFilter,
+  MoreHorizontal,
+  PlusCircle,
+  Search,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,6 +52,7 @@ import { useExpensesMutation } from "@/redux/query/expensesApi";
 import { useJobsMutation } from "@/redux/query/jobApi";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PaginationComponent } from "@/components/PaginationComponent";
+import { Input } from "@/components/ui/input";
 
 function Expenses() {
   const router = useRouter();
@@ -53,6 +60,7 @@ function Expenses() {
   const [alljobs, setAllJobs] = useState([]);
   const [page, setPage] = useState(1);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
   const [isCreateExpensesDialogOpen, setIsCreateExpensesDialogOpen] =
     useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -91,12 +99,25 @@ function Expenses() {
   useEffect(() => {
     if (isSuccess) {
       if (data) {
-        setExpenses(data.data);
+        setExpenses(data?.data);
       }
     }
   }, [isSuccess]);
 
   const [itemToDelete, setItemToDelete] = useState<any>(null);
+    const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    let res;
+    if (query === "") {
+      // If the search query is empty, reset to all RFQs
+      res = await expenseApi({ search: query, page });
+    } else {
+      res = await expenseApi({ search: query, page });
+      // Hide loading state after fetching
+    }
+    console.log(res )
+
+  };
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -116,6 +137,16 @@ function Expenses() {
                     Export
                   </span>
                 </Button> */}
+                <div className="relative flex-1">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="search"
+                    placeholder="Search by job No. job Id or exp id..."
+                    className="w-full rounded-lg bg-background pl-8"
+                    value={searchQuery}
+                    onChange={(e) => handleSearch(e.target.value)}
+                  />
+                </div>
                 <Button
                   size="sm"
                   className="h-7 gap-1"
@@ -182,7 +213,7 @@ function Expenses() {
                                   router.push(`/expenses/${data._id}`)
                                 }
                               >
-                                {data?._id}
+                                {data?.expenseId}
                               </TableCell>
                               <TableCell
                                 className=" cursor-pointer"
@@ -190,7 +221,7 @@ function Expenses() {
                                   router.push(`/expenses/${data._id}`)
                                 }
                               >
-                                {data?.projectId?.projectId || "-"}
+                                {data?.project?.projectId || "-"}
                               </TableCell>
                               <TableCell
                                 onClick={() =>
@@ -198,8 +229,7 @@ function Expenses() {
                                 }
                                 className=" cursor-pointer"
                               >
-                                {data?.category_display
-}
+                                {data?.category_display}
                               </TableCell>
                               <TableCell
                                 onClick={() =>
@@ -267,7 +297,7 @@ function Expenses() {
                   </div> */}
                   <PaginationComponent
                     setPage={setPage}
-                    numberOfPages={data?.count}
+                    totalPages={data?.totalPages}
                     page={page}
                   />
                 </CardFooter>

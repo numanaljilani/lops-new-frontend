@@ -39,19 +39,19 @@ function Headers() {
     {
       href: "/projects",
       label: "Projects",
-      access: ["admin", "team member", "Team Leads", "accounts", "sales"],
+      access: ["admin", "team member", "team leads", "accounts", "sales"],
     },
     { href: "/accounts", label: "Accounts", access: ["admin", "accounts"] },
-    { href: "/expenses", label: "Expenses", access: ["admin", "accounts"] },
+    { href: "/expenses", label: "Expenses", access: ["admin", "accounts","team leads"] },
 
-    { href: "/clients", label: "Clients", access: ["admin"] },
+    { href: "/clients", label: "Clients", access: ["admin", "sales"] },
     { href: "/employee", label: "Employee", access: ["admin"] },
     { href: "/companies", label: "Companies", access: ["admin"] },
 
     {
       href: "/timesheet",
       label: "Timecard",
-      access: ["admin", "sales", "Team Lead", "team member", "accounts","subcontractor"],
+      access: ["admin", "sales", "team leads", "team member", "accounts","subcontractor"],
     },
     // { href: "#", label: "Analytics" },
   ];

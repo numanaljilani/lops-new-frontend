@@ -87,7 +87,7 @@ function More({
     }
   }, [cardData, reset]);
 
-  console.log(cardData)
+  // console.log(cardData)
   async function onSubmit(data: any) {
     try {
       const payload = {

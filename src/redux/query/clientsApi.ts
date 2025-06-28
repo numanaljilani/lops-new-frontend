@@ -8,16 +8,20 @@ export const clientsApi = createApi({
   reducerPath: 'clientsApi',
   baseQuery: fetchBaseQuery({ baseUrl: `${urls.server}/client` , 
   prepareHeaders :(headers, { getState }) =>{
-     const token = (getState() as any);
-     console.log(token , "TOKEN")
-  }
+      const token = (getState() as any)?.user?.accessToken;
+
+      if (token) {
+        headers.set("Authorization", `Bearer ${token}`);
+      }
+      return headers;
+    },
   }),
   
   endpoints: (builder) => ({
     clients: builder.mutation({
-        query: ({page}) => {
+        query: ({page , search}) => {
           return {
-            url: `/?page=${page || 1}`,
+            url: `/?page=${page || 1}&search=${search}`,
             method: "GET",
             headers: {
               "Content-type": "application/json; charset=UTF-8",

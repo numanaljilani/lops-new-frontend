@@ -69,7 +69,7 @@ function CreateTask({
   // Subcontractor Task Schema
   const SubcontractorTaskSchema = z.object({
     subcontract_brief: z.string().min(1, "Subcontract brief is required"),
-    weightage: z.string().min(1, "Weightage is required"),
+    weightage: z.string().min(1, "Weightage is required").max(100,"max weightage is 100"),
     due_date: z.date({
       required_error: "A due date is required.",
     }),
@@ -149,16 +149,22 @@ function CreateTask({
         description: "Please select the payment ball in which you want to create the task.",
       });
     } else {
-      const res = await createTaskApi({
+      const res : any = await createTaskApi({
         data: { ...data, paymentId: ball?._id, due_date: format(new Date(data.due_date), 'yyyy-MM-dd') },
       });
+      console.log(res , "response")
       if (res?.data) {
         setIsDialogOpen(false);
         toast("Success", {
           description: "Task created successfully!",
         });
       }
-      getTasks(ball?.payment_id);
+      if(res.error){
+            toast("Success", {
+          description: res?.error?.data?.message || "Something went wrong.",
+        });
+      }
+      getTasks(ball?._id);
     }
   }
 
@@ -319,7 +325,7 @@ function CreateTask({
                           <SelectContent>
                             {employee?.map((data: any, index) => (
                               <SelectItem key={index} value={data._id}>
-                                {data?.userId?.name}
+                                {data?.user?.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -341,7 +347,7 @@ function CreateTask({
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="Pending">Pending</SelectItem>
-                            <SelectItem value="InProgress">InProgress</SelectItem>
+                            <SelectItem value="In Progress">InProgress</SelectItem>
                             <SelectItem value="Completed">Completed</SelectItem>
                           </SelectContent>
                         </Select>

@@ -56,7 +56,7 @@ function TimeSheet() {
   const [deleteCompanyApi] = useDeleteCompanyMutation();
 
   const getTimeSheetData = async () => {
-    const res = await timeSheetApi({page});
+    const res = await timeSheetApi({ page });
     console.log(res, "response");
   };
 
@@ -196,15 +196,13 @@ function TimeSheet() {
                           },
                           index: number
                         ) => {
-                          console.log(data)
+                          console.log(data);
                           return (
                             <TableRow
                               key={index}
                               className="cursor-pointer"
                               onClick={() =>
-                                router.push(
-                                  `/timesheet/${data._id}`
-                                )
+                                router.push(`/timesheet/${data._id}`)
                               }
                             >
                               <TableCell className="font-medium">
@@ -276,8 +274,8 @@ function TimeSheet() {
                 <CardFooter>
                   <PaginationComponent
                     setPage={setPage}
-                    numberOfPages={data?.count}
-                    page={page}
+                    totalPages={data?.totalPages || 1}
+                    page={data?.page || 1}
                   />
                 </CardFooter>
               </Card>

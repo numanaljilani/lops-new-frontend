@@ -8,7 +8,7 @@ export const subcontractorApi = createApi({
     baseUrl: `${urls.server}`,
     prepareHeaders: (headers, { getState }) => {
       const token = (getState() as any)?.user?.accessToken;
-      console.log(token, "TOKEN");
+
       if (token) {
         headers.set("Authorization", `Bearer ${token}`);
       }

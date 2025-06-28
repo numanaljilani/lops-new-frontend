@@ -17,10 +17,10 @@ export const employeeApi = createApi({
   }),
   endpoints: (builder) => ({
     employee: builder.mutation({
-      query: ({ page }) => {
+      query: ({ page , search }) => {
         return {
           // url: `/?page=${page || 1}`,
-          url: `/`,
+          url: `/?page=${page || 1}search=${search}`,
           method: "GET",
           headers: {
             "Content-type": "application/json; charset=UTF-8",

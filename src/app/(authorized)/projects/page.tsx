@@ -60,21 +60,27 @@ import CreateTask from "@/components/dialogs/CreateTask";
 import CreateExpense from "@/components/dialogs/CreateExpenses";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton component
-import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"; // Import Pagination components
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"; // Import Pagination components
 import { PaginationComponent } from "@/components/PaginationComponent";
 
 function Projects() {
   const router = useRouter();
   const [jobs, setJobs] = useState([]);
-  const [page , setPage] = useState(1)
+  const [page, setPage] = useState(1);
   const [projectDetails, setProjectDetails] = useState<any>();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [rfq , setRfq] = useState<any>()
+  const [rfq, setRfq] = useState<any>();
+  const [searchQuery, setSearchQuery] = useState("");
   const [isCreateRFQDialogOpen, setIsCreateRFQDialogOpen] = useState(false);
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<any>(null);
   const [loading, setLoading] = useState(true); // Loading state
-  const [currentPage, setCurrentPage] = useState(1); // Pagination state
   const itemsPerPage = 5; // Number of items per page
 
   const [jobApi, { data, isSuccess, error, isError }] = useJobsMutation();
@@ -90,7 +96,7 @@ function Projects() {
 
   const getJobs = async () => {
     setLoading(true); // Set loading to true before fetching data
-    const res = await jobApi({page });
+    const res = await jobApi({ page });
     console.log(res, "response");
   };
 
@@ -99,14 +105,13 @@ function Projects() {
   }, []);
 
   useEffect(() => {
-    if (isDialogOpen) {
+    if (!isDialogOpen) {
       getJobs();
     }
-  }, [isDialogOpen]);
+  }, [isDialogOpen, page]);
 
   useEffect(() => {
     if (isSuccess) {
-   
       if (data) {
         setJobs(data.data);
         setLoading(false); // Set loading to false after data is fetched
@@ -123,13 +128,22 @@ function Projects() {
     getJobs();
   };
 
-  // Pagination logic
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = jobs?.slice(indexOfFirstItem, indexOfLastItem) || [];
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    let res;
+    if (query === "") {
+      // If the search query is empty, reset to all RFQs
+      res = await jobApi({ search: query, page });
+    } else {
+      res = await jobApi({ search: query, page });
+      // Call the API to search for RFQs
+      setLoading(true); // Show loading state while fetching
+      // Pass the search query to the API
+      // console.log(res , "res")
 
-  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
-
+      setLoading(false); // Hide loading state after fetching
+    }
+  };
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
@@ -137,16 +151,16 @@ function Projects() {
           <Tabs defaultValue="all">
             <div className="flex items-center">
               <div className="ml-auto flex items-center gap-2">
-                {/* <div className="relative flex-1">
+                <div className="relative flex-1">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     type="search"
-                    placeholder="Search by RFQ ID..."
+                    placeholder="Search by Job No. RFQ ID..."
                     className="w-full rounded-lg bg-background pl-8"
-                    // value={searchQuery}
-                    // onChange={(e) => handleSearch(e.target.value)}
+                    value={searchQuery}
+                    onChange={(e) => handleSearch(e.target.value)}
                   />
-                </div> */}
+                </div>
 
                 <Button
                   size="sm"
@@ -221,7 +235,9 @@ function Projects() {
                         // No data message
                         <TableRow>
                           <TableCell colSpan={7} className="text-center py-10">
-                            <p className="text-muted-foreground">No data available.</p>
+                            <p className="text-muted-foreground">
+                              No data available.
+                            </p>
                           </TableCell>
                         </TableRow>
                       ) : (
@@ -328,7 +344,11 @@ function Projects() {
                 </CardContent>
                 {/* Pagination */}
                 <CardFooter className="flex justify-center">
-                <PaginationComponent setPage={setPage} numberOfPages={data?.count} page={page}/>
+                  <PaginationComponent
+                    setPage={setPage}
+                    totalPages={data?.totalPages || 1}
+                    page={data?.page || 1}
+                  />
                 </CardFooter>
               </Card>
             </TabsContent>

@@ -1,5 +1,5 @@
 "use client";
-import { File, ListFilter, MoreHorizontal, PlusCircle } from "lucide-react";
+import { File, ListFilter, MoreHorizontal, PlusCircle, Search } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -46,13 +46,14 @@ import {
 } from "../../../redux/query/clientsApi";
 import Alert from "@/components/dialogs/Alert";
 import { PaginationComponent } from "@/components/PaginationComponent";
+import { Input } from "@/components/ui/input";
 
 function Clients() {
   const router = useRouter();
   const [companies, setCompanies] = useState([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [page , setPage] = useState(1)
-
+  const [page, setPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
   const [itemToDelete, setItemToDelete] = useState<any>(null);
 
   const [deleteClientApi] = useDeleteClientMutation();
@@ -60,7 +61,7 @@ function Clients() {
     useClientsMutation();
 
   const getClients = async () => {
-    const res = await clientsApi({page });
+    const res = await clientsApi({ page });
     console.log(res, "response");
   };
 
@@ -68,10 +69,10 @@ function Clients() {
     getClients();
   }, []);
   useEffect(() => {
-    if (isDialogOpen) {
+    if (!isDialogOpen) {
       getClients();
     }
-  }, [isDialogOpen , page]);
+  }, [isDialogOpen, page]);
 
   useEffect(() => {
     if (isSuccess) {
@@ -94,6 +95,20 @@ function Clients() {
   const update = async (url: string) => {
     router.push(`/clients/${url}`);
   };
+
+
+  
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    let res;
+    if (query === "") {
+      // If the search query is empty, reset to all RFQs
+      res = await clientsApi({ search: query, page });
+    } else {
+      res = await clientsApi({ search: query, page });
+
+    }
+  };
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
@@ -109,44 +124,17 @@ function Clients() {
               <TabsTrigger value="Accounts">Accounts</TabsTrigger>
             </TabsList> */}
               <div className="ml-auto flex items-center gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-7 gap-1">
-                      <ListFilter className="h-3.5 w-3.5" />
-                      <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                        Filter
-                      </span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Filter by</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuCheckboxItem checked>
-                      All
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem>
-                      Sales Member
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem>
-                      Team Leads
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem>
-                      Team Members
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem>
-                      Sub-Contractors
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem>
-                      Accounts Members
-                    </DropdownMenuCheckboxItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <Button size="sm" variant="outline" className="h-7 gap-1">
-                  <File className="h-3.5 w-3.5" />
-                  <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                    Export
-                  </span>
-                </Button>
+       
+                <div className="relative flex-1">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="search"
+                    placeholder="Search by client name , contact person , etc "
+                    className="w-full rounded-lg bg-background pl-8"
+                    value={searchQuery}
+                    onChange={(e) => handleSearch(e.target.value)}
+                  />
+                </div>
                 <Link href="/clients/create-client">
                   <Button size="sm" className="h-7 gap-1">
                     <PlusCircle className="h-3.5 w-3.5" />
@@ -210,9 +198,13 @@ function Clients() {
                           index: number
                         ) => {
                           return (
-                            <TableRow key={index} onClick={() => update(data._id)} className="cursor-pointer">
+                            <TableRow
+                              key={index}
+                              onClick={() => update(data._id)}
+                              className="cursor-pointer"
+                            >
                               <TableCell className="hidden sm:table-cell">
-                               {index + 1}
+                                {index + 1}
                               </TableCell>
                               <TableCell className="font-medium">
                                 {data?.client_name}
@@ -222,9 +214,7 @@ function Clients() {
                                   {data?.status ? "Active" : "Inactive"}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="font-medium">
-                                {0}
-                              </TableCell>
+                              <TableCell className="font-medium">{0}</TableCell>
                               <TableCell className="font-medium">
                                 {data?.contact_person}
                               </TableCell>
@@ -233,7 +223,7 @@ function Clients() {
                                 {data?.contact_info || "-"}
                               </TableCell>
                               <TableCell className="hidden md:table-cell">
-                              {data?.contact_number}
+                                {data?.contact_number}
                               </TableCell>
                               <TableCell className="hidden md:table-cell">
                                 {formatDate(data?.createdAt)}
@@ -280,7 +270,11 @@ function Clients() {
                   </Table>
                 </CardContent>
                 <CardFooter>
-                      <PaginationComponent setPage={setPage} numberOfPages={data?.count} page={page}/>
+                  <PaginationComponent
+                    setPage={setPage}
+                    totalPages={data?.totalPages || 1}
+                    page={data?.page || 1}
+                  />
                 </CardFooter>
               </Card>
             </TabsContent>

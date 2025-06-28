@@ -5,6 +5,7 @@ import {
   MoreHorizontal,
   PlusCircle,
   Router,
+  Search,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -57,10 +58,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useRouter } from "next/navigation";
 import { PaginationComponent } from "@/components/PaginationComponent";
+import { Input } from "@/components/ui/input";
 
 function Employee() {
   const router = useRouter();
   const [employee, setEmployee] = useState([]);
+    const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
   const [employeeApi, { data, isSuccess, error, isError }] =
     useEmployeeMutation();
@@ -75,6 +78,9 @@ function Employee() {
   useEffect(() => {
     getEmployes();
   }, []);
+  useEffect(() => {
+    getEmployes();
+  }, [page]);
 
   useEffect(() => {
     if (isSuccess) {
@@ -104,6 +110,19 @@ function Employee() {
     setItemToDelete(null);
   };
 
+
+    
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    let res;
+    if (query === "") {
+      // If the search query is empty, reset to all RFQs
+      res = await employeeApi({ search: query, page });
+    } else {
+      res = await employeeApi({ search: query, page });
+
+    }
+  };
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
@@ -111,44 +130,22 @@ function Employee() {
           <Tabs defaultValue="all">
             <div className="flex items-center">
               <div className="ml-auto flex items-center gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-7 gap-1">
-                      <ListFilter className="h-3.5 w-3.5" />
-                      <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                        Filter
-                      </span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Filter by</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuCheckboxItem checked>
-                      All
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem>
-                      Sales Member
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem>
-                      Team Leads
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem>
-                      Team Members
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem>
-                      Sub-Contractors
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem>
-                      Accounts Members
-                    </DropdownMenuCheckboxItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
                 {/* <Button size="sm" variant="outline" className="h-7 gap-1">
                   <File className="h-3.5 w-3.5" />
                   <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
                     Export
                   </span>
                 </Button> */}
+                <div className="relative flex-1">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="search"
+                    placeholder="Search by client name , contact person , etc "
+                    className="w-full rounded-lg bg-background pl-8"
+                    value={searchQuery}
+                    onChange={(e) => handleSearch(e.target.value)}
+                  />
+                </div>
                 <Link href="/employee/create-employee">
                   <Button size="sm" className="h-7 gap-1">
                     <PlusCircle className="h-3.5 w-3.5" />
@@ -192,7 +189,7 @@ function Employee() {
                       {employee?.map(
                         (
                           data: {
-                            userId: { name: string };
+                            user: { name: string };
                             createdAt: string;
                             _id: string;
                             salary: string;
@@ -204,9 +201,7 @@ function Employee() {
                             <TableRow
                               key={index}
                               onClick={() =>
-                                router.push(
-                                  `/employee/${data?._id}`
-                                )
+                                router.push(`/employee/${data?._id}`)
                               }
                               className="cursor-pointer"
                             >
@@ -215,12 +210,12 @@ function Employee() {
                                   alt="Employee Image"
                                   className="aspect-square rounded-md object-cover"
                                   height="64"
-                                  src={`https://ui-avatars.com/api/?name=${data?.userId?.name}&&color=fff&&background=3A72EC&&rounded=true&&font-size=0.44`}
+                                  src={`https://ui-avatars.com/api/?name=${data?.user?.name}&&color=fff&&background=3A72EC&&rounded=true&&font-size=0.44`}
                                   width="64"
                                 />
                               </TableCell>
                               <TableCell className="font-medium">
-                                {data?.userId?.name}
+                                {data?.user?.name}
                               </TableCell>
                               <TableCell>
                                 <Badge variant="outline">
@@ -280,8 +275,8 @@ function Employee() {
                 <CardFooter>
                   <PaginationComponent
                     setPage={setPage}
-                    numberOfPages={data?.count}
-                    page={page}
+                    totalPages={data?.totalPages || 1}
+                    page={data?.page || 1}
                   />
                 </CardFooter>
               </Card>

@@ -53,16 +53,11 @@ import CreateDialog from "@/components/dialogs/CreateDialog";
 import CreateLPO from "@/components/dialogs/CreateLPO";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton component
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination"; // Import Pagination components
 import { PaginationComponent } from "@/components/PaginationComponent";
 
 function RFQs() {
+
+  const companyId = "6850144a18d7f8eeea750c20"
   const router = useRouter();
   const [rfqs, setRFQs] = useState([]);
   const [filteredRFQs, setFilteredRFQs] = useState([]); // State for filtered RFQs
@@ -93,7 +88,7 @@ function RFQs() {
     client: "",
   });
 
-  const [rfqsApi, { data, isSuccess, error, isError }] = useAllRFQsMutation();
+  const [rfqsApi, { data, isSuccess, error, isError }]  = useAllRFQsMutation();
   const [createRFQApi] = useCreateRFQMutation();
   const [deleteRFQApi] = useDeleteRfqMutation();
 
@@ -102,10 +97,13 @@ function RFQs() {
     setLoading(true); // Set loading to true before fetching data
     const res = await rfqsApi({ page });
   };
-
+  useEffect(() => {
+    getRFQs();
+  }, []);
   useEffect(() => {
     getRFQs();
   }, [page]);
+
 
   useEffect(() => {
     if (isSuccess && data) {
@@ -122,16 +120,16 @@ function RFQs() {
     let res;
     if (query === "") {
       // If the search query is empty, reset to all RFQs
-      res = await rfqsApi({ quotation_number: query, page: 1 });
+      res = await rfqsApi({ search: query, page });
       setFilteredRFQs(rfqs);
     } else {
-      res = await rfqsApi({ quotation_number: query, page: 1 });
+      res = await rfqsApi({ search: query, page });
       // Call the API to search for RFQs
       setLoading(true); // Show loading state while fetching
       // Pass the search query to the API
       // console.log(res , "res")
-      if (res.data) {
-        setFilteredRFQs(res.data.data); // Update filtered RFQs with the API response
+      if (res?.data) {
+        setFilteredRFQs(res?.data?.data); // Update filtered RFQs with the API response
       }
       setLoading(false); // Hide loading state after fetching
     }
@@ -140,7 +138,7 @@ function RFQs() {
   const handleSubmit = async () => {
     setIsCreateRFQDialogOpen(false);
 
-    const res = await createRFQApi({ data: { ...rfq }, token: "" });
+    const res = await createRFQApi({ data: { ...rfq , company : companyId}});
     // console.log(res, "response");
     getRFQs();
   };
@@ -154,12 +152,7 @@ function RFQs() {
     getRFQs();
   };
 
-  // Pagination logic
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredRFQs?.slice(indexOfFirstItem, indexOfLastItem);
 
-  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -266,9 +259,7 @@ function RFQs() {
                           <TableRow className="cursor-pointer" key={index}>
                             <TableCell
                               className="font-medium"
-                              onClick={() =>
-                                router.push(`/rfqs/${data._id}`)
-                              }
+                              onClick={() => router.push(`/rfqs/${data._id}`)}
                             >
                               {data?.rfqId}
                             </TableCell>
@@ -280,33 +271,25 @@ function RFQs() {
                             </TableCell>
                             <TableCell
                               className="font-medium"
-                              onClick={() =>
-                                router.push(`/rfqs/${data._id}`)
-                              }
+                              onClick={() => router.push(`/rfqs/${data._id}`)}
                             >
                               {data?.client?.client_name}
                             </TableCell>
                             <TableCell
                               className="hidden md:table-cell"
-                              onClick={() =>
-                                router.push(`/rfqs/${data._id}`)
-                              }
+                              onClick={() => router.push(`/rfqs/${data._id}`)}
                             >
                               {data?.project_type}
                             </TableCell>
                             <TableCell
                               className="hidden md:table-cell"
-                              onClick={() =>
-                                router.push(`/rfqs/${data._id}`)
-                              }
+                              onClick={() => router.push(`/rfqs/${data._id}`)}
                             >
                               {data?.scope_of_work}
                             </TableCell>
                             <TableCell
                               className="hidden md:table-cell"
-                              onClick={() =>
-                                router.push(`/rfqs/${data._id}`)
-                              }
+                              onClick={() => router.push(`/rfqs/${data._id}`)}
                             >
                               {data?.quotation_amount}
                             </TableCell>
@@ -360,8 +343,8 @@ function RFQs() {
                 <CardFooter className="flex justify-center">
                   <PaginationComponent
                     setPage={setPage}
-                    numberOfPages={data?.count}
-                    page={page}
+                    totalPages={data?.totalPages || 1}
+                    page={data?.page || 1}
                   />
                 </CardFooter>
               </Card>

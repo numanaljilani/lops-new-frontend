@@ -53,6 +53,7 @@ import {
 } from "@/components/ui/pagination"; // Import Pagination components
 import { PaginationComponent } from "@/components/PaginationComponent";
 import { usePaymentBallsListMutation } from "@/redux/query/accountsApi";
+import { Input } from "@/components/ui/input";
 
 function Accounts() {
   const router = useRouter();
@@ -60,69 +61,57 @@ function Accounts() {
   const [payemtes, setPayments] = useState<[]>([]);
   const [page, setPage] = useState(1);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
   const [rfq, setRfq] = useState<any>();
   const [itemToDelete, setItemToDelete] = useState<any>(null);
   const [loading, setLoading] = useState(true); // Loading state
-  const [currentPage, setCurrentPage] = useState(1); // Pagination state
   const itemsPerPage = 5; // Number of items per page
 
- const [jobApi, { data, isSuccess, error, isError }] = useJobsMutation();
-  const [
-    paymentApi,
-    {
-      data: payementData,
-      isSuccess: paymentIsSuccess,
-      error: paymentError,
-      isError: paymentIsError,
-    },
-  ] = usePaymentBallsListMutation();
+  const [jobApi, { data, isSuccess, error, isError }] = useJobsMutation();
 
-  const getPaymentBalls = async () => {
+
+
+  const getJobs = async () => {
     setLoading(true); // Set loading to true before fetching data
-    const res = await paymentApi({ page , percentage : 100});
-    console.log(res , "RESPONSE")
+    const res = await jobApi({ page });
+    console.log(res, "response ....");
   };
+
   useEffect(() => {
-    getPaymentBalls();
+    getJobs();
   }, []);
 
   useEffect(() => {
-    if (paymentIsSuccess) {
-      console.log(payementData.data, ">>>>>>>>");
-      setPayments(payementData.data);
-      setLoading(false)
-    }
-  }, [paymentIsSuccess]);
-
-
-
-    const getJobs = async () => {
-      setLoading(true); // Set loading to true before fetching data
-      const res = await jobApi({page });
-      console.log(res, "response ....");
-    };
-  
-    useEffect(() => {
+    if (!isDialogOpen) {
       getJobs();
-    }, []);
-  
-    useEffect(() => {
-      if (isDialogOpen) {
-        getJobs();
-      }
-    }, [isDialogOpen]);
-  
-    useEffect(() => {
-      if (isSuccess) {
-     
-        if (data) {
-          setJobs(data.data);
-          setLoading(false); // Set loading to false after data is fetched
-        }
-      }
-    }, [isSuccess]);
-  
+    }
+  }, [isDialogOpen , page]);
 
+  useEffect(() => {
+    if (isSuccess) {
+      if (data) {
+        setJobs(data?.data);
+        setLoading(false); // Set loading to false after data is fetched
+      }
+    }
+  }, [isSuccess]);
+
+    const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    let res;
+    if (query === "") {
+      // If the search query is empty, reset to all RFQs
+      res = await jobApi({ search: query, page });
+    } else {
+      res = await jobApi({ search: query, page });
+      // Call the API to search for RFQs
+      setLoading(true); // Show loading state while fetching
+      // Pass the search query to the API
+      // console.log(res , "res")
+
+      setLoading(false); // Hide loading state after fetching
+    }
+  };
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -131,16 +120,16 @@ function Accounts() {
           <Tabs defaultValue="all">
             <div className="flex items-center">
               <div className="ml-auto flex items-center gap-2">
-                {/* <div className="relative flex-1">
+                <div className="relative flex-1">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     type="search"
-                    placeholder="Search by RFQ ID..."
+                    placeholder="Search by job No. RFQ ID..."
                     className="w-full rounded-lg bg-background pl-8"
-                    // value={searchQuery}
-                    // onChange={(e) => handleSearch(e.target.value)}
+                    value={searchQuery}
+                    onChange={(e) => handleSearch(e.target.value)}
                   />
-                </div> */}
+                </div>
               </div>
             </div>
             <TabsContent value="all">
@@ -153,7 +142,7 @@ function Accounts() {
                 </CardHeader>
                 <CardContent>
                   <Table>
-                <TableHeader>
+                    <TableHeader>
                       <TableRow>
                         <TableHead className="hidden w-[100px] sm:table-cell">
                           Job No
@@ -166,10 +155,9 @@ function Accounts() {
                         <TableHead className="hidden md:table-cell">
                           Deadline at
                         </TableHead>
-                      
                       </TableRow>
                     </TableHeader>
-  <TableBody>
+                    <TableBody>
                       {loading ? (
                         // Skeleton loading UI
                         Array.from({ length: itemsPerPage }).map((_, index) => (
@@ -204,7 +192,9 @@ function Accounts() {
                         // No data message
                         <TableRow>
                           <TableCell colSpan={7} className="text-center py-10">
-                            <p className="text-muted-foreground">No data available.</p>
+                            <p className="text-muted-foreground">
+                              No data available.
+                            </p>
                           </TableCell>
                         </TableRow>
                       ) : (
@@ -263,7 +253,6 @@ function Accounts() {
                             <TableCell className="hidden md:table-cell">
                               {data?.delivery_timelines}
                             </TableCell>
-                           
                           </TableRow>
                         ))
                       )}
@@ -274,8 +263,8 @@ function Accounts() {
                 <CardFooter className="flex justify-center">
                   <PaginationComponent
                     setPage={setPage}
-                    numberOfPages={payementData?.count}
-                    page={page}
+                    totalPages={data?.totalPages || 1}
+                    page={data?.page || 1}
                   />
                 </CardFooter>
               </Card>

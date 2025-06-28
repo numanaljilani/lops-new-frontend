@@ -8,7 +8,7 @@ export const paymentApi = createApi({
     baseUrl: `${urls.server}/payment`,
     prepareHeaders: (headers, { getState }) => {
       const token = (getState() as any)?.user?.accessToken;
-      console.log(token, "TOKEN");
+
       if (token) {
         headers.set("Authorization", `Bearer ${token}`);
       }
@@ -17,11 +17,11 @@ export const paymentApi = createApi({
   }),
   endpoints: (builder) => ({
     payments: builder.mutation({
-      query: ({ id }) => {
+      query: ({ id,page }) => {
         console.log(id, "paymentsAPI");
         return {
           // url: `/?projectId=${id || ''}`,
-          url: `/?projectId=${id || ""}`,
+          url: `/?projectId=${id || ""}&page=${page || 1}`,
           method: "GET",
           headers: {
             "Content-type": "application/json; charset=UTF-8",

@@ -559,7 +559,7 @@ function AccountsDetails() {
                             <div className="grid gap-3">
                               <Label htmlFor="date">Invoice No. </Label>
                               <h4 className="font-semibold text-lg">
-                                {accountsDetails?.invoice_number || "-"}
+                                {accountsDetails?.invoice_number?.toUpperCase() || "-"}
                               </h4>
                             </div>
 

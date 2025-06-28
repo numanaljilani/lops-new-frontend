@@ -8,7 +8,7 @@ export const RFQSApi = createApi({
     baseUrl: `${urls.server}/rfq`,
     prepareHeaders: (headers, { getState }) => {
       const token = (getState() as any)?.user?.accessToken;
-      console.log(token, "TOKEN");
+      
       if (token) {
         headers.set("Authorization", `Bearer ${token}`);
       }
@@ -17,12 +17,10 @@ export const RFQSApi = createApi({
   }),
   endpoints: (builder) => ({
     allRFQs: builder.mutation({
-      query: ({ quotation_number, page }) => {
+      query: ({  page , search }) => {
         console.log("Inside api", page);
         return {
-          url: `/?page=${page || ""}&${
-            quotation_number && `quotation_number=` + quotation_number
-          }`,
+          url: `/?page=${page || 1}&search=${search || ''}`,
           method: "GET",
           headers: {
             "Content-type": "application/json; charset=UTF-8",
@@ -31,9 +29,9 @@ export const RFQSApi = createApi({
       },
     }),
     rfqs: builder.mutation({
-      query: ({ quotation_number }) => {
+      query: ({ quotation_number , page }) => {
         return {
-          url: `/`,
+          url: `/?page=${page || 1}`,
           method: "GET",
           headers: {
             "Content-type": "application/json; charset=UTF-8",

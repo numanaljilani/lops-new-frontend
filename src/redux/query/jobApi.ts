@@ -6,7 +6,7 @@ export const jobApi = createApi({
   reducerPath: "jobApi",
   baseQuery: fetchBaseQuery({ baseUrl: `${urls.server}/project`,    prepareHeaders: (headers, { getState }) => {
       const token = (getState() as any)?.user?.accessToken;
-      console.log(token, "TOKEN");
+  
       if (token) {
         headers.set("Authorization", `Bearer ${token}`);
       }
@@ -14,9 +14,9 @@ export const jobApi = createApi({
     }, }),
   endpoints: (builder) => ({
     jobs: builder.mutation({
-      query: ({page}) => {
+      query: ({page , search}) => {
         return {
-          url: `/?page=${page || 1 }`,
+          url: `/?page=${page || 1 }&search=${search || ''}`,
           method: "GET",
           headers: {
             "Content-type": "application/json; charset=UTF-8",

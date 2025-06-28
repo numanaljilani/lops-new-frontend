@@ -28,10 +28,10 @@ export const expensesApi = createApi({
       },
     }),
     expenses: builder.mutation({
-      query: (data) => {
-        console.log(data, "API");
+      query: ({page , search}) => {
+        console.log(page, "API");
         return {
-          url: `/`,
+          url: `/?page=${page || 1}&search=${search || ''}`,
           method: "GET",
           headers: {
             "Content-type": "application/json; charset=UTF-8",

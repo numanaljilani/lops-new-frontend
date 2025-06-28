@@ -175,7 +175,6 @@ function ProjectDetails() {
 
   const getTasks = async (id: string) => {
     const res = await taskApi({ id });
-    console.log(res, "....");
 
     if (res?.data) {
       setPaymentBallTask(res?.data?.data);
@@ -238,9 +237,10 @@ function ProjectDetails() {
   //   // getExpenses();
   // }, []);
   // useEffect(() => {
+  //   console.log(taskDetails)
   //   if (!isTaskDialogOpen) {
-  //     if (taskDetails?.task_id) {
-  //       // getTasks(taskDetails?.task_id);
+  //     if (taskDetails?._id) {
+  //       getTasks(taskDetails?._id);
   //     }
   //   }
   // }, [isTaskDialogOpen]);

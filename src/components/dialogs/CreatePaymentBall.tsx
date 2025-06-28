@@ -50,6 +50,7 @@ import { formatDate } from "@/lib/dateFormat";
 import { useCreateBallMutation } from "@/redux/query/paymentApi";
 import { useParams } from "next/navigation";
 import { log } from "console";
+import { toast } from "sonner";
 
 function CreatePaymentBall({
   isDialogOpen,
@@ -80,7 +81,7 @@ function CreatePaymentBall({
   } = useForm({ resolver: zodResolver(PaymentBallSchema) });
 
   const now = today(getLocalTimeZone());
-  const [createPaymentBallApi, { data, isSuccess, error, isError }] =
+  const [createPaymentBallApi, { data, isSuccess, error, isError }] :any =
     useCreateBallMutation();
   async function onSubmit(data: any) {
     const res = await createPaymentBallApi({
@@ -96,13 +97,16 @@ function CreatePaymentBall({
       if (data) {
       }
     }
-  }, [isSuccess]);
-  // job_card - id
-  //   job_card - id
-  // project_percentage
-  // project_status
-  // invoice_number
-  // amount
+  }, [isError]);
+  useEffect(() => {
+    if (isError) {
+      // console.log(data, "response from server");
+             toast("Success", {
+          description: error?.data?.message || "Something went wrong.",
+        });
+    }
+  }, [isError]);
+
   return (
     <Dialog open={isDialogOpen} onOpenChange={() => setIsDialogOpen(false)}>
       <DialogContent className=" overflow-x-scroll no-scrollbar border border-black rounded-lg w-[90%] max-h-[90%]  scroll-smooth lg:w-[1200px] md:w-[1200px]">
@@ -242,7 +246,7 @@ function CreatePaymentBall({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Pending">Pending</SelectItem>
-                      <SelectItem value="InProgress">InProgress</SelectItem>
+                      <SelectItem value="In Progress">InProgress</SelectItem>
                       <SelectItem value="Completed">Completed</SelectItem>
                     </SelectContent>
                   </Select>

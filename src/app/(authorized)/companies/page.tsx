@@ -1,5 +1,5 @@
 "use client";
-import { File, ListFilter, MoreHorizontal, PlusCircle } from "lucide-react";
+import { File, ListFilter, MoreHorizontal, PlusCircle, Search } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -41,12 +41,14 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AlertDialogAlert from "@/components/dialogs/AlertDialog";
 import { PaginationComponent } from "@/components/PaginationComponent";
+import { Input } from "@/components/ui/input";
 
 function Companies() {
   const router = useRouter();
   const [companies, setCompanies] = useState([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [page, setPage] = useState(1);
+      const [searchQuery, setSearchQuery] = useState("");
   const [itemToDelete, setItemToDelete] = useState<any>(null);
 
   const [companiesApi, { data, isSuccess, error, isError }] =
@@ -54,7 +56,7 @@ function Companies() {
   const [deleteCompanyApi] = useDeleteCompanyMutation();
 
   const getEmployes = async () => {
-    const res = await companiesApi({});
+    const res = await companiesApi({ page });
     console.log(res, "response");
   };
 
@@ -62,10 +64,10 @@ function Companies() {
     getEmployes();
   }, []);
   useEffect(() => {
-    if (isDialogOpen) {
+    if (!isDialogOpen) {
       getEmployes();
     }
-  }, [isDialogOpen]);
+  }, [isDialogOpen, page]);
 
   useEffect(() => {
     if (isSuccess) {
@@ -84,8 +86,19 @@ function Companies() {
   };
 
   const update = async (url: string) => {
-    
     router.push(`/companies/${url}`);
+  };
+
+   const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    let res;
+    if (query === "") {
+      // If the search query is empty, reset to all RFQs
+      res = await companiesApi({ search: query, page });
+    } else {
+      res = await companiesApi({ search: query, page });
+
+    }
   };
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -102,44 +115,16 @@ function Companies() {
               <TabsTrigger value="Accounts">Accounts</TabsTrigger>
             </TabsList> */}
               <div className="ml-auto flex items-center gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-7 gap-1">
-                      <ListFilter className="h-3.5 w-3.5" />
-                      <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                        Filter
-                      </span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Filter by</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuCheckboxItem checked>
-                      All
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem>
-                      Sales Member
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem>
-                      Team Leads
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem>
-                      Team Members
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem>
-                      Sub-Contractors
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem>
-                      Accounts Members
-                    </DropdownMenuCheckboxItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <Button size="sm" variant="outline" className="h-7 gap-1">
-                  <File className="h-3.5 w-3.5" />
-                  <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                    Export
-                  </span>
-                </Button>
+             <div className="relative flex-1">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="search"
+                    placeholder="Search by client name , contact person , etc "
+                    className="w-full rounded-lg bg-background pl-8"
+                    value={searchQuery}
+                    onChange={(e) => handleSearch(e.target.value)}
+                  />
+                </div>
                 <Link href="/companies/create-company">
                   <Button size="sm" className="h-7 gap-1">
                     <PlusCircle className="h-3.5 w-3.5" />
@@ -211,9 +196,7 @@ function Companies() {
                                 {data?.name}
                               </TableCell>
                               <TableCell>
-                                <Badge variant="outline">
-                                  {data?.status}
-                                </Badge>
+                                <Badge variant="outline">{data?.status}</Badge>
                               </TableCell>
                               <TableCell>{data?.location}</TableCell>
                               <TableCell className="hidden md:table-cell">
@@ -266,8 +249,8 @@ function Companies() {
                 <CardFooter>
                   <PaginationComponent
                     setPage={setPage}
-                    numberOfPages={data?.count}
-                    page={page}
+                    totalPages={data?.totalPages || 1}
+                    page={data?.page || 1}
                   />
                 </CardFooter>
               </Card>

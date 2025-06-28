@@ -8,7 +8,7 @@ export const taskApi = createApi({
     baseUrl: `${urls.server}/task`,
     prepareHeaders: (headers, { getState }) => {
       const token = (getState() as any)?.user?.accessToken;
-      console.log(token, "TOKEN");
+  
       if (token) {
         headers.set("Authorization", `Bearer ${token}`);
       }
@@ -28,9 +28,9 @@ export const taskApi = createApi({
       },
     }),
     myTasks: builder.mutation({
-      query: ({ projectId }) => {
+      query: ({ projectId , page }) => {
         return {
-          url: `/?mytask=true&projectId=${projectId || ""}`,
+          url: `/?mytask=true&projectId=${projectId || ""}&page=${page || 1 }`,
           method: "GET",
           headers: {
             "Content-type": "application/json; charset=UTF-8",

@@ -1,49 +1,46 @@
 import {
   Pagination,
   PaginationContent,
-  PaginationEllipsis,
   PaginationItem,
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
 
-export function PaginationComponent({ setPage, numberOfPages , page  }: any) {
-  console.log(numberOfPages , page)
-  function getPagination(itemCount: any, itemsPerPage = 10) {
-    let totalPages = Math.ceil(itemCount / itemsPerPage);
-    let pages = [];
-
-    for (let i = 1; i <= totalPages; i++) {
-      pages.push(i);
-    }
-
-    return pages;
-  }
-
-  const pages = getPagination(numberOfPages);
+export function PaginationComponent({ setPage, totalPages, page }: { setPage: (page: number) => void; totalPages: number; page: number }) {
+  // Generate array of page numbers
+  const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
 
   return (
     <Pagination>
       <PaginationContent>
-       {page != 1 &&  <PaginationItem>
-          <PaginationPrevious onClick={()=> setPage(page - 1)} />
-        </PaginationItem>}
-  
-        {pages.map((item , index) => (
-          <PaginationItem key={index?.toString()}>
-            <PaginationLink onClick={() => setPage(index + 1)} isActive={(index+1) == page ? true : false}>
-            {index + 1}
+        {/* Previous Button: Disabled on first page */}
+        <PaginationItem>
+          <PaginationPrevious
+            onClick={() => setPage(page - 1)}
+            className={page <= 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+          />
+        </PaginationItem>
+
+        {/* Page Numbers */}
+        {pages.map((pageNumber) => (
+          <PaginationItem key={pageNumber}>
+            <PaginationLink
+              onClick={() => setPage(pageNumber)}
+              isActive={pageNumber === page}
+            >
+              {pageNumber}
             </PaginationLink>
           </PaginationItem>
         ))}
-    
-        {/* <PaginationItem>
-          <PaginationEllipsis />
-        </PaginationItem> */}
-        {page < pages.length &&  <PaginationItem>
-          <PaginationNext onClick={()=> setPage(page + 1)} />
-        </PaginationItem>}
+
+        {/* Next Button: Disabled on last page */}
+        <PaginationItem>
+          <PaginationNext
+            onClick={() => setPage(page + 1)}
+            className={page >= totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+          />
+        </PaginationItem>
       </PaginationContent>
     </Pagination>
   );

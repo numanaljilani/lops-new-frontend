@@ -8,7 +8,7 @@ export const companiesApi = createApi({
     baseUrl: `${urls.server}/company`,
     prepareHeaders: (headers, { getState }) => {
       const token = (getState() as any)?.user?.accessToken;
-      console.log(token, "TOKEN");
+
       if (token) {
         headers.set("Authorization", `Bearer ${token}`);
       }
@@ -17,11 +17,11 @@ export const companiesApi = createApi({
   }),
   endpoints: (builder) => ({
     componies: builder.mutation({
-      query: ({ page }) => {
+      query: ({ page ,search}) => {
         console.log("inside componies ");
         return {
           // url: `/?page=${page || 1 }`,
-          url: `/`,
+          url: `/?page=${page || 1}&search=${search}`,
           method: "GET",
           headers: {
             "Content-type": "application/json; charset=UTF-8",
