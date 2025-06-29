@@ -21,7 +21,7 @@ export const clientsApi = createApi({
     clients: builder.mutation({
         query: ({page , search}) => {
           return {
-            url: `/?page=${page || 1}&search=${search}`,
+            url: `/?page=${page || 1}&search=${search || ''}`,
             method: "GET",
             headers: {
               "Content-type": "application/json; charset=UTF-8",
