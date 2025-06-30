@@ -137,7 +137,7 @@ function RFQs() {
 
   const handleSubmit = async () => {
     setIsCreateRFQDialogOpen(false);
-
+console.log(rfq , "...")
     const res = await createRFQApi({ data: { ...rfq , company : companyId}});
     // console.log(res, "response");
     getRFQs();

@@ -75,11 +75,13 @@ function CreateLPO({
   });
 console.log(rfq_info)
   async function onSubmit(data: any) {
+    console.log(rfq_info , "rfq_info")
+    console.log(data , "rfq_info")
     const response = await createJobApi({
       data: {
         ...data,
 
-        rfq: rfq_info.rfq_id,
+        rfq: rfq_info._id,
       },
     });
 
