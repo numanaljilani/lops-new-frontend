@@ -40,7 +40,7 @@ export const jobApi = createApi({
       query: ({data , id }) => {
         console.log("delet client ", data);
         return {
-          url: `/${id}/`,
+          url: `/${id}`,
           method: "DELETE",
           headers: {
             "Content-type": "application/json; charset=UTF-8",
@@ -61,15 +61,14 @@ export const jobApi = createApi({
         };
       },
     }),
-    patchClient: builder.mutation({
-      query: (data) => {
+    updateProject: builder.mutation({
+      query: ({data , id}) => {
         return {
-          url: `/${data.id}/`,
-          method: "PATCH",
-          body: data.details,
+          url: `/${id}/`,
+          method: "PUT",
+          body: data,
           headers: {
             "Content-type": "application/json; charset=UTF-8",
-            authorization: `bearer ${data.token}`,
           },
         };
       },
@@ -84,5 +83,5 @@ export const {
   useJobsMutation,
   useCreateJobMutation,
   useDeleteJobCardMutation,
-  usePatchClientMutation,
+  useUpdateProjectMutation,
 } = jobApi;

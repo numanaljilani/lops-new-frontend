@@ -151,7 +151,7 @@ function Accounts() {
                         {/* <TableHead>Project Name</TableHead> */}
                         <TableHead>Brief of scope</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead>Profit</TableHead>
+                        {/* <TableHead>Profit</TableHead> */}
                         <TableHead className="hidden md:table-cell">
                           Deadline at
                         </TableHead>
@@ -242,14 +242,14 @@ function Accounts() {
                                 {data?.completion_percentage}%
                               </Badge>
                             </TableCell>
-                            <TableCell
+                            {/* <TableCell
                               className="hidden md:table-cell"
                               onClick={() =>
                                 router.push(`/accounts/${data._id}`)
                               }
                             >
                               {data?.profit}
-                            </TableCell>
+                            </TableCell> */}
                             <TableCell className="hidden md:table-cell">
                               {data?.delivery_timelines}
                             </TableCell>

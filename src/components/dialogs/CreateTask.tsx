@@ -212,7 +212,7 @@ function CreateTask({
         >
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="employee">Assign to Employee</TabsTrigger>
-            <TabsTrigger value="subcontractor">Assign to Subcontractor</TabsTrigger>
+            {/* <TabsTrigger value="subcontractor">Assign to Subcontractor</TabsTrigger> */}
           </TabsList>
 
           <TabsContent value="employee">
@@ -223,9 +223,9 @@ function CreateTask({
                     <div>
                       Job Id: <span className="text-gray-700 text-sm">{details?.projectId}</span>
                     </div>
-                    <div>
+                    {/* <div>
                       Job Number: <span className="text-gray-700 text-sm">{details?.lpo_number}</span>
-                    </div>
+                    </div> */}
                     <div>
                       Deadline: <span className="text-gray-700 text-sm">{formatDate(details?.delivery_timelines)}</span>
                     </div>

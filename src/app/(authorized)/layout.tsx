@@ -16,7 +16,7 @@ export default function RootLayout({
         <Headers />
         {children}
       </div>
-      <Toaster />
+      {/* <Toaster /> */}
     </Provider>
   );
 }

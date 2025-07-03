@@ -10,7 +10,7 @@ import { Button } from "../ui/button";
 import { ClipboardCheck, Trash2 } from "lucide-react";
 import { Label } from "../ui/label";
 import Wave from "react-wavify";
-import { isDateGreaterThanToday } from "@/lib/dateFormat";
+import { date, formatDate, isDateGreaterThanToday } from "@/lib/dateFormat";
 
 function ExpensesCard({
   expenses,
@@ -63,8 +63,8 @@ function ExpensesCard({
                 >
                   <div className="z-30">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-md text-center font-medium">
-                        {data?.assignee_name}
+                      <CardTitle className="text-md justify-center items-center text-center font-medium">
+               
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -72,12 +72,14 @@ function ExpensesCard({
                         {data?.amount} AED
                       </div>
                       <div className="text-sm font-medium text-center">
-                        {data?.category_name}
+                        {data?.payment_mode}
+                      </div>
+                      <div className="text-sm font-medium text-center">
+                       
+                       {data?.category_display}
                       </div>
                       <div className="text-xs font-light text-gray-600 text-center">
-                        {data?.expense_type?.length < 30
-                          ? data?.expense_type
-                          : `${data?.expense_type?.substring(0, 40)} ...`}
+                        {formatDate(data?.payment_date)}
                       </div>
                     </CardContent>
                   </div>

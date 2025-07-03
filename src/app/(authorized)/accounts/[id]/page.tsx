@@ -79,7 +79,7 @@ const accountsSchema = z.object({
 type AccountsForm = z.infer<typeof accountsSchema>;
 
 function AccountsDetails() {
-  const path = usePathname();
+  
   const { id } = useParams();
   const [updateView, setUpdateView] = useState(false);
   const [accountsDetails, setAccountsDetails] = useState<any>();
@@ -564,7 +564,7 @@ function AccountsDetails() {
                             </div>
 
                             <div className="grid gap-3">
-                              <Label htmlFor="job_number">Job Id</Label>
+                              <Label htmlFor="job_number">Job No.</Label>
                               <h4 className="font-semibold text-lg">
                                 {accountsDetails?.projectId?.projectId}
                               </h4>
@@ -636,18 +636,18 @@ function AccountsDetails() {
                                 )+ "AED" || "-"}
                               </h4>
                             </div>
-                            <div className="grid gap-3">
+                            {/* <div className="grid gap-3">
                               <Label htmlFor="vat_amount">Balance Amount</Label>
                               <h4 className="font-semibold text-lg">
                                 {accountsDetails?.balance_amount+ " AED"|| "-"}
                               </h4>
-                            </div>
-                            <div className="grid gap-3">
+                            </div> */}
+                            {/* <div className="grid gap-3">
                               <Label htmlFor="vat_amount">Paid Amount</Label>
                               <h4 className="font-semibold text-lg">
                                 {accountsDetails?.paid_amount + " AED" || "-"}
                               </h4>
-                            </div>
+                            </div> */}
 
                             <div className="grid gap-3">
                               <Label htmlFor="description">Description</Label>

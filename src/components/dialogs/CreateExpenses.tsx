@@ -68,9 +68,9 @@ function CreateExpense({
     }
     // console.log(res.data, "CATE");
   };
-  useEffect(() => {
-    getExpCategories();
-  }, []);
+  // useEffect(() => {
+  //   getExpCategories();
+  // }, []);
 
   const {
     register,

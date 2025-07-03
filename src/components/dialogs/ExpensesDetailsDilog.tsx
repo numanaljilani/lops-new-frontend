@@ -11,6 +11,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "../ui/button";
+import { formatDate } from "@/lib/dateFormat";
 
 function ExpensesDetailsDilog({
   isDialogOpen,
@@ -38,14 +39,10 @@ function ExpensesDetailsDilog({
         <div className="space-y-4">
           <div className="text-lg font-semibold tracking-wide gap-4">
             <div>
-              <span className="font-thin">Date</span> : {data?.date}
+              <span className="font-thin">Date</span> :{" "}
+              {formatDate(data?.payment_date)}
             </div>
-            <div>
-              <span className="font-thin">Job Id</span> : {data?.job_number}
-            </div>
-            <div>
-              <span className="font-thin">LPO Id</span> : {data?.lpo_number}
-            </div>
+
             <div>
               <span className="font-thin">Net Amount</span> : {data?.net_amount}
             </div>
@@ -56,10 +53,11 @@ function ExpensesDetailsDilog({
               <span className="font-thin">Total Amount</span> : {data?.amount}
             </div>
             <div>
-              <span className="font-thin">Category</span> : {data?.category_display}
+              <span className="font-thin">Category</span> :{" "}
+              {data?.category_display}
             </div>
             <div>
-              <span className="font-thin">Description</span> : {data?.description}
+              <span className="font-thin">Description</span> : {data?.remarks}
             </div>
           </div>
         </div>

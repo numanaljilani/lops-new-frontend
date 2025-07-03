@@ -1,11 +1,11 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useParams, usePathname } from "next/navigation";
 import { toast, Toaster } from "sonner";
-import AlertDialogAlert from "@/components/dialogs/AlertDialog";
+import Alert from "@/components/dialogs/Alert";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -29,63 +29,44 @@ import {
   useRFQDetailsMutation,
   useUpdateRFQMutation,
 } from "@/redux/query/rfqsApi";
-import { useClientsMutation } from "@/redux/query/clientsApi"; // Import the clients API
+import { useClientsMutation } from "@/redux/query/clientsApi";
 import { formatDate } from "@/lib/dateFormat";
 import { LoaderCircle } from "lucide-react";
-import Alert from "@/components/dialogs/Alert";
+import AsyncSelect from "react-select/async";
+import debounce from "lodash.debounce";
 
-// Zod schema for validation
+const rfqSchema = z.object({
+  rfq_id: z.string().optional(),
+  client: z.string().min(1, "Client is required"),
+  project_type: z.string().min(1, "Project type is required"),
+  scope_of_work: z.string().min(1, "Scope of work is required"),
+  quotation_amount: z
+    .string()
+    .min(1, "Quotation amount is required")
+    .regex(/^\d+(\.\d{1,2})?$/, "Quotation amount must be a valid number"),
+  remarks: z.string().min(1, "Remarks are required"),
+  status: z.enum(["Pending", "Ongoing", "Completed"], {
+    message: "Status must be one of 'Pending', 'Ongoing', or 'Completed'",
+  }),
+});
+
+type RFQFormData = z.infer<typeof rfqSchema>;
 
 function RFQDetails() {
   const path = usePathname();
   const { id } = useParams();
-  const [updateView, setUpdateView] = useState(false); // State to toggle between read-only and edit modes
+  const [updateView, setUpdateView] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const [
-    rfqDetaislApi,
+    rfqDetailsApi,
     {
       data: rfqData,
       isSuccess: rfqIsSuccess,
       error: rfqError,
       isError: rfqIsError,
     },
-  ] = useRFQDetailsMutation();
-  const rfqSchema = z.object({
-    rfq_id: z.string().optional(),
-    client: z
-      .string()
-      .min(1, "Client ID is required and must be a positive number"),
-    project_type: z.string().min(1, "Project type is required"),
-    scope_of_work: z.string().min(1, "Scope of work is required"),
-
-    quotation_amount: z.string().min(1, "Quotation amount is required"), // Use string for currency formatting
-    remarks: z.string().min(1, "Remarks are required"),
-    status: z.enum(["Pending", "Ongoing", "Completed"], {
-      message: "Status must be one of 'Pending', 'Ongoing', or 'Completed'",
-    }),
-  });
-  type RFQFormData = z.infer<typeof rfqSchema>;
-
-  const {
-    control,
-    handleSubmit,
-    reset,
-    formState: { isSubmitting, errors },
-  } :any = useForm<RFQFormData>({
-    resolver: zodResolver(rfqSchema),
-    defaultValues: {
-      client: rfqData?.client_id?.toString(), // Ensure client_id is a string
-      project_type: rfqData?.project_type,
-      scope_of_work: rfqData?.scope_of_work,
-
-      quotation_amount: rfqData?.quotation_amount,
-      remarks: rfqData?.remarks,
-      status: rfqData?.status || "Pending", // Default to "Pending" if status is not available
-    },
-  });
-
-  console.log(rfqData, "rfqData");
+  ] : any = useRFQDetailsMutation();
 
   const [
     patchRFQApi,
@@ -97,7 +78,6 @@ function RFQDetails() {
     },
   ] = useUpdateRFQMutation();
 
-  // Fetch clients list
   const [
     clientsApi,
     {
@@ -105,352 +85,452 @@ function RFQDetails() {
       isSuccess: clientsIsSuccess,
       error: clientsError,
       isError: clientsIsError,
+      isLoading: isClientsApiLoading,
     },
   ] = useClientsMutation();
-  const [clients, setClients] = useState<any[]>([]);
+  const [defaultClients, setDefaultClients] = useState<any[]>([]);
 
-  const getClients = async () => {
-    const res = await clientsApi({});
-    console.log(res, "response");
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { isSubmitting, errors },
+    watch,
+  } = useForm<RFQFormData>({
+    resolver: zodResolver(rfqSchema),
+    defaultValues: {
+      client: "",
+      project_type: "",
+      scope_of_work: "",
+      quotation_amount: "",
+      remarks: "",
+      status: "Pending",
+    },
+  });
+
+  const client = watch("client");
+
+  const fetchDefaultClients = async () => {
+    try {
+      const res = await clientsApi({}).unwrap();
+      console.log("Default Clients API Response:", JSON.stringify(res, null, 2));
+      const clients = res.data || [];
+      if (clients.length > 0) {
+        setDefaultClients(clients);
+      } else {
+        toast.warning("No default clients found.");
+        setDefaultClients([]);
+      }
+    } catch (err: any) {
+      console.error("Default Clients Fetch Error:", JSON.stringify(err, null, 2));
+      toast.error("Failed to fetch default clients: " + (err?.data?.message || err.message || "Unknown error"));
+      setDefaultClients([]);
+    }
   };
 
+  const loadClients = useCallback(
+    debounce(async (inputValue: string, callback: (options: any[]) => void) => {
+      try {
+        console.log("Search Input:", inputValue);
+        const res = await clientsApi({ search: inputValue }).unwrap();
+        console.log("Search Clients API Response:", JSON.stringify(res, null, 2));
+        const clients = res.data || [];
+        const options = clients.map((client: any) => ({
+          value: client._id,
+          label: client.client_name || "No Name",
+        }));
+        console.log("Search Options:", options);
+        callback(options);
+        console.log("Callback Executed with Options:", options);
+      } catch (err: any) {
+        console.error("Search Clients Fetch Error:", JSON.stringify(err, null, 2));
+        toast.error("Failed to fetch clients: " + (err?.data?.message || err.message || "Unknown error"));
+        const options = defaultClients
+          .filter((client: any) =>
+            client.client_name?.toLowerCase().includes(inputValue.toLowerCase())
+          )
+          .map((client: any) => ({
+            value: client._id,
+            label: client.client_name || "No Name",
+          }));
+        console.log("Fallback Search Options:", options);
+        callback(options);
+        console.log("Callback Executed with Fallback Options:", options);
+      }
+    }, 500),
+    [clientsApi, defaultClients]
+  );
+
   useEffect(() => {
-    getClients();
+    fetchDefaultClients();
   }, []);
 
-  useEffect(() => {
-    if (clientsIsSuccess && clientsData) {
-      setClients(clientsData.data); // Assuming the API returns an array of clients in `results`
-    }
-  }, [clientsIsSuccess, clientsData]);
-
   const getRFQDetails = async () => {
-    await rfqDetaislApi({ rfq_id: id });
+    try {
+      await rfqDetailsApi({ rfq_id: id });
+    } catch (err: any) {
+      console.error("RFQ Details Fetch Error:", JSON.stringify(err, null, 2));
+      toast.error("Failed to fetch RFQ details: " + (err?.data?.message || err.message || "Unknown error"));
+    }
   };
 
   useEffect(() => {
     if (!updateView) {
       getRFQDetails();
     }
-  }, [updateView]);
+  }, [updateView, id]);
 
   useEffect(() => {
     if (rfqIsSuccess && rfqData) {
       reset({
-        ...rfqData,
-        client: rfqData.client?._id?.toString(), // Ensure client_id is a string
-      }); // Reset form with fetched RFQ data
+        rfq_id: rfqData.rfqId,
+        client: rfqData.client?._id?.toString() || "",
+        project_type: rfqData.project_type || "",
+        scope_of_work: rfqData.scope_of_work || "",
+        quotation_amount: rfqData.quotation_amount || "",
+        remarks: rfqData.remarks || "",
+        status: rfqData.status || "Pending",
+      });
     }
-  }, [rfqIsSuccess, rfqData, reset]);
+    if (rfqIsError) {
+      toast.error("Failed to load RFQ details: " + (rfqError?.data?.message || rfqError?.message || "Unknown error"));
+    }
+  }, [rfqIsSuccess, rfqIsError, rfqData, rfqError, reset]);
 
   const onSubmit = async (formData: RFQFormData) => {
     try {
-      console.log(id, { ...formData });
-      const res = await patchRFQApi({
-        id: id,
+      console.log("Submit Data:", formData);
+      await patchRFQApi({
+        id,
         data: { ...formData },
-      });
-      console.log(res, "RESPONSE");
-    } catch (error) {
-      toast.error("Failed to update RFQ");
+      }).unwrap();
+      toast.success("RFQ updated successfully");
+      setUpdateView(false);
+    } catch (err: any) {
+      console.error("Update RFQ Error:", JSON.stringify(err, null, 2));
+      toast.error("Failed to update RFQ: " + (err?.data?.message || err.message || "Unknown error"));
     }
   };
-
-  useEffect(() => {
-    if (patchIsSuccess) {
-      toast.success("RFQ updated successfully");
-      setUpdateView(false); // Switch back to read-only mode after successful update
-    }
-  }, [patchIsSuccess]);
 
   const [deleteRFQApi] = useDeleteRfqMutation();
   const deleteRFQ = async () => {
-    const res = await deleteRFQApi({
-      id,
-      token: "",
-    });
+    try {
+      await deleteRFQApi({ id, token: "" }).unwrap();
+      toast.success("RFQ deleted successfully");
+      setIsDialogOpen(false);
+      // Optionally redirect or refresh
+    } catch (err: any) {
+      console.error("Delete RFQ Error:", JSON.stringify(err, null, 2));
+      toast.error("Failed to delete RFQ: " + (err?.data?.message || err.message || "Unknown error"));
+    }
   };
 
-  if (errors?.client) {
-    toast.error("Please select the client");
-  }
+  const defaultOptions = defaultClients.map((client: any) => ({
+    value: client._id,
+    label: client.client_name || "No Name",
+  }));
+
+  // console.log("Default Options:", defaultOptions);
+  // console.log("Selected client:", client);
+
   return (
-    <div className="flex min-h-screen w-full flex-col bg-muted/40">
-      <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
-        <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
-          <div className="mx-auto grid max-w-[59rem] flex-1 auto-rows-max gap-4  w-full">
-            <div className="flex items-center gap-4">
-              <h1 className="flex-1 shrink-0 whitespace-nowrap text-xl font-semibold tracking-tight sm:grow-0">
-                RFQ
-              </h1>
-              <div className="hidden items-center gap-2 md:ml-auto md:flex"></div>
-            </div>
-            <div className="grid gap-4  w-full  lg:gap-8">
-              <div className="grid auto-rows-max items-start gap-4 w-full  lg:gap-8">
-                <Card x-chunk="dashboard-07-chunk-0">
-                  <CardHeader>
-                    <CardTitle>RFQ Details</CardTitle>
-                    <CardDescription>Enter the RFQ details</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {updateView ? (
-                      // Edit Mode: Show editable form
-                      <form
-                        onSubmit={handleSubmit(onSubmit)}
-                        className="grid gap-6"
-                      >
-                        <div className="grid gap-3">
-                          <Label htmlFor="client">Client</Label>
-                          <Controller
-                            name="client"
-                            control={control}
-                            defaultValue={rfqData?.client?.client_id?.toString()} // Ensure default value is set
-                            render={({ field }) => (
-                              <Select
-                                onValueChange={field.onChange}
-                                value={field.value}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue
-                                    placeholder={
-                                      rfqData?.client_name
-                                        ? rfqData?.client_name
-                                        : "Select client"
-                                    }
-                                  />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {clients?.map((client) => (
-                                    <SelectItem
-                                      key={client?._id}
-                                      value={String(client?._id)}
-                                    >
-                                      {client?.client_name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            )}
-                          />
-                          {errors.client && (
-                            <p className="text-red-500">
-                              {errors.client.message}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="grid gap-3">
-                          <Label htmlFor="project_type">Project Type</Label>
-                          <Controller
-                            name="project_type"
-                            control={control}
-                            render={({ field }) => <Input {...field} />}
-                          />
-                          {errors.project_type && (
-                            <p className="text-red-500">
-                              {errors.project_type.message}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="grid gap-3">
-                          <Label htmlFor="scope_of_work">Scope of Work</Label>
-                          <Controller
-                            name="scope_of_work"
-                            control={control}
-                            render={({ field }) => <Textarea {...field} />}
-                          />
-                          {errors.scope_of_work && (
-                            <p className="text-red-500">
-                              {errors.scope_of_work.message}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="grid gap-3">
-                          <Label htmlFor="quotation_amount">
-                            Quotation Amount
-                          </Label>
-                          <Controller
-                            name="quotation_amount"
-                            defaultValue={rfqData?.quotation_amount}
-                            control={control}
-                            render={({ field }) => <Input {...field} />}
-                          />
-                          {errors.quotation_amount && (
-                            <p className="text-red-500">
-                              {errors.quotation_amount.message}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="grid gap-3">
-                          <Label htmlFor="remarks">Remarks</Label>
-                          <Controller
-                            name="remarks"
-                            control={control}
-                            render={({ field }) => <Textarea {...field} />}
-                          />
-                          {errors.remarks && (
-                            <p className="text-red-500">
-                              {errors.remarks.message}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="grid gap-3">
-                          <Label htmlFor="status">Status</Label>
-                          <Controller
-                            name="status"
-                            control={control}
-                            render={({ field }) => (
-                              <Select
-                                onValueChange={field.onChange}
-                                value={field.value}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="Pending">
-                                    Pending
-                                  </SelectItem>
-                                  <SelectItem value="Ongoing">
-                                    Ongoing
-                                  </SelectItem>
-                                  <SelectItem value="Completed">
-                                    Completed
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                            )}
-                          />
-                          {errors.status && (
-                            <p className="text-red-500">
-                              {errors.status.message}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="flex gap-2">
-                          <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting && (
-                              <LoaderCircle
-                                className="-ms-1 me-2 animate-spin"
-                                size={16}
-                                strokeWidth={2}
-                                aria-hidden="true"
-                              />
-                            )}
-                            Save Changes
-                          </Button>
-                          <Button
-                            variant="secondary"
-                            onClick={() => setUpdateView(false)}
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                      </form>
-                    ) : (
-                      // Read-Only Mode: Show non-editable fields
-                      <div className="grid gap-6">
-                        <div className="grid gap-3">
-                          <Label htmlFor="rfq_id">RFQ ID</Label>
-                          <p>{rfqData?.rfqId}</p>
-                        </div>
-
-                        <div className="grid gap-3">
-                          <Label htmlFor="client_name">Client Name</Label>
-                          <p>{rfqData?.client?.client_name}</p>
-                        </div>
-
-                        <div className="grid gap-3">
-                          <Label htmlFor="rfq_date">RFQ Date</Label>
-                          <p>{formatDate(rfqData?.createdAt)}</p>
-                        </div>
-
-                        <div className="grid gap-3">
-                          <Label htmlFor="project_type">Project Type</Label>
-                          <p>{rfqData?.project_type}</p>
-                        </div>
-
-                        <div className="grid gap-3">
-                          <Label htmlFor="scope_of_work">Scope of Work</Label>
-                          <p>{rfqData?.scope_of_work}</p>
-                        </div>
-
-                        <div className="grid gap-3">
-                          <Label htmlFor="quotation_number">
-                            Quotation Number
-                          </Label>
-                          <p>{rfqData?.quotationNo}</p>
-                        </div>
-
-                        <div className="grid gap-3">
-                          <Label htmlFor="quotation_amount">
-                            Quotation Amount
-                          </Label>
-                          <p>{rfqData?.quotation_amount}</p>
-                        </div>
-
-                        <div className="grid gap-3">
-                          <Label htmlFor="remarks">Remarks</Label>
-                          <p>{rfqData?.remarks}</p>
-                        </div>
-
-                        <div className="grid gap-3">
-                          <Label htmlFor="status">Status</Label>
-                          <p>{rfqData?.status}</p>
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
+    <div className="flex min-h-screen w-full flex-col bg-gradient-to-br from-gray-50 to-gray-100">
+      <Toaster richColors position="top-right" />
+      <div className="flex flex-col gap-6 p-6 sm:p-4 lg:p-6">
+        <main className="grid flex-1 items-start gap-6 mx-auto max-w-7xl w-full">
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold text-gray-800">RFQ Details</h1>
+            <div className="flex gap-3">
               {!updateView && (
-                <div className="grid auto-rows-max items-start gap-4 lg:gap-8">
-                  <Card x-chunk="dashboard-07-chunk-5">
-                    <CardHeader>
-                      <CardTitle>Actions</CardTitle>
-                      <CardDescription>
-                        You can update and delete the RFQ.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex justify-between gap-2">
-                        <Button
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => setUpdateView(true)}
-                        >
-                          Update
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="bg-red-200 text-red-700 hover:bg-red-300 flex-1"
-                          onClick={() => setIsDialogOpen(true)}
-                          variant="secondary"
-                        >
-                          Delete
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
+                <>
+                  <Button
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg px-6 transition-all duration-200"
+                    onClick={() => setUpdateView(true)}
+                  >
+                    Edit RFQ
+                  </Button>
+                  <Button
+                    className="bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg px-6 transition-all duration-200"
+                    onClick={() => setIsDialogOpen(true)}
+                  >
+                    Delete RFQ
+                  </Button>
+                </>
               )}
             </div>
           </div>
+
+          <Card className="shadow-lg border-none rounded-xl bg-white overflow-hidden">
+            <CardHeader className="bg-blue-50 border-b border-gray-200">
+              <CardTitle className="text-2xl font-semibold text-gray-800">
+                {updateView ? "Edit RFQ" : "View RFQ"}
+              </CardTitle>
+              <CardDescription className="text-gray-600">
+                {updateView ? "Update the RFQ details below." : "Details of the selected RFQ."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6">
+              {updateView ? (
+                <form onSubmit={handleSubmit(onSubmit)} className="grid gap-6">
+                  <div className="grid gap-2">
+                    <Label htmlFor="client" className="text-sm font-medium text-gray-700">
+                      Client
+                    </Label>
+                    <Controller
+                      name="client"
+                      control={control}
+                      render={({ field }) => (
+                        <AsyncSelect
+                          cacheOptions
+                          defaultOptions={defaultOptions}
+                          loadOptions={(inputValue, callback) => {
+                            console.log("loadOptions Triggered with Input:", inputValue);
+                            loadClients(inputValue, callback);
+                          }}
+                          isLoading={isClientsApiLoading}
+                          placeholder="Search for a client..."
+                          noOptionsMessage={() => "No clients found"}
+                          onChange={(option) => {
+                            console.log("Selected Option:", option);
+                            field.onChange(option ? option.value : "");
+                          }}
+                          value={
+                            client
+                              ? defaultOptions.find((opt) => opt.value === client) || {
+                                  value: client,
+                                  label: client,
+                                }
+                              : null
+                          }
+                          isClearable
+                          isSearchable
+                          styles={{
+                            control: (base) => ({
+                              ...base,
+                              borderColor: errors.client ? "red" : base.borderColor,
+                              "&:hover": {
+                                borderColor: errors.client ? "red" : base.borderColor,
+                              },
+                              borderRadius: "0.5rem",
+                              padding: "0.25rem",
+                              boxShadow: errors.client ? "0 0 0 1px red" : base.boxShadow,
+                            }),
+                            menu: (base) => ({
+                              ...base,
+                              zIndex: 9999,
+                            }),
+                          }}
+                        />
+                      )}
+                    />
+                    {errors.client && (
+                      <p className="text-red-500 text-sm">{errors.client.message}</p>
+                    )}
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="project_type" className="text-sm font-medium text-gray-700">
+                      Project Type
+                    </Label>
+                    <Controller
+                      name="project_type"
+                      control={control}
+                      render={({ field }) => (
+                        <Input
+                          {...field}
+                          className="rounded-lg border-gray-300 focus:ring-2 focus:ring-blue-500"
+                        />
+                      )}
+                    />
+                    {errors.project_type && (
+                      <p className="text-red-500 text-sm">{errors.project_type.message}</p>
+                    )}
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="scope_of_work" className="text-sm font-medium text-gray-700">
+                      Scope of Work
+                    </Label>
+                    <Controller
+                      name="scope_of_work"
+                      control={control}
+                      render={({ field }) => (
+                        <Textarea
+                          {...field}
+                          className="rounded-lg border-gray-300 focus:ring-2 focus:ring-blue-500 min-h-[100px]"
+                        />
+                      )}
+                    />
+                    {errors.scope_of_work && (
+                      <p className="text-red-500 text-sm">{errors.scope_of_work.message}</p>
+                    )}
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="quotation_amount" className="text-sm font-medium text-gray-700">
+                      Quotation Amount
+                    </Label>
+                    <Controller
+                      name="quotation_amount"
+                      control={control}
+                      render={({ field }) => (
+                        <Input
+                          {...field}
+                          className="rounded-lg border-gray-300 focus:ring-2 focus:ring-blue-500"
+                        />
+                      )}
+                    />
+                    {errors.quotation_amount && (
+                      <p className="text-red-500 text-sm">{errors.quotation_amount.message}</p>
+                    )}
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="remarks" className="text-sm font-medium text-gray-700">
+                      Remarks
+                    </Label>
+                    <Controller
+                      name="remarks"
+                      control={control}
+                      render={({ field }) => (
+                        <Textarea
+                          {...field}
+                          className="rounded-lg border-gray-300 focus:ring-2 focus:ring-blue-500 min-h-[100px]"
+                        />
+                      )}
+                    />
+                    {errors.remarks && (
+                      <p className="text-red-500 text-sm">{errors.remarks.message}</p>
+                    )}
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="status" className="text-sm font-medium text-gray-700">
+                      Status
+                    </Label>
+                    <Controller
+                      name="status"
+                      control={control}
+                      render={({ field }) => (
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <SelectTrigger className="rounded-lg border-gray-300 focus:ring-2 focus:ring-blue-500">
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Pending">Pending</SelectItem>
+                            <SelectItem value="Ongoing">Ongoing</SelectItem>
+                            <SelectItem value="Completed">Completed</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                    {errors.status && (
+                      <p className="text-red-500 text-sm">{errors.status.message}</p>
+                    )}
+                  </div>
+
+                  <div className="flex gap-3 mt-4">
+                    <Button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg px-6 transition-all duration-200"
+                    >
+                      {isSubmitting && (
+                        <LoaderCircle
+                          className="animate-spin -ml-1 mr-2"
+                          size={16}
+                          strokeWidth={2}
+                          aria-hidden="true"
+                        />
+                      )}
+                      Save Changes
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => setUpdateView(false)}
+                      className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-lg px-6 transition-all duration-200"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </form>
+              ) : (
+                <div className="grid gap-6">
+                  <div className="grid gap-2">
+                    <Label className="text-sm font-medium text-gray-700">RFQ ID</Label>
+                    <p className="text-gray-900">{rfqData?.rfqId || "N/A"}</p>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label className="text-sm font-medium text-gray-700">Client Name</Label>
+                    <p className="text-gray-900">{rfqData?.client?.client_name || "N/A"}</p>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label className="text-sm font-medium text-gray-700">RFQ Date</Label>
+                    <p className="text-gray-900">{rfqData?.createdAt ? formatDate(rfqData.createdAt) : "N/A"}</p>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label className="text-sm font-medium text-gray-700">Project Type</Label>
+                    <p className="text-gray-900">{rfqData?.project_type || "N/A"}</p>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label className="text-sm font-medium text-gray-700">Scope of Work</Label>
+                    <p className="text-gray-900">{rfqData?.scope_of_work || "N/A"}</p>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label className="text-sm font-medium text-gray-700">Quotation Number</Label>
+                    <p className="text-gray-900">{rfqData?.quotationNo || "N/A"}</p>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label className="text-sm font-medium text-gray-700">Quotation Amount</Label>
+                    <p className="text-gray-900">{rfqData?.quotation_amount || "N/A"}</p>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label className="text-sm font-medium text-gray-700">Remarks</Label>
+                    <p className="text-gray-900">{rfqData?.remarks || "N/A"}</p>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label className="text-sm font-medium text-gray-700">Status</Label>
+                    <p className="text-gray-900">{rfqData?.status || "N/A"}</p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* {!updateView && (
+            <Card className="shadow-lg border-none rounded-xl bg-white overflow-hidden">
+              <CardHeader className="bg-blue-50 border-b border-gray-200">
+                <CardTitle className="text-2xl font-semibold text-gray-800">Actions</CardTitle>
+                <CardDescription className="text-gray-600">
+                  Manage the RFQ with the options below.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="flex gap-3">
+                  <Button
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg px-6 transition-all duration-200 flex-1"
+                    onClick={() => setUpdateView(true)}
+                  >
+                    Update RFQ
+                  </Button>
+                  <Button
+                    className="bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg px-6 transition-all duration-200 flex-1"
+                    onClick={() => setIsDialogOpen(true)}
+                  >
+                    Delete RFQ
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )} */}
         </main>
 
         <Alert
           isDialogOpen={isDialogOpen}
           setIsDialogOpen={setIsDialogOpen}
           handleDelete={deleteRFQ}
-          name={rfqData?.id}
+          name={rfqData?.rfqId || "this RFQ"}
         />
-
-        <Toaster />
       </div>
     </div>
   );

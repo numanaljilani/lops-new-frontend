@@ -124,12 +124,8 @@ export default function AlertAccountStatus({
           ? new Date(item.payment_date).toISOString().split("T")[0]
           : "",
         paid_amount: item?.paid_amount ? Number(item.paid_amount) : 0,
-        new_payment_amount: 0,
-        balance_amount: item?.balance_amount ? Number(item.balance_amount) : 0,
-        due_date: item?.due_date
-          ? new Date(item.due_date).toISOString().split("T")[0]
-          : "",
-        status: item?.status || "Pending",
+      
+      
         verification_status: item?.verification_status || "unverified",
         notes: item?.notes || "",
       });
@@ -141,21 +137,17 @@ export default function AlertAccountStatus({
       const amountValue = Number(amount) || 0;
       const vatPercentageValue = Number(vat_percentage) || 5;
       const charityPercentageValue = Number(charity_percentage) || 2.5;
-      const newPaymentAmountValue = Number(new_payment_amount) || 0;
 
       const vatAmount = (amountValue * vatPercentageValue) / 100;
       const charityAmount = (amountValue * charityPercentageValue) / 100;
       const totalAmount = amountValue + vatAmount;
       const amountAfterCharity = amountValue - charityAmount;
-      const updatedPaidAmount = (item?.paid_amount ? Number(item.paid_amount) : 0) + newPaymentAmountValue;
-      const balanceAmount = totalAmount - updatedPaidAmount;
+  
 
       setValue("vat_amount", parseFloat(vatAmount.toFixed(2)));
       setValue("charity_amount", parseFloat(charityAmount.toFixed(2)));
       setValue("total_amount", parseFloat(totalAmount.toFixed(2)));
       setValue("amount_after_charity", parseFloat(amountAfterCharity.toFixed(2)));
-      setValue("paid_amount", parseFloat(updatedPaidAmount.toFixed(2)));
-      setValue("balance_amount", parseFloat(Math.max(0, balanceAmount).toFixed(2)));
     }
   }, [amount, vat_percentage, charity_percentage, new_payment_amount, setValue, isDialogOpen, item]);
 
@@ -172,15 +164,12 @@ export default function AlertAccountStatus({
           total_amount: parseFloat(data.total_amount),
           amount_after_charity: parseFloat(data.amount_after_charity),
           paid_amount: parseFloat(data.paid_amount),
-          balance_amount: parseFloat(data.balance_amount),
-          payment_date: data.payment_date || undefined,
-          due_date: data.due_date || undefined,
           // Exclude new_payment_amount from submission
         },
         id: item._id,
       });
 
-      console.log(response, "response update status");
+  
 
       if ("error" in response) {
         setWarningMessage("Failed to submit the form. Please try again.");
@@ -383,77 +372,7 @@ export default function AlertAccountStatus({
                 <ErrorMessage message={errors.payment_date.message} />
               )}
             </div>
-            <div>
-              <Label htmlFor="paid_amount">Total Paid Amount</Label>
-              <Input
-                id="paid_amount"
-                type="number"
-                step="0.01"
-                disabled
-                {...register("paid_amount", { valueAsNumber: true })}
-              />
-              {errors.paid_amount && (
-                <ErrorMessage message={errors.paid_amount.message} />
-              )}
-            </div>
-            <div>
-              <Label htmlFor="new_payment_amount">New Payment Amount</Label>
-              <Input
-                id="new_payment_amount"
-                type="number"
-                step="0.01"
-                {...register("new_payment_amount", { valueAsNumber: true })}
-              />
-              {errors.new_payment_amount && (
-                <ErrorMessage message={errors.new_payment_amount.message} />
-              )}
-            </div>
-            <div>
-              <Label htmlFor="balance_amount">Balance Amount (Total - Paid)</Label>
-              <Input
-                id="balance_amount"
-                type="number"
-                step="0.01"
-                disabled
-                {...register("balance_amount", { valueAsNumber: true })}
-              />
-              {errors.balance_amount && (
-                <ErrorMessage message={errors.balance_amount.message} />
-              )}
-            </div>
-            <div>
-              <Label htmlFor="due_date">Due Date</Label>
-              <Input
-                id="due_date"
-                type="date"
-                {...register("due_date")}
-              />
-              {errors.due_date && (
-                <ErrorMessage message={errors.due_date.message} />
-              )}
-            </div>
-            <div className="grid gap-3">
-              <Label htmlFor="status">Payment Status</Label>
-              <Controller
-                name="status"
-                control={control}
-                render={({ field }) => (
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <SelectTrigger id="status">
-                      <SelectValue placeholder="Select Payment Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Pending">Pending</SelectItem>
-                      <SelectItem value="Partially Paid">Partially Paid</SelectItem>
-                      <SelectItem value="Paid">Paid</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              {errors.status && (
-                <ErrorMessage message={errors.status.message} />
-              )}
-            </div>
+            
             <div className="grid gap-3">
               <Label htmlFor="verification_status">Verification Status</Label>
               <Controller

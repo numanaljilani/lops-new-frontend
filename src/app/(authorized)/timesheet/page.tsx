@@ -32,20 +32,19 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { date, formatDate, timeFormat } from "@/lib/dateFormat";
-import {
-  useComponiesMutation,
-  useDeleteCompanyMutation,
-} from "@/redux/query/componiesApi";
+import { date, timeFormat } from "@/lib/dateFormat";
 import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import AlertDialogAlert from "@/components/dialogs/AlertDialog";
-import { useTimesheetMutation } from "@/redux/query/timesheet";
+import {
+  useDeleteTimesheetMutation,
+  useTimesheetMutation,
+} from "@/redux/query/timesheet";
 import { PaginationComponent } from "@/components/PaginationComponent";
+import DeleteItem from "@/components/dialogs/DeleteItem";
 
 function TimeSheet() {
   const router = useRouter();
-  const path = usePathname();
   const [timesheet, setTimeSheet] = useState([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [page, setPage] = useState(1);
@@ -53,11 +52,11 @@ function TimeSheet() {
 
   const [timeSheetApi, { data, isSuccess, error, isError }] =
     useTimesheetMutation();
-  const [deleteCompanyApi] = useDeleteCompanyMutation();
+  const [deleteTimeSheetApi] = useDeleteTimesheetMutation();
 
   const getTimeSheetData = async () => {
     const res = await timeSheetApi({ page });
-    console.log(res, "response");
+    // console.log(res, "response");
   };
 
   useEffect(() => {
@@ -73,10 +72,11 @@ function TimeSheet() {
     }
   }, [isSuccess]);
 
-  const deleteCompany = async (url: string) => {
-    console.log(url.split("/")[6]);
-    const res = await deleteCompanyApi({ id: url.split("/")[6] });
-    console.log(res, ">>>>");
+  const deleteTimeSheet = async () => {
+    console.log(itemToDelete);
+
+    const res = await deleteTimeSheetApi({ id: itemToDelete?._id });
+    // console.log(res, ">>>>");
     getTimeSheetData();
   };
 
@@ -198,34 +198,47 @@ function TimeSheet() {
                         ) => {
                           console.log(data);
                           return (
-                            <TableRow
-                              key={index}
-                              className="cursor-pointer"
-                              onClick={() =>
-                                router.push(`/timesheet/${data._id}`)
-                              }
-                            >
-                              <TableCell className="font-medium">
+                            <TableRow key={index} className="cursor-pointer">
+                              <TableCell
+                                className="font-medium"
+                                onClick={() =>
+                                  router.push(`/timesheet/${data._id}`)
+                                }
+                              >
                                 {date(data?.created_at)}
                               </TableCell>
                               {/* <TableCell>
                               <Badge variant="outline">{data?.active ? "Active" : "Inactive"}</Badge>
                             </TableCell> */}
-                              <TableCell>
+                              <TableCell
+                                onClick={() =>
+                                  router.push(`/timesheet/${data._id}`)
+                                }
+                              >
                                 {data?.startTime
                                   ? timeFormat(data?.startTime)
                                   : "-"}
                               </TableCell>
-                              <TableCell className="hidden md:table-cell">
+                              <TableCell
+                                className="hidden md:table-cell"
+                                onClick={() =>
+                                  router.push(`/timesheet/${data._id}`)
+                                }
+                              >
                                 {data?.endTime
                                   ? timeFormat(data?.endTime)
                                   : "-"}
                               </TableCell>
-                              <TableCell className="hidden md:table-cell">
+                              <TableCell
+                                className="hidden md:table-cell"
+                                onClick={() =>
+                                  router.push(`/timesheet/${data._id}`)
+                                }
+                              >
                                 {data.hours_logged}
                               </TableCell>
                               <TableCell className="hidden md:table-cell">
-                                {data.total_amount}
+                                {Number(data?.total_amount)?.toFixed(2)}
                               </TableCell>
                               <TableCell className="hidden md:table-cell">
                                 {data.remarks}
@@ -282,12 +295,7 @@ function TimeSheet() {
             </TabsContent>
           </Tabs>
         </main>
-        <AlertDialogAlert
-          isDialogOpen={isDialogOpen}
-          setIsDialogOpen={setIsDialogOpen}
-          itemToDelete={itemToDelete}
-          deleteCompany={true}
-        />
+        <DeleteItem isDialogOpen={isDialogOpen} setIsDialogOpen={setIsDialogOpen} text={"Are you sure you want to delete this time sheet."} deleteItem={deleteTimeSheet} />
       </div>
     </div>
   );

@@ -188,11 +188,11 @@ function Expenses() {
                             <TableHead>Expense Id</TableHead>
                             <TableHead>Project Id</TableHead>
                             <TableHead>Category</TableHead>
-                            <TableHead>Expenses Type</TableHead>
+                            {/* <TableHead>Expenses Type</TableHead> */}
                             <TableHead>Amount</TableHead>
-                            <TableHead className="hidden md:table-cell">
+                            {/* <TableHead className="hidden md:table-cell">
                               Date
-                            </TableHead>
+                            </TableHead> */}
                             <TableHead className="hidden md:table-cell">
                               Created at
                             </TableHead>
@@ -231,14 +231,14 @@ function Expenses() {
                               >
                                 {data?.category_display}
                               </TableCell>
-                              <TableCell
+                              {/* <TableCell
                                 onClick={() =>
                                   router.push(`/expenses/${data._id}`)
                                 }
                                 className=" cursor-pointer"
                               >
                                 {data?.expense_type}
-                              </TableCell>
+                              </TableCell> */}
                               <TableCell
                                 onClick={() =>
                                   router.push(`/expenses/${data._id}`)
@@ -247,9 +247,9 @@ function Expenses() {
                               >
                                 {data?.amount}
                               </TableCell>
-                              <TableCell className="hidden md:table-cell">
+                              {/* <TableCell className="hidden md:table-cell">
                                 {formatDate(data?.date)}
-                              </TableCell>
+                              </TableCell> */}
                               <TableCell className="hidden md:table-cell">
                                 {formatDate(data?.created_at)}
                               </TableCell>

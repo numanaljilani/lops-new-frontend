@@ -65,7 +65,7 @@ export const RFQSApi = createApi({
     deleteRfq: builder.mutation({
       query: ({ data, id }) => {
         return {
-          url: `rfqs/${id}/`,
+          url: `/${id}`,
           method: "DELETE",
           headers: {
             "Content-type": "application/json; charset=UTF-8",

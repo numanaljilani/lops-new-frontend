@@ -33,7 +33,7 @@ export default function RootLayout({
         <Provider store={store}>
           <PersistGate loading={null} persistor={persistor}>
         {children}
-        <Toaster />
+        {/* <Toaster richColors/> */}
         </PersistGate>
         </Provider>
       </body>

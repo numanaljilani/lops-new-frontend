@@ -28,10 +28,22 @@ export const expensesApi = createApi({
       },
     }),
     expenses: builder.mutation({
-      query: ({page , search}) => {
+      query: ({page , search , projectId}) => {
         console.log(page, "API");
         return {
-          url: `/?page=${page || 1}&search=${search || ''}`,
+          url: `/?page=${page || 1}&search=${search || ''}&projectId=${projectId || ''}`,
+          method: "GET",
+          headers: {
+            "Content-type": "application/json; charset=UTF-8",
+          },
+        };
+      },
+    }),
+    expensesByProjectId: builder.mutation({
+      query: ({page , search , projectId}) => {
+        console.log(page, "API");
+        return {
+          url: `/projectId?page=${page || 1}&search=${search || ''}&projectId=${projectId || ''}`,
           method: "GET",
           headers: {
             "Content-type": "application/json; charset=UTF-8",
@@ -86,5 +98,6 @@ export const {
   useExpensesMutation,
   useCreateExpenseMutation,
   useGetExpenseByIdMutation,
-  useUpdateExpenseMutation
+  useUpdateExpenseMutation,
+  useExpensesByProjectIdMutation
 } = expensesApi;

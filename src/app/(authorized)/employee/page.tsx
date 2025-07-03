@@ -71,7 +71,7 @@ function Employee() {
   const [deleteEmployeeApi] = useDeleteEmployeeMutation();
 
   const getEmployes = async () => {
-    const res = await employeeApi({});
+    const res = await employeeApi({page});
     // console.log(res, "response");
   };
 

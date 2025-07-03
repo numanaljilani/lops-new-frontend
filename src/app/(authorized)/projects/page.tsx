@@ -87,10 +87,11 @@ function Projects() {
   const [deleteJobCardApi] = useDeleteJobCardMutation();
   const [createRFQApi] = useCreateRFQMutation();
 
-  const handleSubmit = async () => {
-    setIsCreateRFQDialogOpen(false);
-    const res = await createRFQApi({ data: { ...rfq, client: 1 }, token: "" });
-    console.log(res, "response");
+  const handleSubmit = async (data: any) => {
+    console.log(data, "data");
+    // setIsCreateRFQDialogOpen(false);
+    // const res = await createRFQApi({ data: { ...rfq, client: 1 } });
+    // console.log(res, "response");
     getJobs();
   };
 
@@ -190,10 +191,11 @@ function Projects() {
                           Job No
                         </TableHead>
                         <TableHead>Client</TableHead>
+                        <TableHead>Project Name</TableHead>
                         {/* <TableHead>Project Name</TableHead> */}
                         <TableHead>Brief of scope</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead>Profit</TableHead>
+                        <TableHead>Project Amount</TableHead>
                         <TableHead className="hidden md:table-cell">
                           Deadline at
                         </TableHead>
@@ -258,16 +260,16 @@ function Projects() {
                                 router.push(`/projects/${data._id}`)
                               }
                             >
-                              {data?.client_name || "-"}
+                              {data?.rfq?.client?.client_name || "-"}
                             </TableCell>
-                            {/* <TableCell
+                            <TableCell
                               className="font-medium"
                               onClick={() =>
                                 router.push(`/projects/${data._id}`)
                               }
                             >
                               {data?.project_name || "-"}
-                            </TableCell> */}
+                            </TableCell>
                             <TableCell
                               className="font-medium"
                               onClick={() =>
@@ -291,7 +293,7 @@ function Projects() {
                                 router.push(`/projects/${data._id}`)
                               }
                             >
-                              {data?.profit}
+                              {data?.final_amount} AED
                             </TableCell>
                             <TableCell className="hidden md:table-cell">
                               {data?.delivery_timelines}
@@ -364,8 +366,8 @@ function Projects() {
           <CreateDialog
             setIsDialogOpen={setIsCreateRFQDialogOpen}
             isDialogOpen={isCreateRFQDialogOpen}
-            rfq={rfq}
-            setRfq={setRfq}
+            // rfq={rfq}
+            // setRfq={setRfq}
             handleSubmit={handleSubmit}
           />
         }

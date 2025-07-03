@@ -30,7 +30,7 @@ function TimeSheetCard({timesheet , }: any) {
               key={index}
               className={`border cursor-pointer  size-40 hover:scale-105 duration-200 shadow-lg hover:shadow-slate-400 rounded-full overflow-hidden relative flex justify-center items-center`}
               onClick={() => {
-                router.push(`/timesheet/${data.timesheet_id}`);
+                router.push(`/timesheet/${data._id}`);
               }}
             >
               <Wave
@@ -58,8 +58,8 @@ function TimeSheetCard({timesheet , }: any) {
               >
                 <div className="z-30">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-md text-center font-medium">
-                      {data?.employee_name}
+                    <CardTitle className="text-sm text-center font-light">
+                      {data?.userId?.userId?.name}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -70,7 +70,7 @@ function TimeSheetCard({timesheet , }: any) {
                       {data?.date_logged}
                     </div>
                     <div className="text-xs font-light text-gray-600 text-center">
-                      {data?.total_amount} AED
+                      {data?.total_amount?.toFixed(2)} AED
                     </div>
                   </CardContent>
                 </div>

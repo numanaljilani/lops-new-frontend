@@ -1,5 +1,11 @@
 import React from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../ui/card";
 import { Button } from "../ui/button";
 import { ClipboardCheck } from "lucide-react";
 import { Label } from "../ui/label";
@@ -7,22 +13,24 @@ import { hasCommon } from "@/utils/checkAccess";
 import { useSelector } from "react-redux";
 import { adminAndSalesCanAccess } from "@/utils/accessArrays";
 
-
-function ProjectCard({job , setIsUpdateDialogOpen }:any) {
-   const access = useSelector((state: any) => state?.user?.user.access);
+function ProjectCard({ job, setIsUpdateDialogOpen }: any) {
+  const access = useSelector((state: any) => state?.user?.user.access);
+ 
   return (
     <Card x-chunk="dashboard-07-chunk-0">
       <CardHeader>
         <div className="flex  justify-between">
           <CardTitle>Project Details</CardTitle>
-       {hasCommon(access , adminAndSalesCanAccess) &&   <Button
-            className="text-sm gap-3 tracking-wide float-right mx-4"
-            variant={"outline"}
-            onClick={() => setIsUpdateDialogOpen(true)}
-          >
-            <ClipboardCheck />
-            Update
-          </Button>}
+          {hasCommon(access, adminAndSalesCanAccess) && (
+            <Button
+              className="text-sm gap-3 tracking-wide float-right mx-4"
+              variant={"outline"}
+              onClick={() => setIsUpdateDialogOpen(true)}
+            >
+              <ClipboardCheck />
+              Update
+            </Button>
+          )}
         </div>
         <CardDescription>
           {/* Enter the employee details and thier performance */}
@@ -33,7 +41,7 @@ function ProjectCard({job , setIsUpdateDialogOpen }:any) {
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-3">
               <Label className="underline" htmlFor="name">
-                Job Id
+                Job No.
               </Label>
 
               <h4 className="font-semibold text-lg">{job?.projectId}</h4>
@@ -44,6 +52,22 @@ function ProjectCard({job , setIsUpdateDialogOpen }:any) {
               </Label>
 
               <h4 className="font-semibold text-lg">{job?.lpo_number}</h4>
+            </div>
+            <div className="grid gap-3">
+              <Label className="underline" htmlFor="name">
+                Qoutation
+              </Label>
+
+              <h4 className="font-semibold text-lg">
+                {job?.rfq?.quotation_amount} AED
+              </h4>
+            </div>
+            <div className="grid gap-3">
+              <Label className="underline" htmlFor="name">
+                Final Amount
+              </Label>
+
+              <h4 className="font-semibold text-lg">{job?.final_amount} AED</h4>
             </div>
             <div className="grid gap-3">
               <Label className="underline" htmlFor="name">

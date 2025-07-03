@@ -18,9 +18,9 @@ export const timeSheetApi = createApi({
    
   endpoints: (builder) => ({
     timesheet: builder.mutation({
-      query: (data) => {
+      query: ({projectId}) => {
         return {
-          url: `/`,
+          url: `/?projectId=${projectId ||''}`,
           method: "GET",
           headers: {
             "Content-type": "application/json; charset=UTF-8",
@@ -41,11 +41,11 @@ export const timeSheetApi = createApi({
         };
       },
     }),
-    deleteEmployee: builder.mutation({
-      query: (data) => {
+    deleteTimesheet: builder.mutation({
+      query: ({id}) => {
         return {
-          url: `employees/${data.id}/`,
-          method: "Delete",
+          url: `/${id}/`,
+          method: "DELETE",
           headers: {
             "Content-type": "application/json; charset=UTF-8",
        
@@ -83,7 +83,7 @@ export const timeSheetApi = createApi({
 // Export hooks for usage in functional components, which are
 // auto-generated based on the defined endpoints
 export const {
-  useDeleteEmployeeMutation,
+  useDeleteTimesheetMutation,
   useTimesheetMutation,
   useCreateTimeSheetMutation,
   useTimeSheetDetailsMutation,

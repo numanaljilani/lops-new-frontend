@@ -29,7 +29,7 @@ import { date, formatDate, isDateGreaterThanToday } from "@/lib/dateFormat";
 import { usePaymentBallsListMutation } from "@/redux/query/accountsApi";
 import { useProjectEmployeeMutation } from "@/redux/query/employee";
 
-import { useExpensesMutation } from "@/redux/query/expensesApi";
+import { useExpensesByProjectIdMutation, useExpensesMutation } from "@/redux/query/expensesApi";
 import { useJobDetailsMutation } from "@/redux/query/jobApi";
 import {
   useDeletePaymentBallMutation,
@@ -47,19 +47,10 @@ import {
   adminAndTeamLeadCanAccess,
 } from "@/utils/accessArrays";
 import { hasCommon } from "@/utils/checkAccess";
-import {
-  Activity,
-  Blocks,
-  ClipboardCheck,
-  CreditCard,
-  DollarSign,
-  Trash2,
-  Users,
-} from "lucide-react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
-import Wave from "react-wavify";
+
 
 function ProjectDetails() {
   const path = usePathname();
@@ -94,6 +85,15 @@ function ProjectDetails() {
 
   const [jobDetailsApi, { data, isSuccess, error, isError }] =
     useJobDetailsMutation();
+      const [
+    timeSheetApi,
+    {
+      data: timeSheetData,
+      isSuccess: isTimeSheetSuccess,
+      error: timeSheetError,
+      isError: isTimeSheetError,
+    },
+  ] = useTimesheetMutation();
   const [
     projectEmployeeApi,
     { data: projectEmployeeData, isSuccess: isSccessProjectEmployee },
@@ -108,18 +108,15 @@ function ProjectDetails() {
     },
   ] = useTasksMutation();
 
-  const getProjectEmployee = async () => {
-    const res = await projectEmployeeApi({ id });
-    console.log(res, ">>>>>");
-  };
+
 
   useEffect(() => {
     if (tab == "Hours") {
-      getProjectEmployee()
+      getTimeSheetData()
     }
   }, [tab]);
 
-  const [daleteTaskApi] = useDeleteTaskMutation();
+  const [deleteTaskApi] = useDeleteTaskMutation();
   const [
     paymentApi,
     {
@@ -131,29 +128,21 @@ function ProjectDetails() {
   ] = usePaymentsMutation();
   const [deletePaymentBallApi, {}] = useDeletePaymentBallMutation();
 
-  const [
-    timeSheetApi,
-    {
-      data: timeSheetData,
-      isSuccess: isTimeSheetSuccess,
-      error: timeSheetError,
-      isError: isTimeSheetError,
-    },
-  ] = useTimesheetMutation();
+
 
   const getTimeSheetData = async () => {
-    const res = await timeSheetApi({ job_car: id });
-    // console.log(res, "Time Sheet data ");
+    const res = await timeSheetApi({ projectId: id });
+    console.log(res, "Time Sheet data ");
   };
 
   useEffect(() => {
-    if (isSuccess) {
-      // console.log(data, "response from server");
-      if (timeSheetData) {
-        setTimeSheet(timeSheetData.results);
+ 
+
+      if (isTimeSheetSuccess) {
+        setTimeSheet(timeSheetData?.data);
       }
-    }
-  }, [isSuccess]);
+    
+  }, [isTimeSheetSuccess]);
   useEffect(() => {
     if (paymentIsError) {
       // console.log(data, "response from server");
@@ -164,7 +153,7 @@ function ProjectDetails() {
   }, [paymentIsError]);
   const getJobDetails = async () => {
     const res = await jobDetailsApi({ id: id });
-    console.log(res, ">>>>>>>>>>>>");
+    // console.log(res, ">>>>>>>>>>>>");
   };
 
   const getPaymentBalls = async () => {
@@ -221,40 +210,48 @@ function ProjectDetails() {
       error: expenseError,
       isError: isExpenseError,
     },
-  ] = useExpensesMutation();
+  ] = useExpensesByProjectIdMutation();
 
   const getExpenses = async () => {
-    const res = await expenseApi({ job_card: id });
-    // console.log(res, "EXPENSES BY PROJECT ID");
+    const res = await expenseApi({ projectId: id });
+    console.log(res, "EXPENSES BY PROJECT ID");
   };
 
-  // useEffect(() => {
-  //   if (!isCreateExpensesDialogOpen) {
-  //     // getExpenses();
-  //   }
-  // }, [isCreateExpensesDialogOpen]);
-  // useEffect(() => {
-  //   // getExpenses();
-  // }, []);
-  // useEffect(() => {
-  //   console.log(taskDetails)
-  //   if (!isTaskDialogOpen) {
-  //     if (taskDetails?._id) {
-  //       getTasks(taskDetails?._id);
-  //     }
-  //   }
-  // }, [isTaskDialogOpen]);
+  useEffect(() => {
+    if (!isCreateExpensesDialogOpen) {
+      getExpenses();
+    }
+  }, [isCreateExpensesDialogOpen]);
+  useEffect(() => {
+    getExpenses();
+  }, []);
+  useEffect(() => {
+    console.log(taskDetails)
+    if (!isTaskDialogOpen) {
+      if (taskDetails?._id) {
+        getTasks(taskDetails?._id);
+      }
+    }
+  }, [isTaskDialogOpen]);
 
   let totalAmount = 0;
 
-  // useEffect(() => {
-  //   if (isExpenseSuccess) {
-  //     // console.log(expensesData, "expenses response from server");
-  //     if (expensesData) {
-  //       // setExpenses(expensesData.results);
-  //     }
-  //   }
-  // }, [isExpenseSuccess]);
+  useEffect(() => {
+    if (isExpenseSuccess) {
+      // console.log(expensesData, "expenses response from server");
+      if (expensesData) {
+        setExpenses(expensesData);
+      }
+    }
+  }, [isExpenseSuccess]);
+  console.log(tab)
+  useEffect(() => {
+    if (tab == 'Expenses') {
+
+     getExpenses()
+  
+    }
+  }, [tab]);
 
   // console.log(job?.payment_terms_display, ">>>>");
 
@@ -371,8 +368,8 @@ function ProjectDetails() {
                   title={"Profit"}
                   value={`${Number(
                     Number(job?.final_amount) -
-                      job?.employee_cost +
-                      job?.total_expenses
+                     Number( job?.employee_cost +
+                      job?.total_expenses)
                   )?.toFixed(2)} AED`}
                   // setTab={setTab}
                   // btn={true}

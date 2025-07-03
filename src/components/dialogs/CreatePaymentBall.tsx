@@ -127,12 +127,12 @@ function CreatePaymentBall({
                   {details?.projectId}
                 </span>
               </div>
-              <div>
+              {/* <div>
                 Job Number :{" "}
                 <span className="text-gray-700 text-sm">
                   {details?.job_number}
                 </span>
-              </div>
+              </div> */}
               <div>
                 Deadline :{" "}
                 <span className="text-gray-700 text-sm">
