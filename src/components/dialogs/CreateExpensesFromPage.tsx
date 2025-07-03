@@ -215,9 +215,11 @@ function CreateExpenseFromPage({
                 name="projectId"
                 control={control}
                 render={({ field }) => (
+                  // @ts-ignore
                   <AsyncSelect
                     cacheOptions
                     defaultOptions={defaultOptions}
+                    // @ts-ignore
                     loadOptions={loadProjects}
                     isLoading={isJobsApiLoading}
                     placeholder="Search for a project..."

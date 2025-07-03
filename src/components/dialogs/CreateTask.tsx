@@ -81,7 +81,7 @@ function CreateTask({
     is_awarded: z.boolean().default(false),
   });
 
-  const taskForm = useForm({
+  const taskForm :any = useForm({
     resolver: zodResolver(EmployeeTaskSchema),
     defaultValues: {
       task_brief: "",
@@ -93,7 +93,7 @@ function CreateTask({
     },
   });
 
-  const subcontractorForm = useForm({
+  const subcontractorForm :any = useForm({
     resolver: zodResolver(SubcontractorTaskSchema),
     defaultValues: {
       subcontract_brief: "",

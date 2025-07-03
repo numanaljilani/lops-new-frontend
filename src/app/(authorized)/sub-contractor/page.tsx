@@ -292,11 +292,11 @@ function Employee() {
                   </Table>
                 </CardContent>
                 <CardFooter>
-                  <PaginationComponent
+                  {/* <PaginationComponent
                     setPage={setPage}
                     numberOfPages={data?.count}
                     page={page}
-                  />
+                  /> */}
                 </CardFooter>
               </Card>
             </TabsContent>

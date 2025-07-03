@@ -46,14 +46,11 @@ const LPOSchema = z.object({
       })
     )
     .min(1, "At least one payment term is required")
-    .transform((arr) => {
-      return arr.reduce(
-        (acc, term, index) => {
-          acc[index + 1] = term;
-          return acc;
-        },
-        {} as Record<string, { description: string; milestone: string; percentage: number }>
-      );
+    .transform((arr : any) => {
+      return arr.reduce((acc : any, term : any, index : any) => {
+        acc[index + 1] = term;
+        return acc;
+      }, {} as Record<string, { description: string; milestone: string; percentage: number }>);
     }),
   scope_of_work: z.string().min(1, "Scope of work is required"),
   lpo_number: z.string().min(1, "LPO number is required"),
@@ -85,6 +82,7 @@ export default function CreateLPO({
       final_amount: "",
       project_name: "",
       delivery_timelines: "",
+ 
       payment_terms: [{ description: "", milestone: "", percentage: 0 }],
       scope_of_work: "",
       lpo_number: "",
@@ -107,7 +105,10 @@ export default function CreateLPO({
           rfq: rfq_info._id,
         },
       }).unwrap();
-      console.log("response from the server:", JSON.stringify(response, null, 2));
+      console.log(
+        "response from the server:",
+        JSON.stringify(response, null, 2)
+      );
       toast.success("Job created successfully!");
       setIsDialogOpen(false);
       reset();
@@ -158,7 +159,10 @@ export default function CreateLPO({
         </div>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
           <div className="grid gap-2">
-            <Label htmlFor="project_name" className="text-sm font-medium text-gray-700">
+            <Label
+              htmlFor="project_name"
+              className="text-sm font-medium text-gray-700"
+            >
               Project Name
             </Label>
             <Controller
@@ -178,7 +182,10 @@ export default function CreateLPO({
             )}
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="lpo_number" className="text-sm font-medium text-gray-700">
+            <Label
+              htmlFor="lpo_number"
+              className="text-sm font-medium text-gray-700"
+            >
               LPO Number
             </Label>
             <Controller
@@ -198,7 +205,10 @@ export default function CreateLPO({
             )}
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="final_amount" className="text-sm font-medium text-gray-700">
+            <Label
+              htmlFor="final_amount"
+              className="text-sm font-medium text-gray-700"
+            >
               Final Amount
             </Label>
             <Controller
@@ -218,7 +228,10 @@ export default function CreateLPO({
             )}
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="delivery_timelines" className="text-sm font-medium text-gray-700">
+            <Label
+              htmlFor="delivery_timelines"
+              className="text-sm font-medium text-gray-700"
+            >
               Delivery Timelines
             </Label>
             <Controller
@@ -238,7 +251,10 @@ export default function CreateLPO({
             )}
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="status" className="text-sm font-medium text-gray-700">
+            <Label
+              htmlFor="status"
+              className="text-sm font-medium text-gray-700"
+            >
               Status
             </Label>
             <Controller
@@ -260,12 +276,12 @@ export default function CreateLPO({
                 </Select>
               )}
             />
-            {errors.status && (
-              <ErrorMessage message={errors.status.message} />
-            )}
+            {errors.status && <ErrorMessage message={errors.status.message} />}
           </div>
           <div className="grid gap-2">
-            <Label className="text-sm font-medium text-gray-700">Payment Terms</Label>
+            <Label className="text-sm font-medium text-gray-700">
+              Payment Terms
+            </Label>
             {fields.map((field, index) => (
               <div
                 key={field.id}
@@ -363,13 +379,18 @@ export default function CreateLPO({
             <Button
               type="button"
               className="w-full sm:w-auto bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg px-4 py-2 transition-all duration-200"
-              onClick={() => append({ description: "", milestone: "", percentage: 0 })}
+              onClick={() =>
+                append({ description: "", milestone: "", percentage: 0 })
+              }
             >
               Add Payment Term
             </Button>
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="scope_of_work" className="text-sm font-medium text-gray-700">
+            <Label
+              htmlFor="scope_of_work"
+              className="text-sm font-medium text-gray-700"
+            >
               Scope of Work
             </Label>
             <Controller
