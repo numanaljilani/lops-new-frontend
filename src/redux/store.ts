@@ -1,12 +1,10 @@
 import { configureStore } from "@reduxjs/toolkit";
-// Or from '@reduxjs/toolkit/query/react'
 import { setupListeners } from "@reduxjs/toolkit/query";
 import { combineReducers } from "@reduxjs/toolkit";
-import storage from "redux-persist/lib/storage";
+import storage from "redux-persist/lib/storage"; // Default storage (localStorage for web)
 import { persistReducer, persistStore } from "redux-persist";
 
 import userReducer from "./slice/profileSlice";
-
 import { authApi } from "./query/authApi";
 import { employeeApi } from "./query/employee";
 import { companiesApi } from "./query/componiesApi";
@@ -22,12 +20,40 @@ import { taskApi } from "./query/taskApi";
 import { transactionApi } from "./query/transactionApi";
 import { dashboardApi } from "./query/dashboardsApi";
 
+// Custom storage for Next.js to handle SSR
+const createNoopStorage = () => ({
+  getItem: () => Promise.resolve(null),
+  setItem: () => Promise.resolve(),
+  removeItem: () => Promise.resolve(),
+});
+
+const storageEngine = typeof window !== "undefined" ? storage : createNoopStorage();
+
+// Persist configuration
 const persistConfig = {
   key: "root",
   version: 1,
-  storage,
-   whitelist: ['user'],
+  storage: storageEngine, // Use custom storage engine
+  whitelist: ["user"], // Persist only the user slice
+  blacklist: [
+    authApi.reducerPath,
+    employeeApi.reducerPath,
+    companiesApi.reducerPath,
+    timeSheetApi.reducerPath,
+    clientsApi.reducerPath,
+    RFQSApi.reducerPath,
+    jobApi.reducerPath,
+    paymentApi.reducerPath,
+    expensesApi.reducerPath,
+    accountsApi.reducerPath,
+    subcontractorApi.reducerPath,
+    taskApi.reducerPath,
+    transactionApi.reducerPath,
+    dashboardApi.reducerPath,
+  ], // Blacklist RTK Query API reducers
 };
+
+// Combine reducers
 const reducer = combineReducers({
   user: userReducer,
   [authApi.reducerPath]: authApi.reducer,
@@ -45,16 +71,24 @@ const reducer = combineReducers({
   [transactionApi.reducerPath]: transactionApi.reducer,
   [dashboardApi.reducerPath]: dashboardApi.reducer,
 });
+
 const persistedReducer = persistReducer(persistConfig, reducer);
 
+// Configure store
 export const store = configureStore({
   reducer: persistedReducer,
-  // Add the generated reducer as a specific top-level slice
-
-  // Adding the api middleware enables caching, invalidation, polling,
-  // and other useful features of `rtk-query`.
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware({ serializableCheck: false }).concat(
+    getDefaultMiddleware({
+      serializableCheck: {
+        // Ignore redux-persist actions to prevent serialization errors
+        ignoredActions: [
+          "persist/PERSIST",
+          "persist/REHYDRATE",
+          "persist/PURGE",
+          "persist/REGISTER", // Added REGISTER to suppress warning
+        ],
+      },
+    }).concat([
       authApi.middleware,
       employeeApi.middleware,
       companiesApi.middleware,
@@ -68,11 +102,12 @@ export const store = configureStore({
       subcontractorApi.middleware,
       taskApi.middleware,
       transactionApi.middleware,
-      dashboardApi.middleware
-    ),
+      dashboardApi.middleware,
+    ]),
 });
 
-// optional, but required for refetchOnFocus/refetchOnReconnect behaviors
-// see `setupListeners` docs - takes an optional callback as the 2nd arg for customization
+// Setup listeners for RTK Query
 setupListeners(store.dispatch);
-export const persistor = persistStore(store); // Add this line
+
+// Export persistor
+export const persistor = persistStore(store);
