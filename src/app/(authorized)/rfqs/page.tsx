@@ -70,7 +70,7 @@ function RFQs() {
     try {
       setIsLoading(true);
       const res = await rfqsApi({ page }).unwrap();
-      console.log("Default RFQs API Response:", JSON.stringify(res, null, 2));
+      console.log("Default RFQs API Response:", res);
       if (res?.data) {
         setRFQs(res.data);
         setFilteredRFQs(res.data);
@@ -88,6 +88,10 @@ function RFQs() {
       setIsLoading(false);
     }
   };
+
+  useEffect(()=>{
+    getRFQs();
+  },[])
 
   const handleSearch = useCallback(
     debounce(async (query: string) => {
