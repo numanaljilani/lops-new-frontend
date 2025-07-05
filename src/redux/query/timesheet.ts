@@ -18,9 +18,9 @@ export const timeSheetApi = createApi({
    
   endpoints: (builder) => ({
     timesheet: builder.mutation({
-      query: ({projectId}) => {
+      query: ({projectId, admin}) => {
         return {
-          url: `/?projectId=${projectId ||''}`,
+          url: `/?projectId=${projectId ||''}&admin=${admin || ''}`,
           method: "GET",
           headers: {
             "Content-type": "application/json; charset=UTF-8",

@@ -203,8 +203,9 @@ function RFQs() {
                   <Table className="w-full">
                     <TableHeader>
                       <TableRow className="border-b border-gray-200">
+                        <TableHead className="text-sm font-medium text-gray-700">Sr. No.</TableHead>
                         <TableHead className="text-sm font-medium text-gray-700">RFQ ID</TableHead>
-                        <TableHead className="text-sm font-medium text-gray-700">Quotation No.</TableHead>
+                        {/* <TableHead className="text-sm font-medium text-gray-700">Quotation No.</TableHead> */}
                         <TableHead className="text-sm font-medium text-gray-700">Client</TableHead>
                         <TableHead className="text-sm font-medium text-gray-700">Project</TableHead>
                         <TableHead className="text-sm font-medium text-gray-700">Scope of Work</TableHead>
@@ -245,14 +246,20 @@ function RFQs() {
                               className="text-sm text-blue-600 hover:underline cursor-pointer font-medium"
                               onClick={() => router.push(`/rfqs/${data._id}`)}
                             >
-                              {data?.rfqId || "-"}
+                              {index + 1}
                             </TableCell>
                             <TableCell
+                              className="text-sm text-blue-600 hover:underline cursor-pointer font-medium"
+                              onClick={() => router.push(`/rfqs/${data._id}`)}
+                            >
+                              {data?.rfqId || "-"}
+                            </TableCell>
+                            {/* <TableCell
                               className="text-sm text-gray-800 font-medium"
                               onClick={() => router.push(`/rfqs/${data._id}`)}
                             >
                               {data?.quotationNo || "-"}
-                            </TableCell>
+                            </TableCell> */}
                             <TableCell
                               className="text-sm text-gray-800 font-medium cursor-pointer"
                               onClick={() => router.push(`/rfqs/${data._id}`)}

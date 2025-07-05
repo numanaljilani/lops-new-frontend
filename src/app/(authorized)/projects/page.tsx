@@ -167,6 +167,9 @@ export default function Projects() {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="hidden sm:table-cell text-sm font-medium text-gray-700 w-[100px]">
+                          Sr. No
+                        </TableHead>
+                        <TableHead className="hidden sm:table-cell text-sm font-medium text-gray-700 w-[100px]">
                           Job No
                         </TableHead>
                         <TableHead className="text-sm font-medium text-gray-700">Client</TableHead>
@@ -220,7 +223,13 @@ export default function Projects() {
                         jobs.map((data: any, index: number) => (
                           <TableRow key={index} className="cursor-pointer">
                             <TableCell
-                              className="hidden sm:table-cell text-sm text-gray-800 font-medium"
+                              className="text-sm text-blue-600 hover:underline cursor-pointer font-medium"
+                              onClick={() => router.push(`/projects/${data._id}`)}
+                            >
+                              {index + 1}
+                            </TableCell>
+                            <TableCell
+                              className="text-sm text-blue-600 hover:underline cursor-pointer font-medium"
                               onClick={() => router.push(`/projects/${data._id}`)}
                             >
                               {data?.projectId || "-"}

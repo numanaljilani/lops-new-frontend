@@ -79,7 +79,6 @@ const accountsSchema = z.object({
 type AccountsForm = z.infer<typeof accountsSchema>;
 
 function AccountsDetails() {
-  
   const { id } = useParams();
   const [updateView, setUpdateView] = useState(false);
   const [accountsDetails, setAccountsDetails] = useState<any>();
@@ -559,7 +558,8 @@ function AccountsDetails() {
                             <div className="grid gap-3">
                               <Label htmlFor="date">Invoice No. </Label>
                               <h4 className="font-semibold text-lg">
-                                {accountsDetails?.invoice_number?.toUpperCase() || "-"}
+                                {accountsDetails?.invoice_number?.toUpperCase() ||
+                                  "-"}
                               </h4>
                             </div>
 
@@ -587,11 +587,11 @@ function AccountsDetails() {
                             <div className="grid gap-3">
                               <Label htmlFor="vat_amount">Date</Label>
                               <h4 className="font-semibold text-lg">
-                                {formatDate(accountsDetails?.createdAt)}
+                                {formatDate(accountsDetails?.payment_date)}
                               </h4>
                             </div>
                             <div className="grid gap-3"></div>
-                            
+
                             <div className="grid gap-3">
                               <Label htmlFor="vat_amount">
                                 Charity pertage
@@ -604,7 +604,8 @@ function AccountsDetails() {
                             <div className="grid gap-3">
                               <Label htmlFor="vat_amount">Charity Amount</Label>
                               <h4 className="font-semibold text-lg">
-                                {accountsDetails?.charity_amount+ " AED" || "-"}
+                                {accountsDetails?.charity_amount + " AED" ||
+                                  "-"}
                               </h4>
                             </div>
                             <div className="grid gap-3">
@@ -616,7 +617,7 @@ function AccountsDetails() {
                             <div className="grid gap-3">
                               <Label htmlFor="vat_amount">VAT Amount</Label>
                               <h4 className="font-semibold text-lg">
-                                {accountsDetails?.vat_amount+ " AED" || "-"}
+                                {accountsDetails?.vat_amount + " AED" || "-"}
                               </h4>
                             </div>
                             <div className="grid gap-3">
@@ -624,7 +625,7 @@ function AccountsDetails() {
                                 Total Amount without Tax
                               </Label>
                               <h4 className="font-semibold text-lg">
-                                {accountsDetails?.amount+ " AED" || "-"}
+                                {accountsDetails?.amount + " AED" || "-"}
                               </h4>
                             </div>
                             <div className="grid gap-3">
@@ -633,7 +634,7 @@ function AccountsDetails() {
                                 {Number(
                                   Number(accountsDetails?.amount) +
                                     Number(accountsDetails?.vat_amount)
-                                )+ "AED" || "-"}
+                                ) + "AED" || "-"}
                               </h4>
                             </div>
                             {/* <div className="grid gap-3">

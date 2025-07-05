@@ -23,9 +23,13 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm, useFieldArray } from "react-hook-form";
 import { useCreateJobMutation } from "@/redux/query/jobApi";
-import { LoaderCircle } from "lucide-react";
+import { CalendarIcon, LoaderCircle } from "lucide-react";
 import ErrorMessage from "@/components/errors/ErrorMessage";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import { PopoverContent } from "@radix-ui/react-popover";
+import { Calendar } from "../ui/calendar";
+import { Popover, PopoverTrigger } from "../ui/popover";
 
 const LPOSchema = z.object({
   final_amount: z
@@ -33,7 +37,7 @@ const LPOSchema = z.object({
     .min(1, "Final amount is required")
     .regex(/^\d+(\.\d{1,2})?$/, "Final amount must be a valid number"),
   project_name: z.string().min(1, "Project name is required"),
-  delivery_timelines: z.string().min(1, "Delivery timeline is required"),
+  delivery_timelines: z.date(),
   payment_terms: z
     .array(
       z.object({
@@ -46,8 +50,8 @@ const LPOSchema = z.object({
       })
     )
     .min(1, "At least one payment term is required")
-    .transform((arr : any) => {
-      return arr.reduce((acc : any, term : any, index : any) => {
+    .transform((arr: any) => {
+      return arr.reduce((acc: any, term: any, index: any) => {
         acc[index + 1] = term;
         return acc;
       }, {} as Record<string, { description: string; milestone: string; percentage: number }>);
@@ -59,7 +63,7 @@ const LPOSchema = z.object({
 
 type LPOFormData = z.infer<typeof LPOSchema>;
 
-export default function CreateLPO({
+export default function CreateProject({
   isDialogOpen,
   setIsDialogOpen,
   data: rfq_info,
@@ -81,8 +85,8 @@ export default function CreateLPO({
     defaultValues: {
       final_amount: "",
       project_name: "",
-      delivery_timelines: "",
- 
+      delivery_timelines: new Date(),
+
       payment_terms: [{ description: "", milestone: "", percentage: 0 }],
       scope_of_work: "",
       lpo_number: "",
@@ -238,12 +242,27 @@ export default function CreateLPO({
               name="delivery_timelines"
               control={control}
               render={({ field }) => (
-                <Input
-                  id="delivery_timelines"
-                  type="date"
-                  className="w-full rounded-lg border-gray-300 focus:ring-2 focus:ring-blue-500"
-                  {...field}
-                />
+                <Popover >
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={"w-full justify-start text-left font-normal"}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {field.value
+                        ? format(new Date(field.value), "dd/MM/yyyy")
+                        : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-4 rounded-lg shadow-lg border bg-white ">
+                    <Calendar
+                      mode="single"
+                      selected={field.value ? new Date(field.value) : undefined}
+                      onSelect={(date) => field.onChange(date)}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               )}
             />
             {errors.delivery_timelines && (

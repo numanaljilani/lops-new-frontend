@@ -12,6 +12,7 @@ import { Label } from "../ui/label";
 import { hasCommon } from "@/utils/checkAccess";
 import { useSelector } from "react-redux";
 import { adminAndSalesCanAccess } from "@/utils/accessArrays";
+import { formatDate } from "@/lib/dateFormat";
 
 function ProjectCard({ job, setIsUpdateDialogOpen }: any) {
   const access = useSelector((state: any) => state?.user?.user.access);
@@ -82,7 +83,7 @@ function ProjectCard({ job, setIsUpdateDialogOpen }: any) {
               Delivry Timeline
             </Label>
 
-            <h4 className="font-semibold text-lg">{job?.delivery_timelines}</h4>
+            <h4 className="font-semibold text-lg">{formatDate(job?.delivery_timelines)}</h4>
           </div>
           <div className="grid gap-3">
             <Label className="underline" htmlFor="name">

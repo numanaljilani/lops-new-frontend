@@ -20,9 +20,9 @@ export const dashboardApi = createApi({
   endpoints: (builder) => ({
   
       adminDashboard: builder.mutation({
-        query: (user) => {
+        query: ({admin}) => {
           return {
-            url: "/admin",
+            url: `/admin`,
             method: "GET",
             headers: {
               "Content-type": "application/json; charset=UTF-8",
@@ -30,34 +30,22 @@ export const dashboardApi = createApi({
           };
         },
       }),
-      changePassword: builder.mutation({
-        query: ({password , confirm_password}) => {
-          console.log(password , "PASSWORD")
+      userDashboard: builder.mutation({
+        query: ({admin}) => {
           return {
-            url: "password",
-            method: "PUT",
-            body: {password , confirm_password},
-            headers: {
-              "Content-type": "application/json; charset=UTF-8",
-            },
-          };
-        },
-      }),
-      profile: builder.mutation({
-        query: () => {
-          return {
-            url: "profile",
+            url: `/user`,
             method: "GET",
             headers: {
               "Content-type": "application/json; charset=UTF-8",
-             
             },
           };
         },
       }),
+     
+   
   }),
 })
 
 // Export hooks for usage in functional components, which are
 // auto-generated based on the defined endpoints
-export const { useAdminDashboardMutation ,useProfileMutation , useChangePasswordMutation } = dashboardApi
+export const { useAdminDashboardMutation ,useUserDashboardMutation } = dashboardApi

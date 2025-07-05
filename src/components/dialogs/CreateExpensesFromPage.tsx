@@ -31,7 +31,10 @@ import { toast } from "sonner";
 import ErrorMessage from "@/components/errors/ErrorMessage";
 import AsyncSelect from "react-select/async";
 import debounce from "lodash.debounce";
-import { LoaderCircle } from "lucide-react";
+import { CalendarIcon, LoaderCircle } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { format } from "date-fns";
+import { Calendar } from "../ui/calendar";
 
 const ExpensesSchema = z.object({
   projectId: z.string().min(1, "Project is required"),
@@ -43,7 +46,7 @@ const ExpensesSchema = z.object({
   payment_mode: z.enum(["Cash", "Bank Transfer", "Cheque"], {
     errorMap: () => ({ message: "Payment mode is required" }),
   }),
-  payment_date: z.string().optional(),
+  payment_date: z.date().optional(),
   remarks: z.string().optional(),
 });
 
@@ -59,8 +62,10 @@ function CreateExpenseFromPage({
   const [defaultProjects, setDefaultProjects] = useState<any[]>([]);
   const [createExpense, { data: res, isSuccess, error, isError, isLoading }] =
     useCreateExpenseMutation();
-  const [expensesCategories, { data: expRes }] = useExpensescategoriesMutation();
-  const [jobApi, { isLoading: isJobsApiLoading, error: jobsError }] = useJobsMutation();
+  const [expensesCategories, { data: expRes }] =
+    useExpensescategoriesMutation();
+  const [jobApi, { isLoading: isJobsApiLoading, error: jobsError }] =
+    useJobsMutation();
 
   const {
     register,
@@ -80,7 +85,7 @@ function CreateExpenseFromPage({
       vat_amount: 0,
       amount: 0,
       payment_mode: undefined,
-      payment_date: "",
+      payment_date: new Date(),
       remarks: "",
     },
   });
@@ -122,10 +127,11 @@ function CreateExpenseFromPage({
       try {
         const res = await jobApi({ search: inputValue }).unwrap();
         console.log("Search Projects API Response:", res);
-        const options = res.data?.map((job: any) => ({
-          value: job._id,
-          label: `${job.projectId} - ${job.project_name || "No Name"}`,
-        })) || [];
+        const options =
+          res.data?.map((job: any) => ({
+            value: job._id,
+            label: `${job.projectId} - ${job.project_name || "No Name"}`,
+          })) || [];
         callback(options);
       } catch (err) {
         console.error("Search Projects Fetch Error:", err);
@@ -224,15 +230,21 @@ function CreateExpenseFromPage({
                     isLoading={isJobsApiLoading}
                     placeholder="Search for a project..."
                     noOptionsMessage={() => "No projects found"}
-                    onChange={(option) => field.onChange(option ? option.value : "")}
+                    onChange={(option) =>
+                      field.onChange(option ? option.value : "")
+                    }
                     value={
                       projectId
                         ? {
                             value: projectId,
                             label:
                               projectId === jobData?._id
-                                ? `${jobData?.projectId} - ${jobData?.project_name || "No Name"}`
-                                : defaultOptions.find((opt) => opt.value === projectId)?.label || projectId
+                                ? `${jobData?.projectId} - ${
+                                    jobData?.project_name || "No Name"
+                                  }`
+                                : defaultOptions.find(
+                                    (opt) => opt.value === projectId
+                                  )?.label || projectId,
                           }
                         : null
                     }
@@ -241,13 +253,19 @@ function CreateExpenseFromPage({
                     styles={{
                       control: (base) => ({
                         ...base,
-                        borderColor: errors.projectId ? "red" : base.borderColor,
+                        borderColor: errors.projectId
+                          ? "red"
+                          : base.borderColor,
                         "&:hover": {
-                          borderColor: errors.projectId ? "red" : base.borderColor,
+                          borderColor: errors.projectId
+                            ? "red"
+                            : base.borderColor,
                         },
                         borderRadius: "0.375rem",
                         padding: "0.25rem",
-                        boxShadow: errors.projectId ? "0 0 0 1px red" : base.boxShadow,
+                        boxShadow: errors.projectId
+                          ? "0 0 0 1px red"
+                          : base.boxShadow,
                       }),
                       menu: (base) => ({
                         ...base,
@@ -268,10 +286,7 @@ function CreateExpenseFromPage({
                 name="category_display"
                 control={control}
                 render={({ field }) => (
-                  <UiSelect
-                    onValueChange={field.onChange}
-                    value={field.value}
-                  >
+                  <UiSelect onValueChange={field.onChange} value={field.value}>
                     <SelectTrigger id="category_display">
                       <SelectValue placeholder="Select Category" />
                     </SelectTrigger>
@@ -279,8 +294,12 @@ function CreateExpenseFromPage({
                       <SelectItem value="Material">Material</SelectItem>
                       <SelectItem value="Labor">Labor</SelectItem>
                       <SelectItem value="Equipment">Equipment</SelectItem>
-                      <SelectItem value="Transportation">Transportation</SelectItem>
-                      <SelectItem value="Subcontractor">Subcontractor</SelectItem>
+                      <SelectItem value="Transportation">
+                        Transportation
+                      </SelectItem>
+                      <SelectItem value="Subcontractor">
+                        Subcontractor
+                      </SelectItem>
                       <SelectItem value="Other">Other</SelectItem>
                     </SelectContent>
                   </UiSelect>
@@ -349,16 +368,15 @@ function CreateExpenseFromPage({
                 name="payment_mode"
                 control={control}
                 render={({ field }) => (
-                  <UiSelect
-                    onValueChange={field.onChange}
-                    value={field.value}
-                  >
+                  <UiSelect onValueChange={field.onChange} value={field.value}>
                     <SelectTrigger id="payment_mode">
                       <SelectValue placeholder="Select Payment Mode" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Cash">Cash</SelectItem>
-                      <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+                      <SelectItem value="Bank Transfer">
+                        Bank Transfer
+                      </SelectItem>
                       <SelectItem value="Cheque">Cheque</SelectItem>
                     </SelectContent>
                   </UiSelect>
@@ -371,10 +389,34 @@ function CreateExpenseFromPage({
 
             <div>
               <Label htmlFor="payment_date">Payment Date</Label>
-              <Input
-                id="payment_date"
-                type="date"
-                {...register("payment_date")}
+              <Controller
+                name="payment_date"
+                control={control}
+                render={({ field }) => (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={"w-full justify-start text-left font-normal"}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {field.value
+                          ? format(new Date(field.value), "dd/MM/yyyy")
+                          : "Pick a date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-4 bg-white border shadow-lg">
+                      <Calendar
+                        mode="single"
+                        selected={
+                          field.value ? new Date(field.value) : undefined
+                        }
+                        onSelect={(date) => field.onChange(date)}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                )}
               />
               {errors.payment_date && (
                 <ErrorMessage message={errors.payment_date.message} />

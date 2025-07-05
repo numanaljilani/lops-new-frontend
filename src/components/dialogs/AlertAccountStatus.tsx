@@ -25,6 +25,10 @@ import { Controller, useForm, useWatch } from "react-hook-form";
 import ErrorMessage from "@/components/errors/ErrorMessage";
 import { useVerifyPaymentStatusMutation } from "@/redux/query/accountsApi";
 import { useRouter } from "next/navigation";
+import { Calendar } from "../ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
 
 export default function AlertAccountStatus({
   isDialogOpen,
@@ -61,7 +65,7 @@ export default function AlertAccountStatus({
     payment_mode: z.enum(["Cash", "Credit", "Cheque", "Bank Transfer"], {
       errorMap: () => ({ message: "Invalid payment mode" }),
     }),
-    payment_date: z.string().optional(),
+    payment_date: z.date().optional(),
     paid_amount: z.number().min(0, "Paid amount cannot be negative").default(0),
     new_payment_amount: z
       .number()
@@ -71,7 +75,7 @@ export default function AlertAccountStatus({
       .number()
       .min(0, "Balance amount cannot be negative")
       .default(0),
-    due_date: z.string().optional(),
+    due_date: z.date().optional(),
     status: z.enum(["Pending", "Partially Paid", "Paid"]).default("Pending"),
     verification_status: z
       .enum(["unverified", "invoiced", "paid"])
@@ -363,11 +367,34 @@ export default function AlertAccountStatus({
             </div>
             <div>
               <Label htmlFor="payment_date">Payment Date</Label>
-              <Input
-                id="payment_date"
-                type="date"
-                {...register("payment_date")}
+             <Controller
+        name="payment_date"
+        control={control}
+        render={({ field }) => (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={
+                  "w-full justify-start text-left font-normal"}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {field.value
+                  ? format(new Date(field.value), "dd/MM/yyyy")
+                  : "Pick a date"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-5 rounded-lg bg-white border shadow-lg">
+              <Calendar
+                mode="single"
+                selected={field.value ? new Date(field.value) : undefined}
+                onSelect={(date) => field.onChange(date)}
+                initialFocus
               />
+            </PopoverContent>
+          </Popover>
+        )}
+      />
               {errors.payment_date && (
                 <ErrorMessage message={errors.payment_date.message} />
               )}
