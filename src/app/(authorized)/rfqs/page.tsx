@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowUpRight,
@@ -7,7 +7,7 @@ import {
   PlusCircle,
   Search,
 } from "lucide-react";
-import { toast } from "sonner";
+import { toast, Toaster } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -33,6 +33,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { PaginationComponent } from "@/components/PaginationComponent";
 import { formatDate } from "@/lib/dateFormat";
 import {
   useAllRFQsMutation,
@@ -40,18 +43,18 @@ import {
   useDeleteRfqMutation,
 } from "@/redux/query/rfqsApi";
 import Alert from "@/components/dialogs/Alert";
-import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
-import { PaginationComponent } from "@/components/PaginationComponent";
-import { Toaster } from "@/components/ui/sonner";
 import CreateDialog from "@/components/dialogs/CreateDialog";
 import CreateProject from "@/components/dialogs/CreateLPO";
 import debounce from "lodash.debounce";
+import { useSelector } from "react-redux";
 
 function RFQs() {
-  const companyId = "6850144a18d7f8eeea750c20";
+  const selectedCompany = useSelector(
+    (state: any) => state?.user?.selectedCompany || null
+  );
   const router = useRouter();
   const [rfqs, setRFQs] = useState<any[]>([]);
+  const [tab, setTab] = useState("all");
   const [filteredRFQs, setFilteredRFQs] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
@@ -61,27 +64,40 @@ function RFQs() {
   const [itemToDelete, setItemToDelete] = useState<any>(null);
   const [selectedRFQ, setSelectedRFQ] = useState<any>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const [rfqsApi, { data, isSuccess, error, isError, isLoading: isRFQsLoading }] = useAllRFQsMutation();
   const [createRFQApi] = useCreateRFQMutation();
   const [deleteRFQApi] = useDeleteRfqMutation();
 
-  const getRFQs = async () => {
+  const getRFQs = async (status: string = tab) => {
+    if (!selectedCompany?._id) {
+      toast.error("No company selected", {
+        description: "Please select a company to view RFQs.",
+        style: { backgroundColor: "#fcebbb" },
+      });
+      setIsLoading(false);
+      return;
+    }
     try {
       setIsLoading(true);
-      const res = await rfqsApi({ page }).unwrap();
-      console.log("Default RFQs API Response:", res);
+      const res = await rfqsApi({ page, companyId: selectedCompany._id, status: status === "all" ? "" : status }).unwrap();
+      console.log(`RFQs API Response (status: ${status}):`, JSON.stringify(res, null, 2));
       if (res?.data) {
         setRFQs(res.data);
         setFilteredRFQs(res.data);
       } else {
-        toast.warning("No RFQs found.");
+        toast.warning(`No RFQs found for status: ${status || "all"}.`);
         setRFQs([]);
         setFilteredRFQs([]);
       }
     } catch (err: any) {
-      console.error("Default RFQs Fetch Error:", JSON.stringify(err, null, 2));
-      toast.error("Failed to fetch RFQs: " + (err?.data?.message || err.message || "Unknown error"));
+      console.error(`RFQs Fetch Error (status: ${status}):`, JSON.stringify(err, null, 2));
+      toast.error(`Failed to fetch RFQs: ${err?.data?.message || err.message || "Unknown error"}`, {
+        style: { backgroundColor: "#fcebbb" },
+      });
       setRFQs([]);
       setFilteredRFQs([]);
     } finally {
@@ -89,9 +105,9 @@ function RFQs() {
     }
   };
 
-  useEffect(()=>{
+  useEffect(() => {
     getRFQs();
-  },[])
+  }, [tab, page, selectedCompany]);
 
   const handleSearch = useCallback(
     debounce(async (query: string) => {
@@ -103,7 +119,7 @@ function RFQs() {
         if (query === "") {
           await getRFQs();
         } else {
-          const res = await rfqsApi({ search: query, page }).unwrap();
+          const res = await rfqsApi({ search: query, page, companyId: selectedCompany._id, status: tab === "all" ? "" : tab }).unwrap();
           console.log("Search RFQs API Response:", JSON.stringify(res, null, 2));
           if (res?.data) {
             setFilteredRFQs(res.data);
@@ -116,25 +132,29 @@ function RFQs() {
         }
       } catch (err: any) {
         console.error("Search RFQs Error:", JSON.stringify(err, null, 2));
-        toast.error("Failed to search RFQs: " + (err?.data?.message || err.message || "Unknown error"));
+        toast.error(`Failed to search RFQs: ${err?.data?.message || err.message || "Unknown error"}`, {
+          style: { backgroundColor: "#fcebbb" },
+        });
         setFilteredRFQs([]);
       } finally {
         setIsLoading(false);
       }
     }, 500),
-    [rfqsApi, page]
+    [rfqsApi, page, tab, selectedCompany]
   );
 
   const handleSubmit = async (data: any) => {
     try {
       console.log("Create RFQ Data:", JSON.stringify(data, null, 2));
-      const res = await createRFQApi({ data }).unwrap();
+      const res = await createRFQApi({ data: { ...data, company: selectedCompany._id } }).unwrap();
       toast.success("RFQ created successfully!");
       getRFQs();
       return res;
     } catch (err: any) {
       console.error("RFQ Creation Error:", JSON.stringify(err, null, 2));
-      toast.error("Failed to create RFQ: " + (err?.data?.message || err.message || "Unknown error"));
+      toast.error(`Failed to create RFQ: ${err?.data?.message || err.message || "Unknown error"}`, {
+        style: { backgroundColor: "#fcebbb" },
+      });
       throw err;
     }
   };
@@ -142,29 +162,76 @@ function RFQs() {
   const deleteRFQ = async () => {
     if (!itemToDelete?._id) return;
     try {
-      console.log("Delete RFQ Response:", itemToDelete._id);
+      console.log("Delete RFQ ID:", itemToDelete._id);
       await deleteRFQApi({ id: itemToDelete._id }).unwrap();
       toast.success("RFQ deleted successfully!");
       setIsDialogOpen(false);
       getRFQs();
     } catch (err: any) {
       console.error("Delete RFQ Error:", JSON.stringify(err, null, 2));
-      toast.error("Failed to delete RFQ: " + (err?.data?.message || err.message || "Unknown error"));
+      toast.error(`Failed to delete RFQ: ${err?.data?.message || err.message || "Unknown error"}`, {
+        style: { backgroundColor: "#fcebbb" },
+      });
     }
   };
+
+  useEffect(() => {
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !isFetchingMore) {
+          setIsFetchingMore(true);
+          setTimeout(() => {
+            console.log("Fetching more RFQs...");
+            setIsFetchingMore(false);
+          }, 1000);
+        }
+      },
+      { threshold: 1.0 }
+    );
+
+    if (loadMoreRef.current) {
+      observerRef.current.observe(loadMoreRef.current);
+    }
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+    };
+  }, []);
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-gray-50 overflow-y-auto">
       <Toaster richColors position="top-right" />
       <div className="flex flex-col gap-3 p-3 sm:p-4 w-full">
         <main className="grid gap-3 md:gap-4">
-          <Tabs defaultValue="all">
+          <Tabs defaultValue="all" onValueChange={(value) => { setTab(value); setPage(1); }}>
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-              <TabsList className="hidden sm:flex bg-gray-100 rounded-lg">
-                <TabsTrigger value="all" className="text-sm text-gray-800">All</TabsTrigger>
-                <TabsTrigger value="pending" className="text-sm text-gray-800">Pending</TabsTrigger>
-                <TabsTrigger value="approved" className="text-sm text-gray-800">Approved</TabsTrigger>
-                <TabsTrigger value="rejected" className="text-sm text-gray-800">Rejected</TabsTrigger>
+              <TabsList className="bg-gray-100 rounded-lg p-1">
+                <TabsTrigger
+                  value="all"
+                  className="text-sm text-gray-800 data-[state=active]:bg-white data-[state=active]:text-blue-600 rounded-md"
+                >
+                  All
+                </TabsTrigger>
+                <TabsTrigger
+                  value="pending"
+                  className="text-sm text-gray-800 data-[state=active]:bg-white data-[state=active]:text-blue-600 rounded-md"
+                >
+                  Pending
+                </TabsTrigger>
+                <TabsTrigger
+                  value="approved"
+                  className="text-sm text-gray-800 data-[state=active]:bg-white data-[state=active]:text-blue-600 rounded-md"
+                >
+                  Approved
+                </TabsTrigger>
+                {/* <TabsTrigger
+                  value="rejected"
+                  className="text-sm text-gray-800 data-[state=active]:bg-white data-[state=active]:text-blue-600 rounded-md"
+                >
+                  Rejected
+                </TabsTrigger> */}
               </TabsList>
               <div className="ml-auto flex items-center gap-2">
                 <div className="relative w-full sm:w-64">
@@ -179,17 +246,17 @@ function RFQs() {
                 </div>
                 <Button
                   size="sm"
-                  className="h-8 gap-1 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg px-3 py-1 text-sm"
+                  className="h-8 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg"
                   onClick={() => setIsCreateRFQDialogOpen(true)}
                 >
-                  <PlusCircle className="h-3.5 w-3.5" />
+                  <PlusCircle className="h-3.5 w-3.5 mr-1" />
                   <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
                     Generate RFQ
                   </span>
                 </Button>
               </div>
             </div>
-            <TabsContent value="all">
+            <TabsContent value={tab}>
               <Card className="bg-white shadow-lg rounded-xl border-none w-full">
                 <CardHeader className="p-4">
                   <CardTitle className="text-base font-semibold text-gray-800">
@@ -200,12 +267,11 @@ function RFQs() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="p-4">
-                  <Table className="w-full">
+                  <Table className="overflow-x-auto">
                     <TableHeader>
                       <TableRow className="border-b border-gray-200">
                         <TableHead className="text-sm font-medium text-gray-700">Sr. No.</TableHead>
                         <TableHead className="text-sm font-medium text-gray-700">RFQ ID</TableHead>
-                        {/* <TableHead className="text-sm font-medium text-gray-700">Quotation No.</TableHead> */}
                         <TableHead className="text-sm font-medium text-gray-700">Client</TableHead>
                         <TableHead className="text-sm font-medium text-gray-700">Project</TableHead>
                         <TableHead className="text-sm font-medium text-gray-700">Scope of Work</TableHead>
@@ -217,19 +283,23 @@ function RFQs() {
                     </TableHeader>
                     <TableBody>
                       {isLoading ? (
-                        Array.from({ length: 5 }).map((_, index) => (
-                          <TableRow key={index} className="border-b border-gray-100">
-                            <TableCell><Skeleton className="h-4 w-full rounded-lg" /></TableCell>
-                            <TableCell><Skeleton className="h-4 w-full rounded-lg" /></TableCell>
-                            <TableCell><Skeleton className="h-4 w-full rounded-lg" /></TableCell>
-                            <TableCell><Skeleton className="h-4 w-full rounded-lg" /></TableCell>
-                            <TableCell><Skeleton className="h-4 w-full rounded-lg" /></TableCell>
-                            <TableCell><Skeleton className="h-4 w-full rounded-lg" /></TableCell>
-                            <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-full rounded-lg" /></TableCell>
-                            <TableCell><Skeleton className="h-8 w-8 rounded-lg" /></TableCell>
-                            <TableCell><Skeleton className="h-8 w-8 rounded-lg" /></TableCell>
-                          </TableRow>
-                        ))
+                        <>
+                          {Array.from({ length: 5 }).map((_, index) => (
+                            <TableRow key={index} className="border-b border-gray-100">
+                              <TableCell><Skeleton className="h-6 w-full bg-gray-200 rounded-lg" /></TableCell>
+                              <TableCell><Skeleton className="h-6 w-full bg-gray-200 rounded-lg" /></TableCell>
+                              <TableCell><Skeleton className="h-6 w-full bg-gray-200 rounded-lg" /></TableCell>
+                              <TableCell><Skeleton className="h-6 w-full bg-gray-200 rounded-lg" /></TableCell>
+                              <TableCell><Skeleton className="h-6 w-full bg-gray-200 rounded-lg" /></TableCell>
+                              <TableCell><Skeleton className="h-6 w-full bg-gray-200 rounded-lg" /></TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                <Skeleton className="h-6 w-full bg-gray-200 rounded-lg" />
+                              </TableCell>
+                              <TableCell><Skeleton className="h-8 w-8 bg-gray-200 rounded-lg" /></TableCell>
+                              <TableCell><Skeleton className="h-8 w-8 bg-gray-200 rounded-lg" /></TableCell>
+                            </TableRow>
+                          ))}
+                        </>
                       ) : filteredRFQs.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={9} className="text-center py-8 text-sm text-gray-600">
@@ -254,12 +324,6 @@ function RFQs() {
                             >
                               {data?.rfqId || "-"}
                             </TableCell>
-                            {/* <TableCell
-                              className="text-sm text-gray-800 font-medium"
-                              onClick={() => router.push(`/rfqs/${data._id}`)}
-                            >
-                              {data?.quotationNo || "-"}
-                            </TableCell> */}
                             <TableCell
                               className="text-sm text-gray-800 font-medium cursor-pointer"
                               onClick={() => router.push(`/rfqs/${data._id}`)}
@@ -313,7 +377,7 @@ function RFQs() {
                                     <span className="sr-only">Toggle menu</span>
                                   </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="rounded-lg shadow-lg">
+                                <DropdownMenuContent align="end" className="bg-white border-gray-300 rounded-lg shadow-lg">
                                   <DropdownMenuLabel className="text-sm text-gray-800">Actions</DropdownMenuLabel>
                                   <DropdownMenuItem
                                     className="text-sm text-red-600 hover:bg-red-50"
@@ -343,6 +407,12 @@ function RFQs() {
               </Card>
             </TabsContent>
           </Tabs>
+          {isFetchingMore && (
+            <div className="col-span-full">
+              <Skeleton className="h-24 w-full bg-gray-200 rounded-xl" />
+            </div>
+          )}
+          <div ref={loadMoreRef} className="h-1"></div>
         </main>
 
         <Alert

@@ -14,9 +14,9 @@ export const jobApi = createApi({
     }, }),
   endpoints: (builder) => ({
     jobs: builder.mutation({
-      query: ({page , search}) => {
+      query: ({page , search , companyId}) => {
         return {
-          url: `/?page=${page || 1 }&search=${search || ''}`,
+          url: `/?page=${page || 1 }&search=${search || ''}&companyId=${companyId || ''}`,
           method: "GET",
           headers: {
             "Content-type": "application/json; charset=UTF-8",

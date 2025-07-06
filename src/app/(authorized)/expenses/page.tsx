@@ -54,9 +54,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PaginationComponent } from "@/components/PaginationComponent";
 import { Input } from "@/components/ui/input";
 import debounce from "lodash.debounce";
+import { useSelector } from "react-redux";
 
 function Expenses() {
   const router = useRouter();
+    const selectedCompany = useSelector(
+      (state: any) => state?.user?.selectedCompany || null
+    );
   const [expenses, setExpenses] = useState([]);
   const [alljobs, setAllJobs] = useState([]);
   const [page, setPage] = useState(1);
@@ -69,7 +73,7 @@ function Expenses() {
 const itemsPerPage = 5;
   const getJobs = async () => {
     try {
-      const res = await jobApi({}).unwrap();
+      const res = await jobApi({companyId : selectedCompany?._id}).unwrap();
       console.log("Default Jobs API Response:", JSON.stringify(res, null, 2));
       setAllJobs(res?.data || []);
     } catch (err: any) {
@@ -81,7 +85,7 @@ const itemsPerPage = 5;
   const getExpenses = async () => {
     setIsLoading(true);
     try {
-      const res = await expenseApi({ page }).unwrap();
+      const res = await expenseApi({ page , companyId: selectedCompany?._id }).unwrap();
       console.log("Default Expenses API Response:", JSON.stringify(res, null, 2));
       setExpenses(res?.data || []);
     } catch (err: any) {
@@ -98,7 +102,7 @@ const itemsPerPage = 5;
       setSearchQuery(query);
       setIsLoading(true);
       try {
-        const res = await expenseApi({ search: query, page }).unwrap();
+        const res = await expenseApi({ search: query, page , companyId : selectedCompany?._id }).unwrap();
         console.log("Search Expenses API Response:", JSON.stringify(res, null, 2));
         setExpenses(res?.data || []);
         if (res?.data?.length === 0) {
@@ -119,6 +123,9 @@ const itemsPerPage = 5;
   useEffect(() => {
     getJobs();
   }, []);
+  useEffect(() => {
+    getJobs();
+  }, [selectedCompany]);
 
   useEffect(() => {
     if (jobsIsSuccess) {

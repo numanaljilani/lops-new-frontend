@@ -4,6 +4,7 @@ const initialState = {
   user: {},
   accessToken: null,
   refreshToken: null, 
+  selectedCompany: null,
 };
 
 const profileSlice = createSlice({
@@ -21,9 +22,13 @@ const profileSlice = createSlice({
       // console.log(action.payload,"setRefreshToken")
       state.refreshToken = action.payload;
     },  
+    setSelectedCompany: (state, action) => {
+      // console.log(action.payload,"setRefreshToken")
+      state.selectedCompany = action.payload;
+    },  
   },
 });
 
-export const { setUser, setAccessToken, setRefreshToken } =
+export const { setUser, setAccessToken, setRefreshToken,setSelectedCompany } =
   profileSlice.actions;
 export default profileSlice.reducer;

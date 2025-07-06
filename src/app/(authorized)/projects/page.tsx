@@ -37,9 +37,14 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PaginationComponent } from "@/components/PaginationComponent";
 import debounce from "lodash.debounce";
+import { useSelector } from "react-redux";
+import { formatDate } from "@/lib/dateFormat";
 
 export default function Projects() {
   const router = useRouter();
+      const selectedCompany = useSelector(
+      (state: any) => state?.user?.selectedCompany || null
+    );
   const [jobs, setJobs] = useState<any[]>([]);
   const [page, setPage] = useState(1);
   const [projectDetails, setProjectDetails] = useState<any>();
@@ -61,7 +66,7 @@ export default function Projects() {
       setSearchQuery(query);
       setLoading(true);
       try {
-        const res = await jobApi({ search: query, page }).unwrap();
+        const res = await jobApi({ search: query, page , companyId : selectedCompany._id }).unwrap();
         console.log("Search Jobs API Response:", JSON.stringify(res, null, 2));
         setJobs(res?.data || []);
         if (res?.data?.length === 0) {
@@ -82,7 +87,7 @@ export default function Projects() {
   const getJobs = async () => {
     setLoading(true);
     try {
-      const res = await jobApi({ page }).unwrap();
+      const res = await jobApi({ page , companyId : selectedCompany._id }).unwrap();
       console.log("Default Jobs API Response:", JSON.stringify(res, null, 2));
       setJobs(res?.data || []);
     } catch (err: any) {
@@ -96,7 +101,7 @@ export default function Projects() {
   const handleSubmit = async (data: any) => {
     console.log("Submit Data:", JSON.stringify(data, null, 2));
     try {
-      const res = await createRFQApi({ data }).unwrap();
+      const res = await createRFQApi({ data, company : selectedCompany._id  }).unwrap();
       console.log("Create RFQ Response:", JSON.stringify(res, null, 2));
       setIsCreateRFQDialogOpen(false);
       getJobs();
@@ -118,7 +123,7 @@ export default function Projects() {
 
   useEffect(() => {
     getJobs();
-  }, [page]);
+  }, [page , selectedCompany]);
 
   useEffect(() => {
     if (isSuccess) {
@@ -268,7 +273,7 @@ export default function Projects() {
                             <TableCell
                               className="hidden md:table-cell text-sm text-gray-800"
                             >
-                              {data?.delivery_timelines || "-"}
+                              {formatDate(data?.delivery_timelines) || "-"}
                             </TableCell>
                             <TableCell>
                               <DropdownMenu>

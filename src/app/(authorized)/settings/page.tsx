@@ -19,7 +19,10 @@ import {
   Briefcase,
   Building2,
 } from "lucide-react";
-import { useProfileMutation, useChangePasswordMutation } from "@/redux/query/authApi";
+import {
+  useProfileMutation,
+  useChangePasswordMutation,
+} from "@/redux/query/authApi";
 import { setUser } from "@/redux/slice/profileSlice";
 import { toast } from "sonner";
 
@@ -34,7 +37,9 @@ type SettingSection =
 const passwordSchema = z
   .object({
     password: z.string().min(6, "Password must be at least 6 characters"),
-    confirm_password: z.string().min(6, "Confirm password must be at least 6 characters"),
+    confirm_password: z
+      .string()
+      .min(6, "Confirm password must be at least 6 characters"),
   })
   .refine((data) => data.password === data.confirm_password, {
     message: "Passwords do not match",
@@ -46,8 +51,17 @@ export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState<SettingSection>("profile");
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const dispatch = useDispatch();
-  const [profileApi, { data, isSuccess, error, isError }] = useProfileMutation();
-  const [changePassword, { isLoading: isPasswordLoading, isSuccess: isPasswordSuccess, isError: isPasswordError, error: passwordError }] = useChangePasswordMutation();
+  const [profileApi, { data, isSuccess, error, isError }] =
+    useProfileMutation();
+  const [
+    changePassword,
+    {
+      isLoading: isPasswordLoading,
+      isSuccess: isPasswordSuccess,
+      isError: isPasswordError,
+      error: passwordError,
+    },
+  ] = useChangePasswordMutation();
 
   const {
     register,
@@ -80,7 +94,9 @@ export default function SettingsPage() {
       reset();
     }
     if (isPasswordError && passwordError) {
-      const errorMessage = (passwordError as any)?.data?.message || "Failed to change password. Please try again.";
+      const errorMessage =
+        (passwordError as any)?.data?.message ||
+        "Failed to change password. Please try again.";
       toast.error(errorMessage);
     }
   }, [isPasswordSuccess, isPasswordError, passwordError, reset]);
@@ -91,11 +107,11 @@ export default function SettingsPage() {
 
   const onPasswordSubmit = async (data: any) => {
     try {
-    const res = await changePassword({
+      const res = await changePassword({
         password: data.password,
         confirm_password: data.confirm_password,
       }).unwrap();
-      console.log(res , "Password change response")
+      console.log(res, "Password change response");
     } catch (err) {
       // Error is handled by useEffect
     }
@@ -158,30 +174,41 @@ export default function SettingsPage() {
             </div>
             <div className="space-y-4">
               <h3 className="text-lg font-medium">Company Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Company Name</p>
-                  <p className="font-medium">{user?.company?.name}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Type</p>
-                  <p className="font-medium">{user?.company?.type}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Location</p>
-                  <p className="font-medium">{user?.company?.location}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Status</p>
-                  <p className="font-medium capitalize">
-                    {user?.company?.status}
-                  </p>
-                </div>
-                <div className="md:col-span-2">
-                  <p className="text-sm text-muted-foreground">About</p>
-                  <p className="font-medium">{user?.company?.about}</p>
-                </div>
-              </div>
+              {user.company.map((data, index) => {
+                return (
+                  <div
+                    key={index}
+                    className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                  >
+
+                     
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        Company Name
+                      </p>
+                      <p className="font-medium">{data?.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Type</p>
+                      <p className="font-medium">{data?.type}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Location</p>
+                      <p className="font-medium">{data?.location}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Status</p>
+                      <p className="font-medium capitalize">
+                        {data?.status}
+                      </p>
+                    </div>
+                    <div className="md:col-span-2">
+                      <p className="text-sm text-muted-foreground">About</p>
+                      <p className="font-medium">{data?.about}</p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         );
@@ -200,7 +227,10 @@ export default function SettingsPage() {
               {showPasswordForm ? "Cancel" : "Change Password"}
             </Button>
             {showPasswordForm && (
-              <form onSubmit={handleSubmit(onPasswordSubmit)} className="space-y-4">
+              <form
+                onSubmit={handleSubmit(onPasswordSubmit)}
+                className="space-y-4"
+              >
                 <div>
                   <Label htmlFor="password">New Password</Label>
                   <Input
@@ -223,8 +253,13 @@ export default function SettingsPage() {
                     <ErrorMessage message={errors.confirm_password.message} />
                   )}
                 </div>
-                <Button type="submit" disabled={isSubmitting || isPasswordLoading}>
-                  {isSubmitting || isPasswordLoading ? "Submitting..." : "Update Password"}
+                <Button
+                  type="submit"
+                  disabled={isSubmitting || isPasswordLoading}
+                >
+                  {isSubmitting || isPasswordLoading
+                    ? "Submitting..."
+                    : "Update Password"}
                 </Button>
               </form>
             )}

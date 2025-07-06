@@ -42,9 +42,13 @@ import {
 } from "@/redux/query/timesheet";
 import { PaginationComponent } from "@/components/PaginationComponent";
 import DeleteItem from "@/components/dialogs/DeleteItem";
+import { useSelector } from "react-redux";
 
 function TimeSheet() {
   const router = useRouter();
+      const selectedCompany = useSelector(
+        (state: any) => state?.user?.selectedCompany || null
+      );
   const [timesheet, setTimeSheet] = useState([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [page, setPage] = useState(1);
@@ -55,13 +59,13 @@ function TimeSheet() {
   const [deleteTimeSheetApi] = useDeleteTimesheetMutation();
 
   const getTimeSheetData = async () => {
-    const res = await timeSheetApi({ page });
+    const res = await timeSheetApi({ page , companyId : selectedCompany._id });
     // console.log(res, "response");
   };
 
   useEffect(() => {
     getTimeSheetData();
-  }, [page]);
+  }, [page , selectedCompany]);
 
   useEffect(() => {
     if (isSuccess) {

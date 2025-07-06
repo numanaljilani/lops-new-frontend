@@ -57,7 +57,7 @@ const LPOSchema = z.object({
       }, {} as Record<string, { description: string; milestone: string; percentage: number }>);
     }),
   scope_of_work: z.string().min(1, "Scope of work is required"),
-  lpo_number: z.string().min(1, "LPO number is required"),
+  lpo_number: z.string().optional(),
   status: z.enum(["Pending", "Ongoing", "Completed"]).default("Pending"),
 });
 

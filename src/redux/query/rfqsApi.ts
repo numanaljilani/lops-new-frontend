@@ -17,10 +17,10 @@ export const RFQSApi = createApi({
   }),
   endpoints: (builder) => ({
     allRFQs: builder.mutation({
-      query: ({  page , search }) => {
+      query: ({  page , search,companyId , status}) => {
         console.log("Inside api", page);
         return {
-          url: `/?page=${page || 1}&search=${search || ''}`,
+          url: `/?page=${page || 1}&search=${search || ''}&companyId=${companyId || ''}&status=${status || ''}`,
           method: "GET",
           headers: {
             "Content-type": "application/json; charset=UTF-8",

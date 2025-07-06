@@ -45,9 +45,13 @@ import {
 } from "@/components/ui/pagination";
 import { PaginationComponent } from "@/components/PaginationComponent";
 import debounce from "lodash.debounce";
+import { useSelector } from "react-redux";
 
 function Accounts() {
   const router = useRouter();
+      const selectedCompany = useSelector(
+      (state: any) => state?.user?.selectedCompany || null
+    );
   const [jobs, setJobs] = useState([]);
   const [payemtes, setPayments] = useState<[]>([]);
   const [page, setPage] = useState(1);
@@ -69,7 +73,7 @@ function Accounts() {
       setSearchQuery(query);
       setLoading(true);
       try {
-        const res = await jobApi({ search: query, page }).unwrap();
+        const res = await jobApi({ search: query, page , companyId : selectedCompany._id }).unwrap();
         console.log("Search Jobs API Response:", JSON.stringify(res, null, 2));
         setJobs(res?.data || []);
         if (res?.data?.length === 0) {
@@ -90,7 +94,7 @@ function Accounts() {
   const getJobs = async () => {
     setLoading(true);
     try {
-      const res = await jobApi({ page }).unwrap();
+      const res = await jobApi({ page , companyId : selectedCompany._id }).unwrap();
       console.log("Default Jobs API Response:", JSON.stringify(res, null, 2));
       setJobs(res?.data || []);
     } catch (err: any) {
@@ -109,7 +113,7 @@ function Accounts() {
     if (!isDialogOpen) {
       getJobs();
     }
-  }, [isDialogOpen, page]);
+  }, [isDialogOpen, page,selectedCompany]);
 
   useEffect(() => {
     if (isSuccess) {
@@ -151,6 +155,9 @@ function Accounts() {
                       <TableRow>
                         <TableHead className="hidden sm:table-cell text-sm font-medium text-gray-700 w-[100px]">
                           Job No
+                        </TableHead>
+                        <TableHead className="hidden sm:table-cell text-sm font-medium text-gray-700 w-[100px]">
+                          Project Name
                         </TableHead>
                         <TableHead className="text-sm font-medium text-gray-700">Client</TableHead>
                         <TableHead className="text-sm font-medium text-gray-700">Scope</TableHead>
@@ -206,6 +213,12 @@ function Accounts() {
                               {data?.projectId}
                             </TableCell>
                             <TableCell
+                              className="hidden sm:table-cell text-sm text-gray-800 font-medium"
+                              onClick={() => router.push(`/accounts/${data._id}`)}
+                            >
+                              {data?.project_name || '-'}
+                            </TableCell>
+                            <TableCell
                               className="text-sm text-gray-800 font-medium"
                               onClick={() => router.push(`/accounts/${data._id}`)}
                             >
@@ -225,7 +238,7 @@ function Accounts() {
                               </Badge>
                             </TableCell>
                             <TableCell className="hidden md:table-cell text-sm text-gray-800">
-                              {data?.delivery_timelines}
+                              {formatDate(data?.delivery_timelines)}
                             </TableCell>
                           </TableRow>
                         ))
