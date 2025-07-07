@@ -44,7 +44,7 @@ function MyTaskCard({ projectId ,payemetBallTask, setTaskDetails, setMore }: any
           {/* Enter the employee details and thier performance */}
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex  items-center gap-x-5">
+      <CardContent className="flex  items-center gap-x-5  flex-wrap">
         {taskData?.data?.map((data: any, index: number) => {
           return (
             <div

@@ -33,7 +33,7 @@ function TaskCard({setIsTaskDialogOpen , payemetBallTask , setTaskDetails , setM
           {/* Enter the employee details and thier performance */}
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex  items-center gap-x-5">
+      <CardContent className="flex  items-center gap-x-5  flex-wrap">
         {payemetBallTask?.map((data: any, index: number) => {
           return (
             <div

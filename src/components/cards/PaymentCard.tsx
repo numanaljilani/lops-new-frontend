@@ -30,7 +30,7 @@ function PaymentCard({
         <CardTitle>Payments</CardTitle>
         {hasCommon(access, adminAndSalesCanAccess) && (
           <CardDescription>
-            {paymentBallsDetails && (
+            {/* {paymentBallsDetails && (
               <Button
                 className="text-sm gap-3 ml-5 tracking-wide float-right border border-red-30 hover:border-red-600 hover:bg-red-100 hover:text-red-600"
                 variant={"outline"}
@@ -41,7 +41,7 @@ function PaymentCard({
                 <Trash2 size={18} />
                 Delete
               </Button>
-            )}
+            )} */}
             <Button
               className="text-sm gap-3 ml-5 tracking-wide float-right"
               onClick={() => {
@@ -55,7 +55,7 @@ function PaymentCard({
         )}
       </CardHeader>
       <CardContent className="flex  items-center">
-        <div className="flex gap-5">
+        <div className="flex gap-5 flex-wrap">
           {/* {paymentBalls?.map((data, index) => ( */}
 
           {paymentBalls?.map((ballData: any, index: number) => {

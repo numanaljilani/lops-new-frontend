@@ -29,15 +29,17 @@ import { date, formatDate, isDateGreaterThanToday } from "@/lib/dateFormat";
 import { usePaymentBallsListMutation } from "@/redux/query/accountsApi";
 import { useProjectEmployeeMutation } from "@/redux/query/employee";
 
-import { useExpensesByProjectIdMutation, useExpensesMutation } from "@/redux/query/expensesApi";
+import {
+  useExpensesByProjectIdMutation,
+  useExpensesMutation,
+} from "@/redux/query/expensesApi";
 import { useJobDetailsMutation } from "@/redux/query/jobApi";
 import {
   useDeletePaymentBallMutation,
   usePaymentsMutation,
-  useDeleteTaskMutation,
 } from "@/redux/query/paymentApi";
 import { useRFQDetailsMutation } from "@/redux/query/rfqsApi";
-import { useTasksMutation } from "@/redux/query/taskApi";
+import { useDeleteTaskMutation, useTasksMutation } from "@/redux/query/taskApi";
 import { useTimesheetMutation } from "@/redux/query/timesheet";
 import {
   adminAndAccountsAndSalesCanAccess,
@@ -50,7 +52,7 @@ import { hasCommon } from "@/utils/checkAccess";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
-
+import { toast } from "sonner";
 
 function ProjectDetails() {
   const path = usePathname();
@@ -85,7 +87,7 @@ function ProjectDetails() {
 
   const [jobDetailsApi, { data, isSuccess, error, isError }] =
     useJobDetailsMutation();
-      const [
+  const [
     timeSheetApi,
     {
       data: timeSheetData,
@@ -108,11 +110,9 @@ function ProjectDetails() {
     },
   ] = useTasksMutation();
 
-
-
   useEffect(() => {
     if (tab == "Hours") {
-      getTimeSheetData()
+      getTimeSheetData();
     }
   }, [tab]);
 
@@ -128,20 +128,15 @@ function ProjectDetails() {
   ] = usePaymentsMutation();
   const [deletePaymentBallApi, {}] = useDeletePaymentBallMutation();
 
-
-
   const getTimeSheetData = async () => {
     const res = await timeSheetApi({ projectId: id });
     console.log(res, "Time Sheet data ");
   };
 
   useEffect(() => {
- 
-
-      if (isTimeSheetSuccess) {
-        setTimeSheet(timeSheetData?.data);
-      }
-    
+    if (isTimeSheetSuccess) {
+      setTimeSheet(timeSheetData?.data);
+    }
   }, [isTimeSheetSuccess]);
   useEffect(() => {
     if (paymentIsError) {
@@ -226,7 +221,7 @@ function ProjectDetails() {
     getExpenses();
   }, []);
   useEffect(() => {
-    console.log(taskDetails)
+    console.log(taskDetails);
     if (!isTaskDialogOpen) {
       if (taskDetails?._id) {
         getTasks(taskDetails?._id);
@@ -244,12 +239,10 @@ function ProjectDetails() {
       }
     }
   }, [isExpenseSuccess]);
-  console.log(tab)
+  console.log(tab);
   useEffect(() => {
-    if (tab == 'Expenses') {
-
-     getExpenses()
-  
+    if (tab == "Expenses") {
+      getExpenses();
     }
   }, [tab]);
 
@@ -258,14 +251,27 @@ function ProjectDetails() {
   const [paymentBallToDelete, setPaymentBallToDelete] = useState();
 
   const deletePaymentBall = async () => {
-    // const res = await deletePaymentBallApi({
-    //   id: paymentBallsDetails.payment_id,
-    // });
-    // console.log(res, "RESPONSE");
+    const res = await deletePaymentBallApi({
+      id: paymentBallsDetails.payment_id,
+    });
+    console.log(res, "RESPONSE");
   };
 
   const deleteTask = async () => {
-    // const res = await daleteTaskApi({ id: taskDetails?.task_id });
+    console.log(taskDetails, "TASK");
+    const res = await deleteTaskApi({ id: taskDetails?._id });
+    setMore(false);
+    console.log(res, "RESPONSE");
+    if (res.data) {
+      toast.success("Deleted", {
+        description: `Task deleted successfully.`,
+        style: {
+          backgroundColor: "#d4edda",
+          color: "green",
+          borderColor: "#d4edda",
+        },
+      });
+    }
   };
 
   return (
@@ -368,8 +374,7 @@ function ProjectDetails() {
                   title={"Profit"}
                   value={`${Number(
                     Number(job?.final_amount) -
-                     Number( job?.employee_cost +
-                      job?.total_expenses)
+                      Number(job?.employee_cost + job?.total_expenses)
                   )?.toFixed(2)} AED`}
                   // setTab={setTab}
                   // btn={true}

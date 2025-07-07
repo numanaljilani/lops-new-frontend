@@ -71,7 +71,7 @@ export const paymentApi = createApi({
     deleteTask: builder.mutation({
       query: ({ id, token }) => {
         return {
-          url: `tasks/${id}/`,
+          url: `/${id}`,
           method: "DELETE",
           headers: {
             "Content-type": "application/json; charset=UTF-8",
@@ -84,7 +84,7 @@ export const paymentApi = createApi({
       query: (data) => {
         // console.log("delet client ", data);
         return {
-          url: `paymentballs/${data?.id}/`,
+          url: `/${data?.id}`,
           method: "DELETE",
           headers: {
             "Content-type": "application/json; charset=UTF-8",

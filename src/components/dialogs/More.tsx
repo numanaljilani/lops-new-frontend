@@ -54,16 +54,18 @@ function More({
     status: z.string().default("Pending"),
     weightage: z.string().min(1, "Weightage is required"),
     remark: z.string().optional(),
-    completion_percentage: z.string().min(1, "Completion percentage is required"),
+    completion_percentage: z
+      .string()
+      .min(1, "Completion percentage is required"),
   });
- const access = useSelector((state: any) => state?.user?.user.access);
+  const access = useSelector((state: any) => state?.user?.user.access);
   const {
     register,
     handleSubmit,
     control,
     reset,
     formState: { errors, isSubmitting },
-  } :any = useForm({
+  }: any = useForm({
     resolver: zodResolver(completeStatusSchema),
     defaultValues: {
       status: cardData?.status || "Pending",
@@ -82,7 +84,8 @@ function More({
         status: cardData?.status || "Pending",
         weightage: cardData?.weightage?.toString() || "0",
         remark: cardData?.remarks || "",
-        completion_percentage: cardData?.completion_percentage?.toString() || "0",
+        completion_percentage:
+          cardData?.completion_percentage?.toString() || "0",
       });
     }
   }, [cardData, reset]);
@@ -98,14 +101,23 @@ function More({
           weightage: parseInt(data.weightage),
           completion_percentage: parseInt(data.completion_percentage),
           paymentId: cardData?.paymentId?._id,
-          projectId : cardData?.paymentId?.projectId
+          projectId: cardData?.paymentId?.projectId,
         },
         id: cardData?._id,
       };
 
       const res = await updateTaskStatus(payload).unwrap();
-      toast.success("Task updated successfully");
-      getTasks(cardData?.paymentId);
+      
+      toast.success("Success", {
+        description: `Task updated successfully.`,
+        style: {
+          backgroundColor: "#d4edda",
+          color: "green",
+          borderColor: "green",
+        },
+      });
+      getTasks(cardData?.paymentId?._id);
+
       setIsDialogOpen(false);
     } catch (error) {
       toast.error("Failed to update task");
@@ -161,12 +173,14 @@ function More({
                     disabled={updateWeightage}
                     {...register("weightage")}
                   />
-                {hasCommon(access , adminAndTeamLeadCanAccess) &&  <Button
-                    type="button"
-                    onClick={() => setUpdateWeightage(!updateWeightage)}
-                  >
-                    <CopyPlus size={18} />
-                  </Button>}
+                  {hasCommon(access, adminAndTeamLeadCanAccess) && (
+                    <Button
+                      type="button"
+                      onClick={() => setUpdateWeightage(!updateWeightage)}
+                    >
+                      <CopyPlus size={18} />
+                    </Button>
+                  )}
                 </div>
                 {errors.weightage && (
                   <p className="text-red-500 text-sm mt-1">
@@ -209,10 +223,7 @@ function More({
                 name="status"
                 control={control}
                 render={({ field }) => (
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                  >
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <SelectTrigger id="status" aria-label="Select Status">
                       <SelectValue placeholder="Select Status" />
                     </SelectTrigger>
@@ -236,16 +247,18 @@ function More({
             >
               {isSubmitting ? "Submitting..." : "Save Changes"}
             </Button>
-          {hasCommon(access , adminAndTeamLeadCanAccess) &&  <Button
-              size="lg"
-              type="button"
-              className="py-4 gap-x-3"
-              variant="destructive"
-              onClick={() => setIsTaskDeleteDialogOpen(true)}
-            >
-              <Trash2 size={18} />
-              Delete
-            </Button>}
+            {hasCommon(access, adminAndTeamLeadCanAccess) && (
+              <Button
+                size="lg"
+                type="button"
+                className="py-4 gap-x-3"
+                variant="destructive"
+                onClick={() => setIsTaskDeleteDialogOpen(true)}
+              >
+                <Trash2 size={18} />
+                Delete
+              </Button>
+            )}
             <AlertDialogCancel>Cancel</AlertDialogCancel>
           </AlertDialogFooter>
         </form>

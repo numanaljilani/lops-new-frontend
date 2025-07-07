@@ -54,11 +54,10 @@ export const taskApi = createApi({
       query: (data) => {
         console.log("delet client ", data);
         return {
-          url: `/${data?.id}/`,
+          url: `/${data?.id}`,
           method: "DELETE",
           headers: {
             "Content-type": "application/json; charset=UTF-8",
-            authorization: `bearer ${data?.token}`,
           },
         };
       },

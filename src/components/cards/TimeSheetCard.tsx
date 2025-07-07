@@ -22,7 +22,7 @@ function TimeSheetCard({timesheet , }: any) {
           {/* Enter the employee details and thier performance */}
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex  items-center gap-5">
+      <CardContent className="flex  items-center gap-5  flex-wrap">
         {timesheet?.map((data: any, index: number) => {
           // console.log(data, "data ....");
           return (

@@ -1,6 +1,5 @@
 "use client";
-
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Button } from "../ui/button";
@@ -13,16 +12,9 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import { Textarea } from "../ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Controller, useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
@@ -30,12 +22,25 @@ import { Calendar } from "../ui/calendar";
 import { useEmployeeMutation } from "@/redux/query/employee";
 import { formatDate } from "@/lib/dateFormat";
 import { useParams } from "next/navigation";
-import { toast } from "sonner";
-import { Form, FormControl, FormField, FormItem, FormMessage } from "../ui/form";
+import { toast, Toaster } from "sonner";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormMessage,
+} from "../ui/form";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { useCreateSubcontractTaskMutation } from "@/redux/query/subcontractor";
 import { useCreateTaskMutation } from "@/redux/query/taskApi";
+import AsyncSelect from "react-select/async";
+import debounce from "lodash.debounce";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+
+function ErrorMessage({ message }: { message: string }) {
+  return <p className="text-xs text-red-500">{message}</p>;
+}
 
 function CreateTask({
   isDialogOpen,
@@ -51,28 +56,33 @@ function CreateTask({
   getTasks: any;
 }) {
   const params = useParams();
-  const [assignmentType, setAssignmentType] = useState<"employee" | "subcontractor">("employee");
-  const [subcontractors, setSubcontractors] = useState([]);
-  
-  // Employee Task Schema
+  const [assignmentType, setAssignmentType] = useState<
+    "employee" | "subcontractor"
+  >("employee");
+  const [employee, setEmployee] = useState<any[]>([]);
+  const [defaultEmployeeOptions, setDefaultEmployeeOptions] = useState<any[]>(
+    []
+  );
+  const [isEmployeeLoading, setIsEmployeeLoading] = useState(false);
+  const [subcontractors, setSubcontractors] = useState<any[]>([]);
+  const [open, setOpen] = useState(false);
+
   const EmployeeTaskSchema = z.object({
     task_brief: z.string().min(1, "Task brief is required"),
     weightage: z.string().min(1, "Weightage is required"),
-    due_date: z.date({
-      required_error: "A due date is required.",
-    }),
+    due_date: z.date({ required_error: "A due date is required." }),
     remarks: z.string().min(1, "Remarks are required"),
     status: z.string().min(1, "Status is required"),
     assigne: z.string().min(1, "Assignee is required"),
   });
 
-  // Subcontractor Task Schema
   const SubcontractorTaskSchema = z.object({
     subcontract_brief: z.string().min(1, "Subcontract brief is required"),
-    weightage: z.string().min(1, "Weightage is required").max(100,"max weightage is 100"),
-    due_date: z.date({
-      required_error: "A due date is required.",
-    }),
+    weightage: z
+      .string()
+      .min(1, "Weightage is required")
+      .max(100, "Max weightage is 100"),
+    due_date: z.date({ required_error: "A due date is required." }),
     status: z.string().min(1, "Status is required"),
     subcontractor: z.string().min(1, "Subcontractor is required"),
     contract_amount: z.string().min(1, "Contract amount is required"),
@@ -81,7 +91,7 @@ function CreateTask({
     is_awarded: z.boolean().default(false),
   });
 
-  const taskForm :any = useForm({
+  const taskForm = useForm({
     resolver: zodResolver(EmployeeTaskSchema),
     defaultValues: {
       task_brief: "",
@@ -93,7 +103,7 @@ function CreateTask({
     },
   });
 
-  const subcontractorForm :any = useForm({
+  const subcontractorForm = useForm({
     resolver: zodResolver(SubcontractorTaskSchema),
     defaultValues: {
       subcontract_brief: "",
@@ -108,23 +118,119 @@ function CreateTask({
     },
   });
 
-  const [employee, setEmployee] = useState([]);
-  const [open, setOpen] = useState(false); 
-  const [employeeApi, { data: employeeData, isSuccess: employeeSuccess }] = useEmployeeMutation();
-  const [subcontractorApi, { data: subcontractorData, isSuccess: subcontractorSuccess }] = useEmployeeMutation(); // Adjust this to your actual subcontractor API
+  const {
+    control,
+    formState: { errors },
+  } = taskForm;
+
+  const [
+    employeeApi,
+    {
+      data: employeeData,
+      isSuccess: employeeSuccess,
+      isError: employeeIsError,
+      error: employeeError,
+    },
+  ] = useEmployeeMutation();
+  const [
+    subcontractorApi,
+    {
+      data: subcontractorData,
+      isSuccess: subcontractorSuccess,
+      isError: subcontractorIsError,
+      error: subcontractorError,
+    },
+  ] = useEmployeeMutation();
   const [createTaskApi] = useCreateTaskMutation();
   const [createSubcontractTaskApi] = useCreateSubcontractTaskMutation();
 
   const getEmployees = async () => {
-    const res = await employeeApi({ page: 1 });
-    // console.log(res, "EMP");
+    try {
+      setIsEmployeeLoading(true);
+      const res = await employeeApi({ page: 1 }).unwrap();
+      console.log("Employees API Response:", JSON.stringify(res, null, 2));
+      setEmployee(res?.data || []);
+      const options =
+        res?.data?.slice(0, 10).map((emp: any) => ({
+          value: emp._id,
+          label: emp.user.name,
+        })) || [];
+      setDefaultEmployeeOptions(options);
+    } catch (err: any) {
+      console.error("Employees Fetch Error:", JSON.stringify(err, null, 2));
+      toast.error(
+        `Failed to fetch employees: ${
+          err?.data?.message || err.message || "Unknown error"
+        }`,
+        {
+          style: { backgroundColor: "#fcebbb" },
+        }
+      );
+      setEmployee([]);
+      setDefaultEmployeeOptions([]);
+    } finally {
+      setIsEmployeeLoading(false);
+    }
   };
-  // console.log(details)
-    
 
   const getSubcontractors = async () => {
-    const res = await subcontractorApi({ page: 1 }); // Adjust to your subcontractor API call
-    // console.log(res, "Subcontractors");
+    try {
+      const res = await subcontractorApi({ page: 1 }).unwrap();
+      console.log("Subcontractors API Response:", JSON.stringify(res, null, 2));
+      setSubcontractors(res?.results || []);
+    } catch (err: any) {
+      console.error(
+        "Subcontractors Fetch Error:",
+        JSON.stringify(err, null, 2)
+      );
+      toast.error(
+        `Failed to fetch subcontractors: ${
+          err?.data?.message || err.message || "Unknown error"
+        }`,
+        {
+          style: { backgroundColor: "#fcebbb" },
+        }
+      );
+      setSubcontractors([]);
+    }
+  };
+
+  const loadEmployees = useCallback(
+    debounce(async (inputValue: string, callback: (options: any[]) => void) => {
+      try {
+        setIsEmployeeLoading(true);
+        const res = await employeeApi({ page: 1, search: inputValue }).unwrap();
+        console.log(
+          "Employee Search API Response:",
+          JSON.stringify(res, null, 2)
+        );
+        callback(
+          res?.data?.map((emp: any) => ({
+            value: emp._id,
+            label: emp.user.name,
+          })) || []
+        );
+      } catch (err: any) {
+        console.error("Employee Search Error:", JSON.stringify(err, null, 2));
+        toast.error(
+          `Failed to search employees: ${
+            err?.data?.message || err.message || "Unknown error"
+          }`,
+          {
+            style: { backgroundColor: "#fcebbb" },
+          }
+        );
+        callback([]);
+      } finally {
+        setIsEmployeeLoading(false);
+      }
+    }, 500),
+    [employeeApi]
+  );
+
+  const getEmployeeLabel = (id: string) => {
+    const emp = employee.find((e: any) => e._id === id);
+    return emp ? emp.user.name : id;
   };
 
   useEffect(() => {
@@ -133,101 +239,197 @@ function CreateTask({
   }, []);
 
   useEffect(() => {
-    // console.log(employeeData , "EMPLOYEE DATA")
     if (employeeSuccess && employeeData) {
-     
-      setEmployee(employeeData?.data);
+      setEmployee(employeeData?.data || []);
+      setDefaultEmployeeOptions(
+        employeeData?.data?.slice(0, 10).map((emp: any) => ({
+          value: emp._id,
+          label: emp.user.name,
+        })) || []
+      );
     }
     if (subcontractorSuccess && subcontractorData) {
-      setSubcontractors(subcontractorData?.results);
+      setSubcontractors(subcontractorData?.results || []);
     }
-  }, [employeeSuccess, subcontractorSuccess]);
+  }, [employeeSuccess, employeeData, subcontractorSuccess, subcontractorData]);
 
   async function onSubmitEmployeeTask(data: any) {
     if (!ball?._id) {
-      toast("Warning", {
-        description: "Please select the payment ball in which you want to create the task.",
+      toast.error("Warning", {
+        description:
+          "Please select the payment ball in which you want to create the task.",
+        style: { backgroundColor: "#fcebbb" },
       });
-    } else {
-      const res : any = await createTaskApi({
-        data: { ...data, paymentId: ball?._id, due_date: format(new Date(data.due_date), 'yyyy-MM-dd') },
+      return;
+    }
+    try {
+      const res: any = await createTaskApi({
+        data: {
+          ...data,
+          paymentId: ball?._id,
+          due_date: format(new Date(data.due_date), "yyyy-MM-dd"),
+        },
+      }).unwrap();
+      console.log("Create Task Response:", JSON.stringify(res, null, 2));
+      setIsDialogOpen(false);
+      toast.success("Task created successfully!", {
+        style: {
+          backgroundColor: "#d4edda",
+          color: "green",
+          borderColor: "green",
+        },
       });
-      console.log(res , "response")
-      if (res?.data) {
-        setIsDialogOpen(false);
-        toast("Success", {
-          description: "Task created successfully!",
-        });
-      }
-      if(res.error){
-            toast("Success", {
-          description: res?.error?.data?.message || "Something went wrong.",
-        });
-      }
       getTasks(ball?._id);
+    } catch (err: any) {
+      console.error("Create Task Error:", JSON.stringify(err, null, 2));
+      toast.error(
+        `Failed to create task: ${
+          err?.data?.message || err.message || "Unknown error"
+        }`,
+        {
+          style: { backgroundColor: "#fcebbb" },
+        }
+      );
     }
   }
 
   async function onSubmitSubcontractorTask(data: any) {
     if (!ball?.payment_id) {
-      toast("Warning", {
-        description: "Please select the payment ball in which you want to create the task.",
+      toast.error("Warning", {
+        description:
+          "Please select the payment ball in which you want to create the task.",
+        style: { backgroundColor: "#fcebbb" },
       });
-    } else {
+      return;
+    }
+    try {
       const res = await createSubcontractTaskApi({
-        data: { 
-          ...data, 
-          payment_ball: ball?.payment_id, 
-          due_date: format(new Date(data.due_date), 'yyyy-MM-dd'),
+        data: {
+          ...data,
+          payment_ball: ball?.payment_id,
+          due_date: format(new Date(data.due_date), "yyyy-MM-dd"),
           contract_amount: parseFloat(data.contract_amount),
           weightage: parseFloat(data.weightage),
-          completion_percentage: data.completion_percentage ? parseFloat(data.completion_percentage) : 0,
+          completion_percentage: data.completion_percentage
+            ? parseFloat(data.completion_percentage)
+            : 0,
+        },
+      }).unwrap();
+      console.log(
+        "Create Subcontract Task Response:",
+        JSON.stringify(res, null, 2)
+      );
+      setIsDialogOpen(false);
+      toast.success("Subcontract task created successfully!", {
+        style: {
+          backgroundColor: "#d4edda",
+          color: "green",
+          borderColor: "green",
         },
       });
-      console.log(res , "response")
-      if (res?.data) {
-        setIsDialogOpen(false);
-        toast("Success", {
-          description: "Subcontract task created successfully!",
-        });
-      }
       getTasks(ball?.payment_id);
+    } catch (err: any) {
+      console.error(
+        "Create Subcontract Task Error:",
+        JSON.stringify(err, null, 2)
+      );
+      toast.error(
+        `Failed to create subcontract task: ${
+          err?.data?.message || err.message || "Unknown error"
+        }`,
+        {
+          style: { backgroundColor: "#fcebbb" },
+        }
+      );
     }
   }
 
+  const customStyles = {
+    control: (base: any) => ({
+      ...base,
+      borderColor: errors.assigne ? "red" : "#d1d5db",
+      "&:hover": { borderColor: errors.assigne ? "red" : "#d1d5db" },
+      borderRadius: "0.375rem",
+      padding: "0.25rem",
+      boxShadow: errors.assigne ? "0 0 0 1px red" : base.boxShadow,
+      fontSize: "0.875rem",
+    }),
+    menu: (base: any) => ({
+      ...base,
+      zIndex: 9999,
+      backgroundColor: "white",
+      border: "1px solid #d1d5db",
+      borderRadius: "0.375rem",
+      maxHeight: "15rem",
+      overflowY: "auto",
+    }),
+    option: (base: any, { isFocused }: any) => ({
+      ...base,
+      backgroundColor: isFocused ? "#f9fafb" : "white",
+      color: "#1f2937",
+      fontSize: "0.875rem",
+    }),
+  };
+
   return (
     <Dialog open={isDialogOpen} onOpenChange={() => setIsDialogOpen(false)}>
-      <DialogContent className="overflow-x-scroll no-scrollbar border border-black rounded-lg w-[90%] max-h-[90%] scroll-smooth lg:w-[1200px] md:w-[1200px]">
+      <Toaster richColors position="top-right" />
+      <DialogContent className="overflow-x-scroll no-scrollbar border border-gray-300 rounded-lg w-[90%] max-h-[90%] scroll-smooth lg:w-[1200px] md:w-[1200px]">
         <DialogHeader>
-          <DialogTitle>Create Task</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-lg font-semibold text-gray-800">
+            Create Task
+          </DialogTitle>
+          <DialogDescription className="text-sm text-gray-600">
             Select task type and fill out the form to create tasks.
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs 
-          defaultValue="employee" 
+        <Tabs
+          defaultValue="employee"
           className="w-full"
-          onValueChange={(value) => setAssignmentType(value as "employee" | "subcontractor")}
+          onValueChange={(value) =>
+            setAssignmentType(value as "employee" | "subcontractor")
+          }
         >
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="employee">Assign to Employee</TabsTrigger>
-            {/* <TabsTrigger value="subcontractor">Assign to Subcontractor</TabsTrigger> */}
+          <TabsList className="grid w-full grid-cols-2 bg-gray-100 rounded-lg p-1">
+            <TabsTrigger
+              value="employee"
+              className="text-sm text-gray-800 data-[state=active]:bg-white data-[state=active]:text-blue-600 rounded-md"
+            >
+              Assign to Employee
+            </TabsTrigger>
+            {/* <TabsTrigger
+              value="subcontractor"
+              className="text-sm text-gray-800 data-[state=active]:bg-white data-[state=active]:text-blue-600 rounded-md"
+            >
+              Assign to Subcontractor
+            </TabsTrigger> */}
           </TabsList>
 
           <TabsContent value="employee">
             <Form {...taskForm}>
               <form onSubmit={taskForm.handleSubmit(onSubmitEmployeeTask)}>
-                <div className="space-y-4 border p-5 rounded-lg shadow-lg">
+                <div className="space-y-4 border border-gray-200 p-5 rounded-lg shadow-lg bg-white">
                   <div className="text-gray-500 text-xs">
                     <div>
-                      Job Id: <span className="text-gray-700 text-sm">{details?.projectId}</span>
+                      Job Id:{" "}
+                      <span className="text-gray-700 text-sm">
+                        {details?.projectId || "-"}
+                      </span>
                     </div>
-                    {/* <div>
-                      Job Number: <span className="text-gray-700 text-sm">{details?.lpo_number}</span>
-                    </div> */}
                     <div>
-                      Deadline: <span className="text-gray-700 text-sm">{formatDate(details?.delivery_timelines)}</span>
+                      Job Number:{" "}
+                      <span className="text-gray-700 text-sm">
+                        {details?.lpo_number || "-"}
+                      </span>
+                    </div>
+                    <div>
+                      Deadline:{" "}
+                      <span className="text-gray-700 text-sm">
+                        {details?.delivery_timelines
+                          ? formatDate(details.delivery_timelines)
+                          : "-"}
+                      </span>
                     </div>
                   </div>
 
@@ -236,9 +438,19 @@ function CreateTask({
                     name="task_brief"
                     render={({ field }) => (
                       <FormItem>
-                        <Label htmlFor="task_brief">Task brief</Label>
-                        <Input id="task_brief" type="text" className="w-full" {...field} />
-                        <FormMessage>{taskForm.formState.errors.task_brief?.message}</FormMessage>
+                        <Label
+                          htmlFor="task_brief"
+                          className="text-sm text-gray-700"
+                        >
+                          Task Brief
+                        </Label>
+                        <Input
+                          id="task_brief"
+                          type="text"
+                          className="w-full border-gray-300 text-sm focus:ring-blue-500"
+                          {...field}
+                        />
+                        <FormMessage className="text-xs text-red-500" />
                       </FormItem>
                     )}
                   />
@@ -248,23 +460,25 @@ function CreateTask({
                     name="weightage"
                     render={({ field }) => (
                       <FormItem>
-                        <Label htmlFor="task">Task Weightage</Label>
-                        <div className="space-y-2">
-                          <div className="relative flex rounded-lg shadow-sm shadow-black/5">
-                            <Input
-                              id="task"
-                              aria-label="Task Weightage"
-                              className="-me-px rounded-e-none ps-6 shadow-none"
-                              placeholder="0.00"
-                              type="text"
-                              {...field}
-                            />
-                            <span className="-z-10 inline-flex items-center rounded-e-lg border border-input bg-background px-3 text-sm text-muted-foreground">
-                              %
-                            </span>
-                          </div>
+                        <Label
+                          htmlFor="weightage"
+                          className="text-sm text-gray-700"
+                        >
+                          Task Weightage
+                        </Label>
+                        <div className="relative flex rounded-lg">
+                          <Input
+                            id="weightage"
+                            className="rounded-e-none border-gray-300 text-sm focus:ring-blue-500"
+                            placeholder="0.00"
+                            type="text"
+                            {...field}
+                          />
+                          <span className="inline-flex items-center rounded-e-lg border border-gray-300 bg-gray-50 px-3 text-sm text-gray-600">
+                            %
+                          </span>
                         </div>
-                        <FormMessage>{taskForm.formState.errors.weightage?.message}</FormMessage>
+                        <FormMessage className="text-xs text-red-500" />
                       </FormItem>
                     )}
                   />
@@ -274,27 +488,33 @@ function CreateTask({
                     name="due_date"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
-                        <Label htmlFor="due-date">Due Date</Label>
+                        <Label
+                          htmlFor="due_date"
+                          className="text-sm text-gray-700"
+                        >
+                          Due Date
+                        </Label>
                         <Popover open={open} onOpenChange={setOpen}>
                           <PopoverTrigger asChild>
                             <FormControl>
                               <Button
-                                variant={"outline"}
+                                variant="outline"
                                 className={cn(
-                                  "w-[240px] pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground"
+                                  "w-[240px] pl-3 text-left text-sm border-gray-300",
+                                  !field.value && "text-gray-500"
                                 )}
                               >
-                                {field.value ? (
-                                  format(field.value, "dd/MM/yyyy")
-                                ) : (
-                                  <span>Pick a date</span>
-                                )}
+                                {field.value
+                                  ? format(field.value, "dd/MM/yyyy")
+                                  : "Pick a date"}
                                 <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                               </Button>
                             </FormControl>
                           </PopoverTrigger>
-                          <PopoverContent className="w-auto z-[1000] p-0" align="start">
+                          <PopoverContent
+                            className="w-auto z-[1000] p-0"
+                            align="start"
+                          >
                             <Calendar
                               mode="single"
                               selected={field.value}
@@ -307,51 +527,98 @@ function CreateTask({
                             />
                           </PopoverContent>
                         </Popover>
-                        <FormMessage>{taskForm.formState.errors.due_date?.message}</FormMessage>
+                        <FormMessage className="text-xs text-red-500" />
                       </FormItem>
                     )}
                   />
 
-                  <FormField
-                    control={taskForm.control}
-                    name="assigne"
-                    render={({ field }) => (
-                      <FormItem>
-                        <Label htmlFor="employee">Employee</Label>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <SelectTrigger id="assigne" aria-label="Select Employee">
-                            <SelectValue placeholder="Select Employee" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {employee?.map((data: any, index) => (
-                              <SelectItem key={index} value={data._id}>
-                                {data?.user?.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage>{taskForm.formState.errors.assigne?.message}</FormMessage>
-                      </FormItem>
+                  <div className="grid gap-3">
+                    <Label htmlFor="assigne" className="text-sm text-gray-700">
+                      Employee
+                    </Label>
+                    <Controller
+                      name="assigne"
+                      control={control}
+                      render={({ field }) => (
+                        <AsyncSelect
+                          cacheOptions
+                          defaultOptions={defaultEmployeeOptions}
+                          // @ts-ignore
+                          loadOptions={loadEmployees}
+                          isLoading={isEmployeeLoading}
+                          placeholder="Search for an employee..."
+                          noOptionsMessage={() => "No employees found"}
+                          onChange={(option) =>
+                            field.onChange(option ? option.value : "")
+                          }
+                          value={
+                            field.value
+                              ? {
+                                  value: field.value,
+                                  label: getEmployeeLabel(field.value),
+                                }
+                              : null
+                          }
+                          isClearable
+                          isSearchable
+                          styles={customStyles}
+                        />
+                      )}
+                    />
+                    {errors.assigne && (
+                      <ErrorMessage
+                        message={
+                          errors.assigne.message || "Assignee is required"
+                        }
+                      />
                     )}
-                  />
+                  </div>
 
                   <FormField
                     control={taskForm.control}
                     name="status"
                     render={({ field }) => (
                       <FormItem>
-                        <Label htmlFor="status">Status</Label>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <SelectTrigger id="Status" aria-label="Select Status">
-                            <SelectValue placeholder="Select Status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Pending">Pending</SelectItem>
-                            <SelectItem value="In Progress">InProgress</SelectItem>
-                            <SelectItem value="Completed">Completed</SelectItem>
+                        <Label
+                          htmlFor="status"
+                          className="text-sm text-gray-700"
+                        >
+                          Status
+                        </Label>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger
+                              id="status"
+                              className={ "w-full border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"}
+                            >
+                              <SelectValue placeholder="Select Status" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent className="bg-white border border-gray-300 rounded-lg max-h-60 overflow-y-auto">
+                            <SelectItem
+                              value="Pending"
+                              className="text-sm text-gray-800 hover:bg-gray-50"
+                            >
+                              Pending
+                            </SelectItem>
+                            <SelectItem
+                              value="In Progress"
+                              className="text-sm text-gray-800 hover:bg-gray-50"
+                            >
+                              In Progress
+                            </SelectItem>
+                            <SelectItem
+                              value="Completed"
+                              className="text-sm text-gray-800 hover:bg-gray-50"
+                            >
+                              Completed
+                            </SelectItem>
                           </SelectContent>
                         </Select>
-                        <FormMessage>{taskForm.formState.errors.status?.message}</FormMessage>
+                        <FormMessage className="text-xs text-red-500" />
                       </FormItem>
                     )}
                   />
@@ -361,28 +628,39 @@ function CreateTask({
                     name="remarks"
                     render={({ field }) => (
                       <FormItem>
-                        <Label htmlFor="remarks">Remark</Label>
-                        <Textarea id="remarks" className="min-h-32" {...field} />
-                        <FormMessage>{taskForm.formState.errors.remarks?.message}</FormMessage>
+                        <Label
+                          htmlFor="remarks"
+                          className="text-sm text-gray-700"
+                        >
+                          Remark
+                        </Label>
+                        <Textarea
+                          id="remarks"
+                          className="min-h-32 border-gray-300 text-sm"
+                          {...field}
+                        />
+                        <FormMessage className="text-xs text-red-500" />
                       </FormItem>
                     )}
                   />
                 </div>
                 <DialogFooter className="pt-6">
                   <Button
-                    aria-label="Cancel creating task"
-                    variant={"secondary"}
+                    variant="secondary"
+                    className="h-8 border-gray-300 text-gray-800 hover:bg-gray-100 text-sm rounded-lg"
                     onClick={() => setIsDialogOpen(false)}
                   >
                     Cancel
                   </Button>
-                  <Button 
-                    aria-label="Create task" 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     type="submit"
+                    className="h-8 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg"
                     disabled={taskForm.formState.isSubmitting}
                   >
-                    {taskForm.formState.isSubmitting ? "Creating..." : "Create Task"}
+                    {taskForm.formState.isSubmitting
+                      ? "Creating..."
+                      : "Create Task"}
                   </Button>
                 </DialogFooter>
               </form>
@@ -391,17 +669,32 @@ function CreateTask({
 
           <TabsContent value="subcontractor">
             <Form {...subcontractorForm}>
-              <form onSubmit={subcontractorForm.handleSubmit(onSubmitSubcontractorTask)}>
-                <div className="space-y-4 border p-5 rounded-lg shadow-lg">
+              <form
+                onSubmit={subcontractorForm.handleSubmit(
+                  onSubmitSubcontractorTask
+                )}
+              >
+                <div className="space-y-4 border border-gray-200 p-5 rounded-lg shadow-lg bg-white">
                   <div className="text-gray-500 text-xs">
                     <div>
-                      Job Id: <span className="text-gray-700 text-sm">{details?.projectId}</span>
+                      Job Id:{" "}
+                      <span className="text-gray-700 text-sm">
+                        {details?.projectId || "-"}
+                      </span>
                     </div>
                     <div>
-                      Job Number: <span className="text-gray-700 text-sm">{details?.lpo_numberlpo_numberlpo_number}</span>
+                      Job Number:{" "}
+                      <span className="text-gray-700 text-sm">
+                        {details?.lpo_number || "-"}
+                      </span>
                     </div>
                     <div>
-                      Deadline: <span className="text-gray-700 text-sm">{formatDate(details?.delivery_timelines)}</span>
+                      Deadline:{" "}
+                      <span className="text-gray-700 text-sm">
+                        {details?.delivery_timelines
+                          ? formatDate(details.delivery_timelines)
+                          : "-"}
+                      </span>
                     </div>
                   </div>
 
@@ -410,9 +703,19 @@ function CreateTask({
                     name="subcontract_brief"
                     render={({ field }) => (
                       <FormItem>
-                        <Label htmlFor="subcontract_brief">Subcontract Brief</Label>
-                        <Input id="subcontract_brief" type="text" className="w-full" {...field} />
-                        <FormMessage>{subcontractorForm.formState.errors.subcontract_brief?.message}</FormMessage>
+                        <Label
+                          htmlFor="subcontract_brief"
+                          className="text-sm text-gray-700"
+                        >
+                          Subcontract Brief
+                        </Label>
+                        <Input
+                          id="subcontract_brief"
+                          type="text"
+                          className="w-full border-gray-300 text-sm focus:ring-blue-500"
+                          {...field}
+                        />
+                        <FormMessage className="text-xs text-red-500" />
                       </FormItem>
                     )}
                   />
@@ -422,23 +725,25 @@ function CreateTask({
                     name="weightage"
                     render={({ field }) => (
                       <FormItem>
-                        <Label htmlFor="weightage">Weightage</Label>
-                        <div className="space-y-2">
-                          <div className="relative flex rounded-lg shadow-sm shadow-black/5">
-                            <Input
-                              id="weightage"
-                              aria-label="Weightage"
-                              className="-me-px rounded-e-none ps-6 shadow-none"
-                              placeholder="0.00"
-                              type="text"
-                              {...field}
-                            />
-                            <span className="-z-10 inline-flex items-center rounded-e-lg border border-input bg-background px-3 text-sm text-muted-foreground">
-                              %
-                            </span>
-                          </div>
+                        <Label
+                          htmlFor="weightage"
+                          className="text-sm text-gray-700"
+                        >
+                          Weightage
+                        </Label>
+                        <div className="relative flex rounded-lg">
+                          <Input
+                            id="weightage"
+                            className="rounded-e-none border-gray-300 text-sm focus:ring-blue-500"
+                            placeholder="0.00"
+                            type="text"
+                            {...field}
+                          />
+                          <span className="inline-flex items-center rounded-e-lg border border-gray-300 bg-gray-50 px-3 text-sm text-gray-600">
+                            %
+                          </span>
                         </div>
-                        <FormMessage>{subcontractorForm.formState.errors.weightage?.message}</FormMessage>
+                        <FormMessage className="text-xs text-red-500" />
                       </FormItem>
                     )}
                   />
@@ -448,14 +753,20 @@ function CreateTask({
                     name="contract_amount"
                     render={({ field }) => (
                       <FormItem>
-                        <Label htmlFor="contract_amount">Contract Amount</Label>
+                        <Label
+                          htmlFor="contract_amount"
+                          className="text-sm text-gray-700"
+                        >
+                          Contract Amount
+                        </Label>
                         <Input
                           id="contract_amount"
                           type="text"
                           placeholder="0.00"
+                          className="border-gray-300 text-sm focus:ring-blue-500"
                           {...field}
                         />
-                        <FormMessage>{subcontractorForm.formState.errors.contract_amount?.message}</FormMessage>
+                        <FormMessage className="text-xs text-red-500" />
                       </FormItem>
                     )}
                   />
@@ -465,27 +776,33 @@ function CreateTask({
                     name="due_date"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
-                        <Label htmlFor="due-date">Due Date</Label>
+                        <Label
+                          htmlFor="due_date"
+                          className="text-sm text-gray-700"
+                        >
+                          Due Date
+                        </Label>
                         <Popover open={open} onOpenChange={setOpen}>
                           <PopoverTrigger asChild>
                             <FormControl>
                               <Button
-                                variant={"outline"}
+                                variant="outline"
                                 className={cn(
-                                  "w-[240px] pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground"
+                                  "w-[240px] pl-3 text-left text-sm border-gray-300",
+                                  !field.value && "text-gray-500"
                                 )}
                               >
-                                {field.value ? (
-                                  format(field.value, "dd/MM/yyyy")
-                                ) : (
-                                  <span>Pick a date</span>
-                                )}
+                                {field.value
+                                  ? format(field.value, "dd/MM/yyyy")
+                                  : "Pick a date"}
                                 <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                               </Button>
                             </FormControl>
                           </PopoverTrigger>
-                          <PopoverContent className="w-auto z-[1000] p-0" align="start">
+                          <PopoverContent
+                            className="w-auto z-[1000] p-0"
+                            align="start"
+                          >
                             <Calendar
                               mode="single"
                               selected={field.value}
@@ -498,7 +815,7 @@ function CreateTask({
                             />
                           </PopoverContent>
                         </Popover>
-                        <FormMessage>{subcontractorForm.formState.errors.due_date?.message}</FormMessage>
+                        <FormMessage className="text-xs text-red-500" />
                       </FormItem>
                     )}
                   />
@@ -508,20 +825,28 @@ function CreateTask({
                     name="subcontractor"
                     render={({ field }) => (
                       <FormItem>
-                        <Label htmlFor="subcontractor">Subcontractor</Label>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <SelectTrigger id="subcontractor" aria-label="Select Subcontractor">
-                            <SelectValue placeholder="Select Subcontractor" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {subcontractors?.map((data: any, index) => (
-                              <SelectItem key={index} value={data.url}>
-                                {data.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage>{subcontractorForm.formState.errors.subcontractor?.message}</FormMessage>
+                        <Label
+                          htmlFor="subcontractor"
+                          className="text-sm text-gray-700"
+                        >
+                          Subcontractor
+                        </Label>
+                        <select
+                          id="subcontractor"
+                          className="w-full border border-gray-300 rounded-lg text-sm focus:ring-blue-500"
+                          onChange={(e) => field.onChange(e.target.value)}
+                          value={field.value}
+                        >
+                          <option value="" disabled>
+                            Select Subcontractor
+                          </option>
+                          {subcontractors?.map((data: any, index) => (
+                            <option key={index} value={data.url}>
+                              {data.name}
+                            </option>
+                          ))}
+                        </select>
+                        <FormMessage className="text-xs text-red-500" />
                       </FormItem>
                     )}
                   />
@@ -531,19 +856,27 @@ function CreateTask({
                     name="status"
                     render={({ field }) => (
                       <FormItem>
-                        <Label htmlFor="status">Status</Label>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <SelectTrigger id="Status" aria-label="Select Status">
-                            <SelectValue placeholder="Select Status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Pending">Pending</SelectItem>
-                            <SelectItem value="InProgress">In Progress</SelectItem>
-                            <SelectItem value="Completed">Completed</SelectItem>
-                            <SelectItem value="Awarded">Awarded</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage>{subcontractorForm.formState.errors.status?.message}</FormMessage>
+                        <Label
+                          htmlFor="status"
+                          className="text-sm text-gray-700"
+                        >
+                          Status
+                        </Label>
+                        <select
+                          id="status"
+                          className="w-full border border-gray-300 rounded-lg text-sm focus:ring-blue-500"
+                          onChange={(e) => field.onChange(e.target.value)}
+                          value={field.value}
+                        >
+                          <option value="" disabled>
+                            Select Status
+                          </option>
+                          <option value="Pending">Pending</option>
+                          <option value="In Progress">In Progress</option>
+                          <option value="Completed">Completed</option>
+                          <option value="Awarded">Awarded</option>
+                        </select>
+                        <FormMessage className="text-xs text-red-500" />
                       </FormItem>
                     )}
                   />
@@ -552,13 +885,19 @@ function CreateTask({
                     control={subcontractorForm.control}
                     name="is_awarded"
                     render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                          <Label htmlFor="is_awarded">Awarded</Label>
-                        </div>
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border border-gray-200 p-4">
+                        <Label
+                          htmlFor="is_awarded"
+                          className="text-sm text-gray-700"
+                        >
+                          Awarded
+                        </Label>
                         <FormControl>
                           <div className="flex items-center gap-2">
-                            <Label htmlFor="is_awarded" className="text-sm font-medium leading-none">
+                            <Label
+                              htmlFor="is_awarded"
+                              className="text-sm font-medium text-gray-700"
+                            >
                               {field.value ? "Yes" : "No"}
                             </Label>
                             <input
@@ -566,7 +905,7 @@ function CreateTask({
                               id="is_awarded"
                               checked={field.value}
                               onChange={field.onChange}
-                              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                             />
                           </div>
                         </FormControl>
@@ -579,23 +918,25 @@ function CreateTask({
                     name="completion_percentage"
                     render={({ field }) => (
                       <FormItem>
-                        <Label htmlFor="completion_percentage">Completion Percentage</Label>
-                        <div className="space-y-2">
-                          <div className="relative flex rounded-lg shadow-sm shadow-black/5">
-                            <Input
-                              id="completion_percentage"
-                              aria-label="Completion Percentage"
-                              className="-me-px rounded-e-none ps-6 shadow-none"
-                              placeholder="0.00"
-                              type="text"
-                              {...field}
-                            />
-                            <span className="-z-10 inline-flex items-center rounded-e-lg border border-input bg-background px-3 text-sm text-muted-foreground">
-                              %
-                            </span>
-                          </div>
+                        <Label
+                          htmlFor="completion_percentage"
+                          className="text-sm text-gray-700"
+                        >
+                          Completion Percentage
+                        </Label>
+                        <div className="relative flex rounded-lg">
+                          <Input
+                            id="completion_percentage"
+                            className="rounded-e-none border-gray-300 text-sm focus:ring-blue-500"
+                            placeholder="0.00"
+                            type="text"
+                            {...field}
+                          />
+                          <span className="inline-flex items-center rounded-e-lg border border-gray-300 bg-gray-50 px-3 text-sm text-gray-600">
+                            %
+                          </span>
                         </div>
-                        <FormMessage>{subcontractorForm.formState.errors.completion_percentage?.message}</FormMessage>
+                        <FormMessage className="text-xs text-red-500" />
                       </FormItem>
                     )}
                   />
@@ -605,28 +946,39 @@ function CreateTask({
                     name="remarks"
                     render={({ field }) => (
                       <FormItem>
-                        <Label htmlFor="remarks">Remark</Label>
-                        <Textarea id="remarks" className="min-h-32" {...field} />
-                        <FormMessage>{subcontractorForm.formState.errors.remarks?.message}</FormMessage>
+                        <Label
+                          htmlFor="remarks"
+                          className="text-sm text-gray-700"
+                        >
+                          Remark
+                        </Label>
+                        <Textarea
+                          id="remarks"
+                          className="min-h-32 border-gray-300 text-sm"
+                          {...field}
+                        />
+                        <FormMessage className="text-xs text-red-500" />
                       </FormItem>
                     )}
                   />
                 </div>
                 <DialogFooter className="pt-6">
                   <Button
-                    aria-label="Cancel creating task"
-                    variant={"secondary"}
+                    variant="secondary"
+                    className="h-8 border-gray-300 text-gray-800 hover:bg-gray-100 text-sm rounded-lg"
                     onClick={() => setIsDialogOpen(false)}
                   >
                     Cancel
                   </Button>
-                  <Button 
-                    aria-label="Create subcontract task" 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     type="submit"
+                    className="h-8 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg"
                     disabled={subcontractorForm.formState.isSubmitting}
                   >
-                    {subcontractorForm.formState.isSubmitting ? "Creating..." : "Create Subcontract Task"}
+                    {subcontractorForm.formState.isSubmitting
+                      ? "Creating..."
+                      : "Create Subcontract Task"}
                   </Button>
                 </DialogFooter>
               </form>
