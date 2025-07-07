@@ -310,7 +310,7 @@ export default function CreateClient() {
               <div className="grid auto-rows-max items-start gap-4 lg:gap-8">
                 <Card x-chunk="dashboard-07-chunk-3">
                   <CardHeader>
-                    <CardTitle>Employee Status</CardTitle>
+                    <CardTitle>Client Status</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="grid gap-6">
