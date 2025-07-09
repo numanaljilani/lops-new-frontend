@@ -27,6 +27,7 @@ import ErrorMessage from "@/components/errors/ErrorMessage";
 import { toast } from "sonner";
 import AsyncSelect from "react-select/async";
 import debounce from "lodash.debounce";
+import { useSelector } from "react-redux";
 
 const RFqSchema = z.object({
   client: z.string().min(1, "Client is required"),
@@ -53,6 +54,10 @@ export default function CreateDialog({
   setIsDialogOpen: (value: boolean) => void;
   handleSubmit: (value: RFQFormData) => Promise<any>;
 }) {
+
+   const selectedCompany = useSelector(
+      (state: any) => state?.user?.selectedCompany || null
+    );
   const [defaultClients, setDefaultClients] = useState<any[]>([]);
   const [clientsApi, { data, isSuccess, error, isError, isLoading: isClientsApiLoading }] = useClientsMutation();
 
@@ -78,7 +83,7 @@ export default function CreateDialog({
 
   const fetchDefaultClients = async () => {
     try {
-      const res = await clientsApi({}).unwrap();
+      const res = await clientsApi({companyId : selectedCompany._id}).unwrap();
       console.log("Default Clients API Response:", JSON.stringify(res, null, 2));
       const clients = res.data || [];
       if (clients.length > 0) {
@@ -104,7 +109,7 @@ export default function CreateDialog({
     debounce(async (inputValue: string, callback: (options: any[]) => void) => {
       try {
         console.log("Search Input:", inputValue);
-        const res = await clientsApi({ search: inputValue }).unwrap();
+        const res = await clientsApi({ search: inputValue ,companyId : selectedCompany._id }).unwrap();
         console.log("Search Clients API Response:", JSON.stringify(res, null, 2));
         const clients = res.data || [];
         const options = clients.map((client: any) => ({

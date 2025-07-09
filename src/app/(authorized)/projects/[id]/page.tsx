@@ -15,6 +15,7 @@ import CreateTask from "@/components/dialogs/CreateTask";
 import DeleteItem from "@/components/dialogs/DeleteItem";
 import ExpensesDetailsDilog from "@/components/dialogs/ExpensesDetailsDilog";
 import More from "@/components/dialogs/More";
+import UpdatePaymentBall from "@/components/dialogs/UpdatePaymentBall";
 import UpdateProject from "@/components/dialogs/UpdateProject";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -37,6 +38,7 @@ import { useJobDetailsMutation } from "@/redux/query/jobApi";
 import {
   useDeletePaymentBallMutation,
   usePaymentsMutation,
+  useUpdatePaymentBallMutation,
 } from "@/redux/query/paymentApi";
 import { useRFQDetailsMutation } from "@/redux/query/rfqsApi";
 import { useDeleteTaskMutation, useTasksMutation } from "@/redux/query/taskApi";
@@ -62,6 +64,7 @@ function ProjectDetails() {
   const [updateView, setUpdateView] = useState(false);
   const [approve, setApprove] = useState(false);
   const [isExpenseDialog, setIsExpensesDialogOpen] = useState(false);
+  const [isPaymentUpdateDialogOpen, setIsPaymentUpdateDialogOpen] = useState(false);
   const [expenseDetails, setExpenseDetails] = useState({});
   const [paymentBalls, setPaymentBalls] = useState<any>();
   const [paymentBallsDetails, setPaymentBallsDetails] = useState<any>();
@@ -127,6 +130,7 @@ function ProjectDetails() {
     },
   ] = usePaymentsMutation();
   const [deletePaymentBallApi, {}] = useDeletePaymentBallMutation();
+  const [updatePaymentBallApi, {}] = useUpdatePaymentBallMutation();
 
   const getTimeSheetData = async () => {
     const res = await timeSheetApi({ projectId: id });
@@ -181,10 +185,10 @@ function ProjectDetails() {
     getPaymentBalls();
   }, []);
   useEffect(() => {
-    if (!isPaymentDialogOpen || !isPaymentDeleteDialogOpen || !more) {
+    if (!isPaymentDialogOpen || !isPaymentDeleteDialogOpen || !more || !isPaymentUpdateDialogOpen) {
       getPaymentBalls();
     }
-  }, [isPaymentDialogOpen, isPaymentDeleteDialogOpen, more]);
+  }, [isPaymentDialogOpen, isPaymentDeleteDialogOpen, more , isPaymentUpdateDialogOpen]);
 
   useEffect(() => {
     if (isSuccess) {
@@ -239,20 +243,17 @@ function ProjectDetails() {
       }
     }
   }, [isExpenseSuccess]);
-  console.log(tab);
+  // console.log(paymentBallsDetails);
   useEffect(() => {
     if (tab == "Expenses") {
       getExpenses();
     }
   }, [tab]);
 
-  // console.log(job?.payment_terms_display, ">>>>");
-
-  const [paymentBallToDelete, setPaymentBallToDelete] = useState();
-
   const deletePaymentBall = async () => {
+    console.log(paymentBallsDetails)
     const res = await deletePaymentBallApi({
-      id: paymentBallsDetails.payment_id,
+      id: paymentBallsDetails._id,
     });
     console.log(res, "RESPONSE");
   };
@@ -404,6 +405,7 @@ function ProjectDetails() {
                         setIsPaymentDeleteDialogOpen={
                           setIsPaymentDeleteDialogOpen
                         }
+                        setIsPaymentUpdateDialogOpen={setIsPaymentUpdateDialogOpen}
                         setIsPaymentDialogOpen={setIsPaymentDialogOpen}
                         paymentBallsDetails={paymentBallsDetails}
                         paymentBalls={paymentBalls}
@@ -496,10 +498,18 @@ function ProjectDetails() {
           setIsTaskDeleteDialogOpen={setIsTaskDeleteDialogOpen}
         />
 
+        <UpdatePaymentBall
+        isDialogOpen={isPaymentUpdateDialogOpen}
+        setIsDialogOpen={setIsPaymentUpdateDialogOpen}
+        // details={}
+        paymentBallsDetails={paymentBallsDetails}
+
+        />
+
         <DeleteItem
           isDialogOpen={isPaymentDeleteDialogOpen}
           setIsDialogOpen={setIsPaymentDeleteDialogOpen}
-          text={`Are you sure you want to delete payment ball with Id ${paymentBallsDetails?.payment_id}? This action
+          text={`Are you sure you want to delete payment ball? This action
           cannot be undone. `}
           deleteItem={deletePaymentBall}
         />

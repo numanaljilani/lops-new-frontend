@@ -47,9 +47,13 @@ import { PaginationComponent } from "@/components/PaginationComponent";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import debounce from "lodash.debounce";
+import { useSelector } from "react-redux";
 
 function Clients() {
   const router = useRouter();
+        const selectedCompany = useSelector(
+      (state: any) => state?.user?.selectedCompany || null
+    );
   const [companies, setCompanies] = useState([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [page, setPage] = useState(1);
@@ -59,13 +63,12 @@ function Clients() {
 
   const [deleteClientApi] = useDeleteClientMutation();
   const [clientsApi, { data, isSuccess, error, isError, isLoading: isClientsApiLoading }] = useClientsMutation();
-  const [companiesApi] = useComponiesMutation();
-  const [deleteCompanyApi] = useDeleteCompanyMutation();
+  
 
   const getClients = async () => {
     setIsLoading(true);
     try {
-      const res = await clientsApi({ page }).unwrap();
+      const res = await clientsApi({ page , companyId : selectedCompany._id }).unwrap();
       console.log("Default Clients API Response:", JSON.stringify(res, null, 2));
       setCompanies(res?.data || []);
     } catch (err: any) {
@@ -82,7 +85,7 @@ function Clients() {
       setSearchQuery(query);
       setIsLoading(true);
       try {
-        const res = await clientsApi({ search: query, page }).unwrap();
+        const res = await clientsApi({ search: query, page, companyId : selectedCompany._id }).unwrap();
         console.log("Search Clients API Response:", JSON.stringify(res, null, 2));
         setCompanies(res?.data || []);
         if (res?.data?.length === 0) {
@@ -103,8 +106,7 @@ function Clients() {
   const deleteClient = async () => {
     try {
       const res = await deleteClientApi({
-        id: itemToDelete.client_id,
-        token: "",
+        id: itemToDelete._id,
       }).unwrap();
       console.log("Delete Client Response:", JSON.stringify(res, null, 2));
       setIsDialogOpen(false);
@@ -120,7 +122,7 @@ function Clients() {
 
   useEffect(() => {
     getClients();
-  }, [page]);
+  }, [page,selectedCompany]);
 
   useEffect(() => {
     if (!isDialogOpen) {
@@ -266,31 +268,31 @@ function Clients() {
                           ) => (
                             <TableRow
                               key={index}
-                              onClick={() => update(data._id)}
+                           
                               className="cursor-pointer hover:bg-gray-50 transition-colors"
                             >
-                              <TableCell className="hidden sm:table-cell text-sm text-gray-800">
+                              <TableCell    onClick={() => update(data._id)} className="hidden sm:table-cell text-sm text-gray-800">
                                 {index + 1}
                               </TableCell>
-                              <TableCell className="text-sm text-gray-800 font-medium max-w-[150px] truncate">
+                              <TableCell    onClick={() => update(data._id)} className="text-sm text-gray-800 font-medium max-w-[150px] truncate">
                                 {data?.client_name?.slice(0, 50) || "-"}
                               </TableCell>
-                              <TableCell>
-                                <Badge className="bg-gray-100 text-gray-800 border-gray-300 text-sm">
+                              <TableCell    onClick={() => update(data._id)}>
+                                <Badge    onClick={() => update(data._id)} className="bg-gray-100 text-gray-800 border-gray-300 text-sm">
                                   {data?.status ? "Active" : "Inactive"}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="text-sm text-gray-800 font-medium">{0}</TableCell>
+                              <TableCell    onClick={() => update(data._id)} className="text-sm text-gray-800 font-medium">{0}</TableCell>
                               <TableCell className="text-sm text-gray-800 font-medium">
                                 {data?.contact_person || "-"}
                               </TableCell>
-                              <TableCell className="hidden md:table-cell text-sm text-gray-800">
+                              <TableCell    onClick={() => update(data._id)} className="hidden md:table-cell text-sm text-gray-800">
                                 {data?.contact_info || "-"}
                               </TableCell>
-                              <TableCell className="hidden md:table-cell text-sm text-gray-800">
+                              <TableCell    onClick={() => update(data._id)} className="hidden md:table-cell text-sm text-gray-800">
                                 {data?.contact_number || "-"}
                               </TableCell>
-                              <TableCell className="hidden md:table-cell text-sm text-gray-800">
+                              <TableCell    onClick={() => update(data._id)} className="hidden md:table-cell text-sm text-gray-800">
                                 {formatDate(data?.createdAt) || "-"}
                               </TableCell>
                               <TableCell>
@@ -346,12 +348,12 @@ function Clients() {
             </TabsContent>
           </Tabs>
         </main>
-        <AlertDialogAlert
+        {/* <AlertDialogAlert
           isDialogOpen={isDialogOpen}
           setIsDialogOpen={setIsDialogOpen}
           itemToDelete={itemToDelete}
           deleteCompany={true}
-        />
+        /> */}
         <Alert
           isDialogOpen={isDialogOpen}
           setIsDialogOpen={setIsDialogOpen}

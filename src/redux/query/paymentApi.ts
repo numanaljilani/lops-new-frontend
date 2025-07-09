@@ -41,11 +41,11 @@ export const paymentApi = createApi({
         };
       },
     }),
-    updateTtasks: builder.mutation({
+    updatePaymentBall: builder.mutation({
       query: ({ data, id }) => {
         // console.log(data , "API")
         return {
-          url: `tasks/${id}/`,
+          url: `/${id}`,
           method: "PUT",
           body: data,
           headers: {
@@ -63,19 +63,6 @@ export const paymentApi = createApi({
           body: data.data,
           headers: {
             "Content-type": "application/json; charset=UTF-8",
-          },
-        };
-      },
-    }),
-
-    deleteTask: builder.mutation({
-      query: ({ id, token }) => {
-        return {
-          url: `/${id}`,
-          method: "DELETE",
-          headers: {
-            "Content-type": "application/json; charset=UTF-8",
-            authorization: `bearer ${token}`,
           },
         };
       },
@@ -100,10 +87,7 @@ export const paymentApi = createApi({
 // auto-generated based on the defined endpoints
 export const {
   usePaymentsMutation,
-  useTasksMutation,
-
   useDeletePaymentBallMutation,
   useCreateBallMutation,
-  useUpdateTtasksMutation,
-  useDeleteTaskMutation,
+  useUpdatePaymentBallMutation
 } = paymentApi;

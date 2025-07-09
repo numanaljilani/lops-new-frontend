@@ -20,6 +20,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import {
   useClientDetailsMutation,
+  useDeleteClientMutation,
   usePatchClientMutation,
 } from "@/redux/query/clientsApi";
 import { useParams, useRouter } from "next/navigation";
@@ -28,6 +29,7 @@ import { useForm, Controller } from "react-hook-form";
 import { toast, Toaster } from "sonner";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import Alert from "@/components/dialogs/Alert";
 
 const clientSchema = z.object({
   client_name: z.string().min(1, "Client name is required"),
@@ -56,6 +58,7 @@ export default function Client() {
 
   const [clientsDetailsApi, { data, isSuccess, isLoading: isClientLoading }] =
     useClientDetailsMutation();
+      const [deleteClientApi] = useDeleteClientMutation();
   const [patchClientApi, { isLoading: isPatchLoading }] = usePatchClientMutation();
 
   const {
@@ -83,7 +86,7 @@ export default function Client() {
     if (!id) return;
     setIsLoading(true);
     try {
-      const res = await clientsDetailsApi({ id, token: "" });
+      const res = await clientsDetailsApi({ id });
       console.log(res, "response from the server");
     } catch (err) {
       console.error("Error fetching client:", err);
@@ -118,6 +121,20 @@ export default function Client() {
       getClientDetails();
     } catch (err) {
       console.error("Error updating client:", err);
+    }
+  };
+
+   const deleteClient = async () => {
+    try {
+      const res = await deleteClientApi({
+        id: data._id,
+      }).unwrap();
+      router.replace('/clients')
+      console.log("Delete Client Response:", JSON.stringify(res, null, 2));
+      setIsDialogOpen(false);
+   
+    } catch (err: any) {
+      console.error("Delete Client Error:", JSON.stringify(err, null, 2));
     }
   };
 
@@ -562,11 +579,11 @@ export default function Client() {
             </div>
           </main>
         )}
-        <AlertDialogAlert
+       <Alert
           isDialogOpen={isDialogOpen}
           setIsDialogOpen={setIsDialogOpen}
-          itemToDelete={data}
-          deleteCompany={true}
+          handleDelete={deleteClient}
+          name={data?.client_name}
         />
       </div>
     </div>

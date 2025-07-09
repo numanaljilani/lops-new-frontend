@@ -1,7 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
-// import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '';
-
+import React, { useEffect, useState, useCallback } from "react";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Button } from "../ui/button";
@@ -14,43 +12,27 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import { Textarea } from "../ui/textarea";
-import { Select } from "@radix-ui/react-select";
-import {
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
-import { useClientsMutation } from "@/redux/query/clientsApi";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import ErrorMessage from "@/components/errors/ErrorMessage";
-
-import { cn } from "@/lib/utils";
 import { getLocalTimeZone, today } from "@internationalized/date";
 import { CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
-import {
-  Calendar,
-  CalendarCell,
-  CalendarGrid,
-  CalendarGridBody,
-  CalendarGridHeader,
-  CalendarHeaderCell,
-  DateField,
-  DateInput,
-  DatePicker,
-  DateSegment,
-  Group,
-  Heading,
-  Popover,
-} from "react-aria-components";
 import { useEmployeeMutation } from "@/redux/query/employee";
 import { formatDate } from "@/lib/dateFormat";
 import { useCreateBallMutation } from "@/redux/query/paymentApi";
 import { useParams } from "next/navigation";
-import { log } from "console";
 import { toast } from "sonner";
+import { useDebounce } from "use-debounce";
+
+const PaymentBallSchema = z.object({
+  projectPercentage: z.string().min(1, "Percentage is required"),
+  project_status: z.string().min(1, "Status is required"),
+  notes: z.string().optional(),
+  amount: z.string().min(1, "Amount is required"),
+  payment_terms: z.any(),
+});
 
 function CreatePaymentBall({
   isDialogOpen,
@@ -62,15 +44,8 @@ function CreatePaymentBall({
   details: any;
 }) {
   const { id } = useParams();
-
-  const PaymentBallSchema = z.object({
-    projectPercentage: z.string(),
-    project_status: z.string(),
-    notes: z.string(),
-    // invoice_number: z.string(),
-    amount: z.string(),
-    payment_terms: z.any(),
-  });
+  const [createPaymentBallApi, { data, isSuccess, error, isError, isLoading }]: any = useCreateBallMutation();
+  const now = today(getLocalTimeZone());
 
   const {
     register,
@@ -78,160 +53,121 @@ function CreatePaymentBall({
     watch,
     control,
     formState: { errors, isSubmitting },
+    reset,
   } = useForm({ resolver: zodResolver(PaymentBallSchema) });
 
-  const now = today(getLocalTimeZone());
-  const [createPaymentBallApi, { data, isSuccess, error, isError }] :any =
-    useCreateBallMutation();
-  async function onSubmit(data: any) {
-    const res = await createPaymentBallApi({
-      data: { ...data, projectId: id, color_status: "gray" },
-    });
-    console.log(res, "CREATE PAYMENT BAALL");
-    setIsDialogOpen(false);
-  }
+  // Debounced submit function to prevent multiple submissions
+  const [debouncedSubmit] = useDebounce(async (data: any) => {
+    try {
+      const res = await createPaymentBallApi({
+        data: { ...data, projectId: id, color_status: "gray" },
+      });
+      if (res.data) {
+        toast.success("Payment Ball Created", {
+          description: "The payment ball has been successfully created!",
+          style: {
+            background: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
+            color: "white",
+            border: "none",
+            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+          },
+        });
+        setIsDialogOpen(false);
+        reset();
+      }
+    } catch (err) {
+      toast.error("Error", {
+        description: error?.data?.message || "Something went wrong.",
+        style: {
+          background: "linear-gradient(135deg, #EF4444 0%, #B91C1C 100%)",
+          color: "white",
+          border: "none",
+          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+        },
+      });
+    }
+  }, 500);
+
+  const onSubmit = useCallback((data: any) => {
+    debouncedSubmit(data);
+  }, [debouncedSubmit]);
 
   useEffect(() => {
-    if (isSuccess) {
-      // console.log(data, "response from server");
-      if (data) {
-      }
-    }
-  }, [isError]);
-  useEffect(() => {
     if (isError) {
-      // console.log(data, "response from server");
-             toast("Success", {
-          description: error?.data?.message || "Something went wrong.",
-        });
+      toast.error("Error", {
+        description: error?.data?.message || "Something went wrong.",
+        style: {
+          background: "linear-gradient(135deg, #EF4444 0%, #B91C1C 100%)",
+          color: "white",
+          border: "none",
+          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+        },
+      });
     }
-  }, [isError]);
+  }, [isError, error]);
 
   return (
     <Dialog open={isDialogOpen} onOpenChange={() => setIsDialogOpen(false)}>
-      <DialogContent className=" overflow-x-scroll no-scrollbar border border-black rounded-lg w-[90%] max-h-[90%]  scroll-smooth lg:w-[1200px] md:w-[1200px]">
-        <DialogHeader>
-          <DialogTitle>Create Payment Ball</DialogTitle>
-          <DialogDescription>
-            Fill out the form below to create payment balls.
+      <DialogContent className="overflow-x-scroll no-scrollbar border border-gray-200 rounded-xl w-[90%] max-h-[90%] scroll-smooth lg:w-[600px] md:w-[600px] bg-gradient-to-br from-white to-gray-50 shadow-2xl">
+        <DialogHeader className="border-b border-gray-100 pb-4">
+          <DialogTitle className="text-2xl font-semibold text-gray-800">Create Payment Ball</DialogTitle>
+          <DialogDescription className="text-gray-500">
+            Fill out the details to create a new payment ball
           </DialogDescription>
         </DialogHeader>
 
-        {/* <form className=" px-3 "> */}
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <div className="space-y-4 border p-5 rounded-lg shadow-lg">
-            <div className="text-gray-500 text-xs">
+        <form onSubmit={handleSubmit(onSubmit)} className="px-6 py-4">
+          <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+            <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
               <div>
-                Job Id :{" "}
-                <span className="text-gray-700 text-sm">
-                  {details?.projectId}
-                </span>
+                <span className="font-medium">Job ID:</span>{" "}
+                <span className="text-gray-800">{details?.projectId}</span>
               </div>
-              {/* <div>
-                Job Number :{" "}
-                <span className="text-gray-700 text-sm">
-                  {details?.job_number}
-                </span>
-              </div> */}
               <div>
-                Deadline :{" "}
-                <span className="text-gray-700 text-sm">
-                  {" "}
-                  {formatDate(details?.delivery_timelines)}
-                </span>
-              </div>
-              {/* <div>
-                Ball :{" "}
-                <span className="text-gray-700 text-sm">
-                  {" "}
-                  {}
-                </span>
-              </div> */}
-            </div>
-
-            <div>
-              <Label htmlFor="amount">Amount</Label>
-
-              <div className="space-y-2">
-                <div className="relative flex rounded-lg shadow-sm shadow-black/5">
-                  <Input
-                    id="input-16"
-                    className="-me-px rounded-e-none rounded-lg ps-6 shadow-none"
-                    placeholder="000"
-                    type="text"
-                    {...register("amount")}
-                  />
-                </div>
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="projectPercentage">Project Percentage</Label>
-
-              <div className="space-y-2">
-                <div className="relative flex rounded-lg shadow-sm shadow-black/5">
-                  <Input
-                    id="input-16"
-                    className="-me-px rounded-e-none rounded-lg ps-6 shadow-none"
-                    placeholder="000"
-                    type="text"
-                    {...register("projectPercentage")}
-                  />
-                </div>
-              </div>
-            </div>
-            {/* <div>
-              <Label htmlFor="final_amount">Payment Percentage</Label>
-
-              <div className="space-y-2">
-                <div className="relative flex rounded-lg shadow-sm shadow-black/5">
-                  <Input
-                    id="input-16"
-                    className="-me-px rounded-e-none ps-6 shadow-none"
-                    placeholder="0.00"
-                    type="text"
-                    {...register("project_percentage")}
-                    max={100}
-                  />
-                  <span className="-z-10 inline-flex items-center rounded-e-lg border border-input bg-background px-3 text-sm text-muted-foreground">
-                    %
-                  </span>
-                </div>
-              </div>
-            </div> */}
-            {/* <div>
-              <Label htmlFor="invoice_number">Invoice Number</Label>
-
-              <div className="space-y-2">
-                <div className="relative flex rounded-lg shadow-sm shadow-black/5">
-                  <Input
-                    id="input-16"
-                    className="-me-px rounded-e-none ps-6 shadow-none"
-                    placeholder="1234001"
-                    type="text"
-                    {...register("invoice_number")}
-                  />
-                </div>
-              </div>
-            </div> */}
-            <div>
-              <Label htmlFor="invoice_number">Note</Label>
-
-              <div className="space-y-2">
-                <div className="relative flex rounded-lg shadow-sm shadow-black/5">
-                  <Input
-                    id="input-16"
-                    className="-me-px rounded-e-none ps-6 shadow-none"
-                    // placeholder="1234001"
-                    type="text"
-                    {...register("notes")}
-                  />
-                </div>
+                <span className="font-medium">Deadline:</span>{" "}
+                <span className="text-gray-800">{formatDate(details?.delivery_timelines)}</span>
               </div>
             </div>
 
-            <div className="grid gap-3">
-              <Label htmlFor="project_status">Status</Label>
+            <div className="space-y-2">
+              <Label htmlFor="amount" className="text-gray-700 font-medium">Amount</Label>
+              <Input
+                id="amount"
+                className="rounded-lg border-gray-200 focus:ring-2 focus:ring-indigo-500 bg-white"
+                placeholder="$0.00"
+                type="text"
+                {...register("amount")}
+              />
+              {errors.amount && <ErrorMessage message={errors.amount.message} />}
+            </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="projectPercentage" className="text-gray-700 font-medium">Project Percentage</Label>
+              <div className="relative">
+                <Input
+                  id="projectPercentage"
+                  className="rounded-lg border-gray-200 focus:ring-2 focus:ring-indigo-500 bg-white pr-10"
+                  placeholder="0"
+                  type="text"
+                  {...register("projectPercentage")}
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">%</span>
+              </div>
+              {errors.projectPercentage && <ErrorMessage message={errors.projectPercentage.message} />}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="notes" className="text-gray-700 font-medium">Notes</Label>
+              <Textarea
+                id="notes"
+                className="rounded-lg border-gray-200 focus:ring-2 focus:ring-indigo-500 bg-white min-h-[100px]"
+                placeholder="Add any additional notes..."
+                {...register("notes")}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="project_status" className="text-gray-700 font-medium">Status</Label>
               <Controller
                 name="project_status"
                 control={control}
@@ -241,31 +177,42 @@ function CreatePaymentBall({
                     onValueChange={(value) => field.onChange(value)}
                     value={field.value}
                   >
-                    <SelectTrigger id="Status" aria-label="Select Status">
+                    <SelectTrigger
+                      className="rounded-lg border-gray-200 focus:ring-2 focus:ring-indigo-500 bg-white"
+                      id="project_status"
+                    >
                       <SelectValue placeholder="Select Status" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Pending">Pending</SelectItem>
-                      <SelectItem value="In Progress">InProgress</SelectItem>
-                      <SelectItem value="Completed">Completed</SelectItem>
+                    <SelectContent className="bg-white border border-gray-200 rounded-lg shadow-lg">
+                      <SelectItem value="Pending" className="hover:bg-indigo-50">Pending</SelectItem>
+                      <SelectItem value="In Progress" className="hover:bg-indigo-50">In Progress</SelectItem>
+                      <SelectItem value="Completed" className="hover:bg-indigo-50">Completed</SelectItem>
                     </SelectContent>
                   </Select>
                 )}
               />
+              {errors.project_status && <ErrorMessage message={errors.project_status.message} />}
             </div>
           </div>
 
-          <DialogFooter className="pt-6">
+          <DialogFooter className="pt-6 flex justify-end gap-3">
             <Button
-              variant={"secondary"}
+              variant="outline"
+              className="border-gray-200 text-gray-600 hover:bg-gray-100"
               onClick={() => setIsDialogOpen(false)}
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
-            <Button type="submit">Create</Button>
+            <Button
+              type="submit"
+              className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 disabled:opacity-50"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Creating..." : "Create"}
+            </Button>
           </DialogFooter>
         </form>
-        {/* </form> */}
       </DialogContent>
     </Dialog>
   );

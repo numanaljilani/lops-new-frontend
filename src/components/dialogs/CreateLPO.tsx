@@ -87,7 +87,7 @@ export default function CreateProject({
       project_name: "",
       delivery_timelines: new Date(),
 
-      payment_terms: [{ description: "", milestone: "", percentage: 0 }],
+      payment_terms: [{ description: "", milestone: "", percentage: undefined }],
       scope_of_work: "",
       lpo_number: "",
       status: "Pending",
@@ -98,6 +98,8 @@ export default function CreateProject({
     control,
     name: "payment_terms",
   });
+
+
 
   async function onSubmit(data: LPOFormData) {
     console.log("rfq_info:", JSON.stringify(rfq_info, null, 2));
@@ -242,7 +244,7 @@ export default function CreateProject({
               name="delivery_timelines"
               control={control}
               render={({ field }) => (
-                <Popover >
+                <Popover>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
@@ -368,12 +370,22 @@ export default function CreateProject({
                     control={control}
                     render={({ field }) => (
                       <Input
-                        type="number"
+                        type="text" // <-- text instead of number
+                        inputMode="numeric" // <-- still allows numeric input
                         id={`payment_terms.${index}.percentage`}
                         className="w-full rounded-lg border-gray-300 focus:ring-2 focus:ring-blue-500"
                         placeholder="Percentage"
                         {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
+                        value={field.value ?? ""} // <-- this keeps it empty
+                        onChange={(e : any) => {
+                          const value = e.target.value;
+                          // Allow empty value
+                          if (value === "") {
+                            field.onChange(undefined);
+                          } else if (!isNaN(value)) {
+                            field.onChange(Number(value));
+                          }
+                        }}
                       />
                     )}
                   />

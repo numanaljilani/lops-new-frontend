@@ -211,7 +211,7 @@ export default function UpdateCompany() {
                 <div className="grid auto-rows-max items-start gap-4 lg:gap-8">
                   <Card x-chunk="dashboard-07-chunk-3">
                     <CardHeader>
-                      <CardTitle>Employee Status</CardTitle>
+                      <CardTitle>Company Status</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="grid gap-6">
@@ -329,7 +329,7 @@ export default function UpdateCompany() {
                       </div>
                     </CardContent>
                   </Card>
-                  <Card x-chunk="dashboard-07-chunk-1">
+                  {/* <Card x-chunk="dashboard-07-chunk-1">
                     <CardHeader>
                       <CardTitle>Company Details</CardTitle>
                     </CardHeader>
@@ -351,7 +351,7 @@ export default function UpdateCompany() {
                         </div>
                       </div>
                     </CardContent>
-                  </Card>
+                  </Card> */}
                 </div>
                 <div className="grid auto-rows-max items-start gap-4 lg:gap-8">
                   <Card x-chunk="dashboard-07-chunk-3">

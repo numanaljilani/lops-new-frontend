@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useSelector } from "react-redux";
 
 // Define Zod schema for form validation
 const clientSchema = z.object({
@@ -43,6 +44,9 @@ type ClientFormValues = z.infer<typeof clientSchema>;
 
 export default function CreateClient() {
   const router = useRouter();
+  const selectedCompany = useSelector(
+    (state: any) => state?.user?.selectedCompany || null
+  );
   const [createClientApi, { data, isSuccess, error, isError, isLoading }] =
     useCreateClientMutation();
 
@@ -67,8 +71,7 @@ export default function CreateClient() {
 
   const onSubmit = async (data: ClientFormValues) => {
     const res = await createClientApi({
-      data: { ...data },
-      token: "",
+      data: { ...data, companyId: selectedCompany._id },
     });
     router.replace("/clients");
   };
@@ -251,7 +254,10 @@ export default function CreateClient() {
                                 onValueChange={field.onChange}
                                 value={field.value}
                               >
-                                <SelectTrigger id="type" aria-label="Select Service">
+                                <SelectTrigger
+                                  id="type"
+                                  aria-label="Select Service"
+                                >
                                   <SelectValue placeholder="Select Service" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -326,7 +332,10 @@ export default function CreateClient() {
                               }
                               value={field.value ? "true" : "false"}
                             >
-                              <SelectTrigger id="status" aria-label="Select status">
+                              <SelectTrigger
+                                id="status"
+                                aria-label="Select status"
+                              >
                                 <SelectValue placeholder="Select status" />
                               </SelectTrigger>
                               <SelectContent>
