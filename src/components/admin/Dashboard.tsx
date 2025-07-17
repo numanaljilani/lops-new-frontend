@@ -9,6 +9,7 @@ import {
   MoreHorizontal,
   PlusCircle,
   Users,
+  Search,
 } from "lucide-react";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -35,7 +36,7 @@ import { useAdminDashboardMutation } from "@/redux/query/dashboardsApi";
 import { useTransactionsMutation } from "@/redux/query/transactionApi";
 import { useJobsMutation } from "@/redux/query/jobApi";
 import { useTimesheetMutation } from "@/redux/query/timesheet";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useSelector } from "react-redux";
 import { PaginationComponent } from "../PaginationComponent";
@@ -50,21 +51,58 @@ import {
   DropdownMenuSeparator,
   DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
+import { DateRangePicker } from "react-date-range";
+import "react-date-range/dist/styles.css"; // Main style file
+import "react-date-range/dist/theme/default.css"; // Theme CSS file
+import { addYears, startOfYear, endOfYear, format } from "date-fns";
+import { defaultStaticRanges } from "react-date-range";
+import { Input } from "@/components/ui/input";
+import debounce from "lodash.debounce";
 
 function Dashboard() {
   const router = useRouter();
   const [page, setPage] = useState(1);
   const [timesheet, setTimeSheet] = useState([]);
-  const selectedCompany = useSelector((state: any) => state?.user?.selectedCompany || null);
-  const [dasboardApi, { data: dasboardData, isLoading: isDashboardLoading, error: dashboardError, isError: isDashboardError }] =
-    useAdminDashboardMutation();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [dateRange, setDateRange] = useState([
+    {
+      startDate: null,
+      endDate: null,
+      key: "selection",
+    },
+  ]);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const selectedCompany = useSelector(
+    (state: any) => state?.user?.selectedCompany || null
+  );
+  const [
+    dasboardApi,
+    {
+      data: dasboardData,
+      isLoading: isDashboardLoading,
+      error: dashboardError,
+      isError: isDashboardError,
+    },
+  ] : any = useAdminDashboardMutation();
   const [
     jobApi,
-    { data: jobData, isSuccess: jobSuccess, error: jobError, isError: jobIsError, isLoading: isJobsLoading },
+    {
+      data: jobData,
+      isSuccess: jobSuccess,
+      error: jobError,
+      isError: jobIsError,
+      isLoading: isJobsLoading,
+    },
   ] = useJobsMutation();
   const [
     timeSheetApi,
-    { data: timeSheetData, isSuccess: timeSheetSuccess, error: timeSheetError, isError: timesheetIsError, isLoading: isTimesheetLoading },
+    {
+      data: timeSheetData,
+      isSuccess: timeSheetSuccess,
+      error: timeSheetError,
+      isError: timesheetIsError,
+      isLoading: isTimesheetLoading,
+    },
   ] = useTimesheetMutation();
   const [
     transactionApi,
@@ -83,7 +121,16 @@ function Dashboard() {
       return;
     }
     try {
-      const res = await dasboardApi({ companyId: selectedCompany._id }).unwrap();
+      const params = {
+        companyId: selectedCompany._id,
+        startDate: dateRange[0].startDate
+          ? dateRange[0].startDate.toISOString()
+          : undefined,
+        endDate: dateRange[0].endDate
+          ? dateRange[0].endDate.toISOString()
+          : undefined,
+      };
+      const res = await dasboardApi(params).unwrap();
       console.log("Dashboard API Response:", JSON.stringify(res, null, 2));
     } catch (err: any) {
       console.error("Dashboard Fetch Error:", JSON.stringify(err, null, 2));
@@ -95,24 +142,60 @@ function Dashboard() {
   };
 
   const getTimeSheetData = async () => {
+    if (!selectedCompany?._id) {
+      toast.error("No company selected", {
+        description: "Please select a company to view timesheet data.",
+        style: { backgroundColor: "#fcebbb" },
+      });
+      setTimeSheet([]);
+      return;
+    }
     try {
-      const res = await timeSheetApi({ page, admin: true }).unwrap();
+      const params = {
+        page,
+        companyId: selectedCompany._id,
+        admin: true,
+        search: searchQuery,
+        startDate: dateRange[0].startDate
+          ? dateRange[0].startDate.toISOString()
+          : undefined,
+        endDate: dateRange[0].endDate
+          ? dateRange[0].endDate.toISOString()
+          : undefined,
+      };
+      const res = await timeSheetApi(params).unwrap();
       console.log("Timesheet API Response:", JSON.stringify(res, null, 2));
-      if (timeSheetSuccess && timeSheetData) {
-        setTimeSheet(timeSheetData.data || []);
-      }
+      setTimeSheet(res?.data || []);
     } catch (err: any) {
       console.error("Timesheet Fetch Error:", JSON.stringify(err, null, 2));
       toast.error("Failed to fetch timesheet data", {
         description: err?.data?.message || err.message || "Unknown error",
         style: { backgroundColor: "#fcebbb" },
       });
+      setTimeSheet([]);
     }
   };
 
   const getJobs = async () => {
+    if (!selectedCompany?._id) {
+      toast.error("No company selected", {
+        description: "Please select a company to view jobs data.",
+        style: { backgroundColor: "#fcebbb" },
+      });
+      return;
+    }
     try {
-      const res = await jobApi({}).unwrap();
+      const params = {
+        companyId: selectedCompany._id,
+        search: searchQuery,
+        startDate: dateRange[0].startDate
+          ? dateRange[0].startDate.toISOString()
+          : undefined,
+        endDate: dateRange[0].endDate
+          ? dateRange[0].endDate.toISOString()
+          : undefined,
+      };
+      const res = await jobApi(params).unwrap();
       console.log("Jobs API Response:", JSON.stringify(res, null, 2));
     } catch (err: any) {
       console.error("Jobs Fetch Error:", JSON.stringify(err, null, 2));
@@ -124,8 +207,25 @@ function Dashboard() {
   };
 
   const transactions = async () => {
+    if (!selectedCompany?._id) {
+      toast.error("No company selected", {
+        description: "Please select a company to view transactions data.",
+        style: { backgroundColor: "#fcebbb" },
+      });
+      return;
+    }
     try {
-      const res = await transactionApi({}).unwrap();
+      const params = {
+        companyId: selectedCompany._id,
+        search: searchQuery,
+        startDate: dateRange[0].startDate
+          ? dateRange[0].startDate.toISOString()
+          : undefined,
+        endDate: dateRange[0].endDate
+          ? dateRange[0].endDate.toISOString()
+          : undefined,
+      };
+      const res = await transactionApi(params).unwrap();
       console.log("Transactions API Response:", JSON.stringify(res, null, 2));
     } catch (err: any) {
       console.error("Transactions Fetch Error:", JSON.stringify(err, null, 2));
@@ -136,15 +236,58 @@ function Dashboard() {
     }
   };
 
+  const handleSearch = useCallback(
+    debounce(async (query: string) => {
+      console.log("Search Input:", query);
+      setSearchQuery(query);
+      setPage(1);
+    }, 500),
+    []
+  );
+
+  const handleDateRangeSelect = (ranges: any) => {
+    setDateRange([ranges.selection]);
+    setPage(1);
+    setShowDatePicker(false);
+  };
+
+  const handleYearSelect = (year: number) => {
+    setDateRange([
+      {
+        startDate: startOfYear(new Date(year, 0, 1)),
+        endDate: endOfYear(new Date(year, 0, 1)),
+        key: "selection",
+      },
+    ]);
+    setPage(1);
+    setShowDatePicker(false);
+  };
+
+  // Format the selected date range for display
+  const formatDateRange = () => {
+    const { startDate, endDate } = dateRange[0];
+    if (!startDate || !endDate) return "Select Date Range";
+    if (
+      startDate.getFullYear() === endDate.getFullYear() &&
+      startDate.getDate() === 1 &&
+      startDate.getMonth() === 0 &&
+      endDate.getDate() === 31 &&
+      endDate.getMonth() === 11
+    ) {
+      return startDate.getFullYear().toString();
+    }
+    return `${format(startDate, "MMM d, yyyy")} - ${format(
+      endDate,
+      "MMM d, yyyy"
+    )}`;
+  };
+
   useEffect(() => {
     getDasboardData();
     transactions();
     getJobs();
-  }, [selectedCompany]);
-
-  useEffect(() => {
     getTimeSheetData();
-  }, [page]);
+  }, [page, selectedCompany, searchQuery, dateRange]);
 
   useEffect(() => {
     if (timeSheetSuccess && timeSheetData) {
@@ -181,11 +324,65 @@ function Dashboard() {
     <div className="flex min-h-screen w-full flex-col bg-gray-50">
       <Toaster richColors position="top-right" />
       <main className="flex flex-1 flex-col gap-3 p-3 sm:p-4 md:gap-4">
+        <div className="flex justify-between">
+          <div className="relative w-full sm:w-auto">
+            <Button
+              size="sm"
+              className="w-full sm:w-auto h-8 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg px-3 py-1 text-sm"
+              onClick={() => setShowDatePicker(!showDatePicker)}
+            >
+              {formatDateRange()}
+            </Button>
+            {showDatePicker && (
+              <div className="absolute z-10 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg w-full sm:w-[600px] max-w-[90vw]">
+                <DateRangePicker
+                  ranges={dateRange}
+                  onChange={handleDateRangeSelect}
+                  showSelectionPreview={true}
+                  moveRangeOnFirstSelection={false}
+                  months={1}
+                  direction="vertical"
+                  className="w-full"
+                  staticRanges={[
+                    ...defaultStaticRanges,
+                    {
+                      label: "This Year",
+                      range: () => ({
+                        startDate: startOfYear(new Date()),
+                        endDate: endOfYear(new Date()),
+                      }),
+                      isSelected: (range) =>
+                        range.startDate?.getFullYear() ===
+                          new Date().getFullYear() &&
+                        range.endDate?.getFullYear() ===
+                          new Date().getFullYear(),
+                    },
+                    {
+                      label: "Last Year",
+                      range: () => ({
+                        startDate: startOfYear(addYears(new Date(), -1)),
+                        endDate: endOfYear(addYears(new Date(), -1)),
+                      }),
+                      isSelected: (range) =>
+                        range.startDate?.getFullYear() ===
+                          addYears(new Date(), -1).getFullYear() &&
+                        range.endDate?.getFullYear() ===
+                          addYears(new Date(), -1).getFullYear(),
+                    },
+                  ]}
+                />
+              </div>
+            )}
+          </div>
+        </div>
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
           {isDashboardLoading ? (
             <>
               {Array.from({ length: 4 }).map((_, index) => (
-                <Card key={index} className="bg-white shadow-lg rounded-xl border-none">
+                <Card
+                  key={index}
+                  className="bg-white shadow-lg rounded-xl border-none"
+                >
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <Skeleton className="h-6 w-1/2 bg-gray-200 rounded-lg" />
                     <Skeleton className="h-4 w-4 bg-gray-200 rounded-full" />
@@ -199,7 +396,10 @@ function Dashboard() {
             </>
           ) : (
             <>
-              <Card x-chunk="dashboard-01-chunk-0" className="bg-white shadow-lg rounded-xl border-none">
+              <Card
+                x-chunk="dashboard-01-chunk-0"
+                className="bg-white shadow-lg rounded-xl border-none"
+              >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-gray-800">
                     Total Revenue
@@ -211,11 +411,16 @@ function Dashboard() {
                     {dasboardData?.totalNetProfit || 0} AED
                   </div>
                   <p className="text-xs text-gray-600">
-                    {dasboardData?.totalNetProfit ? "+20.1% from last month" : "-"}
+                    {dasboardData?.totalNetProfit
+                      ? "+20.1% from last month"
+                      : "-"}
                   </p>
                 </CardContent>
               </Card>
-              <Card x-chunk="dashboard-01-chunk-1" className="bg-white shadow-lg rounded-xl border-none">
+              <Card
+                x-chunk="dashboard-01-chunk-1"
+                className="bg-white shadow-lg rounded-xl border-none"
+              >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-gray-800">
                     Active Clients
@@ -227,11 +432,16 @@ function Dashboard() {
                     {dasboardData?.activeClients || 0}
                   </div>
                   <p className="text-xs text-gray-600">
-                    {dasboardData?.activeClients ? "+180.1% from last month" : "-"}
+                    {dasboardData?.activeClients
+                      ? "+180.1% from last month"
+                      : "-"}
                   </p>
                 </CardContent>
               </Card>
-              <Card x-chunk="dashboard-01-chunk-2" className="bg-white shadow-lg rounded-xl border-none">
+              <Card
+                x-chunk="dashboard-01-chunk-2"
+                className="bg-white shadow-lg rounded-xl border-none"
+              >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-gray-800">
                     Sales
@@ -247,7 +457,10 @@ function Dashboard() {
                   </p>
                 </CardContent>
               </Card>
-              <Card x-chunk="dashboard-01-chunk-3" className="bg-white shadow-lg rounded-xl border-none">
+              <Card
+                x-chunk="dashboard-01-chunk-3"
+                className="bg-white shadow-lg rounded-xl border-none"
+              >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-gray-800">
                     Active Projects
@@ -259,7 +472,7 @@ function Dashboard() {
                     {dasboardData?.activeProjects || 0}
                   </div>
                   <p className="text-xs text-gray-600">
-                    {dasboardData?.activeProjects ? "-": "-"}
+                    {dasboardData?.activeProjects ? "-" : "-"}
                   </p>
                 </CardContent>
               </Card>
@@ -275,116 +488,36 @@ function Dashboard() {
 
         <main className="grid flex-1 items-start gap-3 p-3 sm:p-4 md:gap-4">
           <Tabs defaultValue="all">
-            <div className="flex items-center">
-              {/* <TabsList className="bg-gray-100 rounded-lg p-1">
-                <TabsTrigger
-                  value="all"
-                  className="text-sm text-gray-800 data-[state=active]:bg-white data-[state=active]:text-blue-600 rounded-md"
-                >
-                  All
-                </TabsTrigger>
-                <TabsTrigger
-                  value="Sales"
-                  className="text-sm text-gray-800 data-[state=active]:bg-white data-[state=active]:text-blue-600 rounded-md"
-                >
-                  Sales
-                </TabsTrigger>
-                <TabsTrigger
-                  value="Team Leads"
-                  className="text-sm text-gray-800 data-[state=active]:bg-white data-[state=active]:text-blue-600 rounded-md"
-                >
-                  Team Leads
-                </TabsTrigger>
-                <TabsTrigger
-                  value="Team Members"
-                  className="text-sm text-gray-800 data-[state=active]:bg-white data-[state=active]:text-blue-600 rounded-md"
-                >
-                  Team Members
-                </TabsTrigger>
-                <TabsTrigger
-                  value="Sub-Contractors"
-                  className="text-sm text-gray-800 data-[state=active]:bg-white data-[state=active]:text-blue-600 rounded-md"
-                >
-                  Sub-Contractors
-                </TabsTrigger>
-                <TabsTrigger
-                  value="Accounts"
-                  className="text-sm text-gray-800 data-[state=active]:bg-white data-[state=active]:text-blue-600 rounded-md"
-                >
-                  Accounts
-                </TabsTrigger>
-              </TabsList> */}
-              <div className="ml-auto flex items-center gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 border-gray-300 rounded-lg text-sm text-gray-800 hover:bg-gray-100"
-                    >
-                      <ListFilter className="h-3.5 w-3.5 mr-1" />
-                      <span className="sm:whitespace-nowrap">Filter</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-white border-gray-300 rounded-lg shadow-lg">
-                    <DropdownMenuLabel className="text-sm text-gray-600">Filter by</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuCheckboxItem checked className="text-sm text-gray-800">
-                      All
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem className="text-sm text-gray-800">
-                      Sales Member
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem className="text-sm text-gray-800">
-                      Team Leads
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem className="text-sm text-gray-800">
-                      Team Members
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem className="text-sm text-gray-800">
-                      Sub-Contractors
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem className="text-sm text-gray-800">
-                      Accounts Members
-                    </DropdownMenuCheckboxItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 border-gray-300 rounded-lg text-sm text-gray-800 hover:bg-gray-100"
-                >
-                  <File className="h-3.5 w-3.5 mr-1" />
-                  <span className="sm:whitespace-nowrap">Export</span>
-                </Button>
-                <Link href="/timesheet/create-timesheet">
-                  <Button
-                    size="sm"
-                    className="h-8 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg"
-                  >
-                    <PlusCircle className="h-3.5 w-3.5 mr-1" />
-                    <span className="sm:whitespace-nowrap">Add</span>
-                  </Button>
-                </Link>
-              </div>
-            </div>
+            
             <TabsContent value="all">
-              <Card x-chunk="dashboard-06-chunk-0" className="bg-white shadow-lg rounded-xl border-none">
+              <Card
+                x-chunk="dashboard-06-chunk-0"
+                className="bg-white shadow-lg rounded-xl border-none"
+              >
                 <CardHeader>
-                  <CardTitle className="text-base font-semibold text-gray-800">Time & Logs</CardTitle>
-                  <CardDescription className="text-sm text-gray-600">
-                    Manage your Times and logs and view performance.
-                  </CardDescription>
+                  <CardTitle className="text-base font-semibold text-gray-800">
+                    Time & Logs
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <Table className="overflow-x-auto">
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-sm font-medium text-gray-700">Job No.</TableHead>
-                        <TableHead className="text-sm font-medium text-gray-700">Project Name</TableHead>
-                        <TableHead className="text-sm font-medium text-gray-700">Name</TableHead>
-                        <TableHead className="text-sm font-medium text-gray-700">Date</TableHead>
-                        <TableHead className="text-sm font-medium text-gray-700">Start</TableHead>
+                        <TableHead className="text-sm font-medium text-gray-700">
+                          Job No.
+                        </TableHead>
+                        <TableHead className="text-sm font-medium text-gray-700">
+                          Project Name
+                        </TableHead>
+                        <TableHead className="text-sm font-medium text-gray-700">
+                          Name
+                        </TableHead>
+                        <TableHead className="text-sm font-medium text-gray-700">
+                          Date
+                        </TableHead>
+                        <TableHead className="text-sm font-medium text-gray-700">
+                          Start
+                        </TableHead>
                         <TableHead className="hidden md:table-cell text-sm font-medium text-gray-700">
                           End
                         </TableHead>
@@ -397,9 +530,6 @@ function Dashboard() {
                         <TableHead className="hidden md:table-cell text-sm font-medium text-gray-700">
                           Remark
                         </TableHead>
-                        <TableHead className="text-sm font-medium text-gray-700">
-                          <span className="sr-only">Actions</span>
-                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -407,11 +537,21 @@ function Dashboard() {
                         <>
                           {Array.from({ length: 3 }).map((_, index) => (
                             <TableRow key={index}>
-                              <TableCell><Skeleton className="h-6 w-full bg-gray-200 rounded-lg" /></TableCell>
-                              <TableCell><Skeleton className="h-6 w-full bg-gray-200 rounded-lg" /></TableCell>
-                              <TableCell><Skeleton className="h-6 w-full bg-gray-200 rounded-lg" /></TableCell>
-                              <TableCell><Skeleton className="h-6 w-full bg-gray-200 rounded-lg" /></TableCell>
-                              <TableCell><Skeleton className="h-6 w-full bg-gray-200 rounded-lg" /></TableCell>
+                              <TableCell>
+                                <Skeleton className="h-6 w-full bg-gray-200 rounded-lg" />
+                              </TableCell>
+                              <TableCell>
+                                <Skeleton className="h-6 w-full bg-gray-200 rounded-lg" />
+                              </TableCell>
+                              <TableCell>
+                                <Skeleton className="h-6 w-full bg-gray-200 rounded-lg" />
+                              </TableCell>
+                              <TableCell>
+                                <Skeleton className="h-6 w-full bg-gray-200 rounded-lg" />
+                              </TableCell>
+                              <TableCell>
+                                <Skeleton className="h-6 w-full bg-gray-200 rounded-lg" />
+                              </TableCell>
                               <TableCell className="hidden md:table-cell">
                                 <Skeleton className="h-6 w-full bg-gray-200 rounded-lg" />
                               </TableCell>
@@ -429,7 +569,10 @@ function Dashboard() {
                         </>
                       ) : timesheet.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={9} className="text-center text-sm text-gray-600">
+                          <TableCell
+                            colSpan={9}
+                            className="text-center text-sm text-gray-600"
+                          >
                             No timesheet data available
                           </TableCell>
                         </TableRow>
@@ -452,51 +595,72 @@ function Dashboard() {
                             },
                             index: number
                           ) => (
-                            <TableRow key={index} className="cursor-pointer hover:bg-gray-50">
+                            <TableRow
+                              key={index}
+                              className="cursor-pointer hover:bg-gray-50"
+                            >
                               <TableCell
                                 className="text-sm text-gray-800"
-                                onClick={() => router.push(`/timesheet/${data._id}`)}
+                                onClick={() =>
+                                  router.push(`/timesheet/${data._id}`)
+                                }
                               >
                                 {data?.projectId?.projectId || "-"}
                               </TableCell>
                               <TableCell
                                 className="text-sm text-gray-800"
-                                onClick={() => router.push(`/timesheet/${data._id}`)}
+                                onClick={() =>
+                                  router.push(`/timesheet/${data._id}`)
+                                }
                               >
                                 {data?.projectId?.project_name || "-"}
                               </TableCell>
                               <TableCell
                                 className="text-sm text-gray-800"
-                                onClick={() => router.push(`/timesheet/${data._id}`)}
+                                onClick={() =>
+                                  router.push(`/timesheet/${data._id}`)
+                                }
                               >
                                 {data?.userId?.userId?.name || "-"}
                               </TableCell>
                               <TableCell
                                 className="text-sm text-gray-800"
-                                onClick={() => router.push(`/timesheet/${data._id}`)}
+                                onClick={() =>
+                                  router.push(`/timesheet/${data._id}`)
+                                }
                               >
-                                {date(data?.created_at) || "-"}
+                                {data?.created_at ? date(data.created_at) : "-"}
                               </TableCell>
                               <TableCell
                                 className="text-sm text-gray-800"
-                                onClick={() => router.push(`/timesheet/${data._id}`)}
+                                onClick={() =>
+                                  router.push(`/timesheet/${data._id}`)
+                                }
                               >
-                                {data?.startTime ? timeFormat(data?.startTime) : "-"}
+                                {data?.startTime
+                                  ? timeFormat(data.startTime)
+                                  : "-"}
                               </TableCell>
                               <TableCell
                                 className="hidden md:table-cell text-sm text-gray-800"
-                                onClick={() => router.push(`/timesheet/${data._id}`)}
+                                onClick={() =>
+                                  router.push(`/timesheet/${data._id}`)
+                                }
                               >
-                                {data?.endTime ? timeFormat(data?.endTime) : "-"}
+                                {data?.endTime ? timeFormat(data.endTime) : "-"}
                               </TableCell>
                               <TableCell
                                 className="hidden md:table-cell text-sm text-gray-800"
-                                onClick={() => router.push(`/timesheet/${data._id}`)}
+                                onClick={() =>
+                                  router.push(`/timesheet/${data._id}`)
+                                }
                               >
                                 {data.hours_logged || "-"}
                               </TableCell>
                               <TableCell className="hidden md:table-cell text-sm text-gray-800">
-                                {Number(data?.total_amount)?.toFixed(2) || "-"}
+                                {data?.total_amount
+                                  ? Number(data.total_amount).toFixed(2)
+                                  : "-"}
                               </TableCell>
                               <TableCell className="hidden md:table-cell text-sm text-gray-800">
                                 {data.remarks || "-"}
@@ -521,10 +685,15 @@ function Dashboard() {
         </main>
 
         <div className="grid gap-3 md:gap-4 lg:grid-cols-2 xl:grid-cols-3">
-          <Card x-chunk="dashboard-01-chunk-4" className="xl:col-span-2 bg-white shadow-lg rounded-xl border-none">
+          <Card
+            x-chunk="dashboard-01-chunk-4"
+            className="xl:col-span-2 bg-white shadow-lg rounded-xl border-none"
+          >
             <CardHeader className="flex flex-row items-center">
               <div className="grid gap-2">
-                <CardTitle className="text-base font-semibold text-gray-800">Transactions</CardTitle>
+                <CardTitle className="text-base font-semibold text-gray-800">
+                  Transactions
+                </CardTitle>
                 <CardDescription className="text-sm text-gray-600">
                   Recent transactions from your companies.
                 </CardDescription>
@@ -544,7 +713,9 @@ function Dashboard() {
               <Table className="overflow-x-auto">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-sm font-medium text-gray-700">Customer</TableHead>
+                    <TableHead className="text-sm font-medium text-gray-700">
+                      Customer
+                    </TableHead>
                     <TableHead className="text-sm font-medium text-gray-700 hidden xl:table-column">
                       Type
                     </TableHead>
@@ -554,7 +725,9 @@ function Dashboard() {
                     <TableHead className="text-sm font-medium text-gray-700 hidden xl:table-column">
                       Date
                     </TableHead>
-                    <TableHead className="text-sm font-medium text-gray-700 text-right">Amount</TableHead>
+                    <TableHead className="text-sm font-medium text-gray-700 text-right">
+                      Amount
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -583,16 +756,24 @@ function Dashboard() {
                     </>
                   ) : data.data.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center text-sm text-gray-600">
+                      <TableCell
+                        colSpan={5}
+                        className="text-center text-sm text-gray-600"
+                      >
                         No transactions available
                       </TableCell>
                     </TableRow>
                   ) : (
                     data.data.map((data: any, index: number) => (
-                      <TableRow key={index} className="cursor-pointer hover:bg-gray-50">
+                      <TableRow
+                        key={index}
+                        className="cursor-pointer hover:bg-gray-50"
+                      >
                         <TableCell>
                           <div className="text-sm font-medium text-gray-800">
-                            {data.type === "payment" ? data?.projectId?.company?.name || "-" : "-"}
+                            {data.type === "payment"
+                              ? data?.projectId?.company?.name || "-"
+                              : "-"}
                           </div>
                           <div className="text-sm text-gray-600">
                             {data?.projectId?.projectId || "-"}
@@ -607,11 +788,13 @@ function Dashboard() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-sm text-gray-800 hidden xl:table-column">
-                          {data?.date || "2023-06-23"}
+                          {data?.date ? date(data.date) : "-"}
                         </TableCell>
                         <TableCell
                           className={`text-right text-sm ${
-                            data.type === "payment" ? "text-green-500" : "text-red-500"
+                            data.type === "payment"
+                              ? "text-green-500"
+                              : "text-red-500"
                           }`}
                         >
                           {data.amount || 0} AED
@@ -623,9 +806,14 @@ function Dashboard() {
               </Table>
             </CardContent>
           </Card>
-          <Card x-chunk="dashboard-01-chunk-5" className="bg-white shadow-lg rounded-xl border-none">
+          <Card
+            x-chunk="dashboard-01-chunk-5"
+            className="bg-white shadow-lg rounded-xl border-none"
+          >
             <CardHeader>
-              <CardTitle className="text-base font-semibold text-gray-800">Recent Projects</CardTitle>
+              <CardTitle className="text-base font-semibold text-gray-800">
+                Recent Projects
+              </CardTitle>
             </CardHeader>
             <CardContent className="grid gap-6">
               {isJobsLoading || !jobData?.data ? (
@@ -642,12 +830,16 @@ function Dashboard() {
                   ))}
                 </>
               ) : jobData.data.length === 0 ? (
-                <div className="text-sm text-gray-600">No recent projects available</div>
+                <div className="text-sm text-gray-600">
+                  No recent projects available
+                </div>
               ) : (
                 jobData.data.map((data: any, index: number) => (
                   <div className="flex items-center gap-4" key={index}>
                     <Avatar className="hidden h-9 w-9 sm:flex">
-                      <AvatarFallback className="bg-gray-200 text-gray-800">OM</AvatarFallback>
+                      <AvatarFallback className="bg-gray-200 text-gray-800">
+                        OM
+                      </AvatarFallback>
                     </Avatar>
                     <div className="grid gap-1">
                       <p className="text-sm font-medium text-gray-800">

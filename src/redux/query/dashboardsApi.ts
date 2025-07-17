@@ -20,9 +20,9 @@ export const dashboardApi = createApi({
   endpoints: (builder) => ({
   
       adminDashboard: builder.mutation({
-        query: ({admin , companyId}) => {
+        query: ({admin , companyId , startDate , endDate}) => {
           return {
-            url: `/admin/?companyId=${companyId || ''}`,
+            url: `/admin/?companyId=${companyId || ''}&startDate=${startDate || ""}&endDate=${endDate || ''}`,
             method: "GET",
             headers: {
               "Content-type": "application/json; charset=UTF-8",

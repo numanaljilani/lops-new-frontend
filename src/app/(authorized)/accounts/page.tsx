@@ -31,27 +31,24 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Alert from "@/components/dialogs/Alert";
 import { useAllRFQsMutation, useCreateRFQMutation } from "@/redux/query/rfqsApi";
-import CreateDialog from "@/components/dialogs/CreateDialog";
 import { useDeleteJobCardMutation, useJobsMutation } from "@/redux/query/jobApi";
 import { usePaymentBallsListMutation } from "@/redux/query/accountsApi";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
 import { PaginationComponent } from "@/components/PaginationComponent";
 import debounce from "lodash.debounce";
 import { useSelector } from "react-redux";
+import { DateRangePicker } from "react-date-range";
+import "react-date-range/dist/styles.css"; // Main style file
+import "react-date-range/dist/theme/default.css"; // Theme CSS file
+import { addYears, startOfYear, endOfYear, format } from "date-fns";
+import { defaultStaticRanges } from "react-date-range";
 
 function Accounts() {
   const router = useRouter();
-      const selectedCompany = useSelector(
-      (state: any) => state?.user?.selectedCompany || null
-    );
+  const selectedCompany = useSelector(
+    (state: any) => state?.user?.selectedCompany || null
+  );
   const [jobs, setJobs] = useState([]);
   const [payemtes, setPayments] = useState<[]>([]);
   const [page, setPage] = useState(1);
@@ -60,6 +57,14 @@ function Accounts() {
   const [rfq, setRfq] = useState<any>();
   const [itemToDelete, setItemToDelete] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [dateRange, setDateRange] = useState([
+    {
+      startDate: null,
+      endDate: null,
+      key: "selection",
+    },
+  ]);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const itemsPerPage = 5;
 
   const [jobApi, { data, isSuccess, error, isError, isLoading: isJobApiLoading }] = useJobsMutation();
@@ -67,53 +72,62 @@ function Accounts() {
   const [createRFQApi] = useCreateRFQMutation();
   const [paymentBallsListApi] = usePaymentBallsListMutation();
 
-  const handleSearch = useCallback(
-    debounce(async (query: string) => {
-      console.log("Search Input:", query);
-      setSearchQuery(query);
-      setLoading(true);
-      try {
-        const res = await jobApi({ search: query, page , companyId : selectedCompany._id }).unwrap();
-        console.log("Search Jobs API Response:", JSON.stringify(res, null, 2));
-        setJobs(res?.data || []);
-        if (res?.data?.length === 0) {
-          console.log("Search Results: No jobs found");
-        } else {
-          console.log("Search Results:", res.data);
-        }
-      } catch (err: any) {
-        console.error("Search Jobs Fetch Error:", JSON.stringify(err, null, 2));
-        setJobs([]);
-      } finally {
-        setLoading(false);
-      }
-    }, 500),
-    [jobApi, page]
-  );
-
   const getJobs = async () => {
+    if (!selectedCompany?._id) {
+      console.error("No company selected");
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
-      const res = await jobApi({ page , companyId : selectedCompany._id }).unwrap();
-      console.log("Default Jobs API Response:", JSON.stringify(res, null, 2));
+      const params = {
+        page,
+        companyId: selectedCompany._id,
+        search: searchQuery,
+        startDate: dateRange[0].startDate ? dateRange[0].startDate.toISOString() : undefined,
+        endDate: dateRange[0].endDate ? dateRange[0].endDate.toISOString() : undefined,
+      };
+      const res = await jobApi(params).unwrap();
+      console.log("Jobs API Response:", JSON.stringify(res, null, 2));
       setJobs(res?.data || []);
     } catch (err: any) {
-      console.error("Default Jobs Fetch Error:", JSON.stringify(err, null, 2));
+      console.error("Jobs Fetch Error:", JSON.stringify(err, null, 2));
       setJobs([]);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    getJobs();
-  }, [page]);
+  const handleSearch = useCallback(
+    debounce(async (query: string) => {
+      console.log("Search Input:", query);
+      setSearchQuery(query);
+      setPage(1);
+    }, 500),
+    []
+  );
+
+  const handleDateRangeSelect = (ranges: any) => {
+    setDateRange([ranges.selection]);
+    setPage(1);
+    setShowDatePicker(false);
+  };
+
+  const handleYearSelect = (year: number) => {
+    setDateRange([
+      {
+        startDate: startOfYear(new Date(year, 0, 1)),
+        endDate: endOfYear(new Date(year, 0, 1)),
+        key: "selection",
+      },
+    ]);
+    setPage(1);
+    setShowDatePicker(false);
+  };
 
   useEffect(() => {
-    if (!isDialogOpen) {
-      getJobs();
-    }
-  }, [isDialogOpen, page,selectedCompany]);
+    getJobs();
+  }, [page, selectedCompany, searchQuery, dateRange]);
 
   useEffect(() => {
     if (isSuccess) {
@@ -121,6 +135,23 @@ function Accounts() {
       setLoading(false);
     }
   }, [isSuccess, data]);
+   const formatDateRange = () => {
+    const { startDate, endDate } = dateRange[0];
+    if (!startDate || !endDate) return "Select Date Range";
+    if (
+      startDate.getFullYear() === endDate.getFullYear() &&
+      startDate.getDate() === 1 &&
+      startDate.getMonth() === 0 &&
+      endDate.getDate() === 31 &&
+      endDate.getMonth() === 11
+    ) {
+      return startDate.getFullYear().toString();
+    }
+    return `${format(startDate, "MMM d, yyyy")} - ${format(
+      endDate,
+      "MMM d, yyyy"
+    )}`;
+  };
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-gray-50 overflow-y-auto">
@@ -128,15 +159,62 @@ function Accounts() {
         <main className="grid gap-3 md:gap-4">
           <Tabs defaultValue="all">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-              <div className="relative w-full sm:w-64">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
-                <Input
-                  type="search"
-                  placeholder="Search by Job No, RFQ ID..."
-                  className="w-full rounded-lg border-gray-300 pl-8 text-sm focus:ring-2 focus:ring-blue-500"
-                  value={searchQuery}
-                  onChange={(e) => handleSearch(e.target.value)}
-                />
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full">
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
+                  <Input
+                    type="search"
+                    placeholder="Search by Job No, RFQ ID..."
+                    className="w-full rounded-lg border-gray-300 pl-8 text-sm focus:ring-2 focus:ring-blue-500"
+                    value={searchQuery}
+                    onChange={(e) => handleSearch(e.target.value)}
+                  />
+                </div>
+                <div className="relative w-full sm:w-auto">
+                  <Button
+                    size="sm"
+                    className="w-full sm:w-auto h-8 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg px-3 py-1 text-sm"
+                    onClick={() => setShowDatePicker(!showDatePicker)}
+                  >
+                   {formatDateRange()}
+                  </Button>
+                  {showDatePicker && (
+                    <div className="absolute z-10 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg w-full sm:w-[600px] max-w-[90vw]">
+                      <DateRangePicker
+                        ranges={dateRange}
+                        onChange={handleDateRangeSelect}
+                        showSelectionPreview={true}
+                        moveRangeOnFirstSelection={false}
+                        months={1}
+                        direction="vertical"
+                        className="w-full"
+                        staticRanges={[
+                          ...defaultStaticRanges,
+                          {
+                            label: "This Year",
+                            range: () => ({
+                              startDate: startOfYear(new Date()),
+                              endDate: endOfYear(new Date()),
+                            }),
+                            isSelected: (range) =>
+                              range.startDate?.getFullYear() === new Date().getFullYear() &&
+                              range.endDate?.getFullYear() === new Date().getFullYear(),
+                          },
+                          {
+                            label: "Last Year",
+                            range: () => ({
+                              startDate: startOfYear(addYears(new Date(), -1)),
+                              endDate: endOfYear(addYears(new Date(), -1)),
+                            }),
+                            isSelected: (range) =>
+                              range.startDate?.getFullYear() === addYears(new Date(), -1).getFullYear() &&
+                              range.endDate?.getFullYear() === addYears(new Date(), -1).getFullYear(),
+                          },
+                        ]}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             <TabsContent value="all">
@@ -189,17 +267,11 @@ function Accounts() {
                             <TableCell>
                               <Skeleton className="h-4 w-full rounded-lg" />
                             </TableCell>
-                            <TableCell>
-                              <Skeleton className="h-4 w-full rounded-lg" />
-                            </TableCell>
-                            <TableCell>
-                              <Skeleton className="h-4 w-full rounded-lg" />
-                            </TableCell>
                           </TableRow>
                         ))
                       ) : jobs?.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center py-8">
+                          <TableCell colSpan={6} className="text-center py-8">
                             <p className="text-sm text-gray-600">No data available.</p>
                           </TableCell>
                         </TableRow>
@@ -210,13 +282,13 @@ function Accounts() {
                               className="hidden sm:table-cell text-sm text-gray-800 font-medium"
                               onClick={() => router.push(`/accounts/${data._id}`)}
                             >
-                              {data?.projectId}
+                              {data?.projectId || "-"}
                             </TableCell>
                             <TableCell
                               className="hidden sm:table-cell text-sm text-gray-800 font-medium"
                               onClick={() => router.push(`/accounts/${data._id}`)}
                             >
-                              {data?.project_name || '-'}
+                              {data?.project_name || "-"}
                             </TableCell>
                             <TableCell
                               className="text-sm text-gray-800 font-medium"
@@ -234,11 +306,11 @@ function Accounts() {
                               onClick={() => router.push(`/accounts/${data._id}`)}
                             >
                               <Badge className="bg-gray-100 text-gray-800 border-gray-300 text-sm">
-                                {data?.completion_percentage}%
+                                {data?.completion_percentage || 0}%
                               </Badge>
                             </TableCell>
                             <TableCell className="hidden md:table-cell text-sm text-gray-800">
-                              {formatDate(data?.delivery_timelines)}
+                              {data?.delivery_timelines ? formatDate(data.delivery_timelines) : "-"}
                             </TableCell>
                           </TableRow>
                         ))
@@ -263,13 +335,6 @@ function Accounts() {
           handleDelete={() => {}}
           name={itemToDelete?.client_name}
         />
-        {/* <CreateDialog
-          isDialogOpen={false}
-          setIsDialogOpen={() => {}}
-          handleSubmit={() => {}}
-          rfq={rfq}
-          setRfq={setRfq}
-        /> */}
       </div>
     </div>
   );

@@ -47,6 +47,11 @@ import CreateDialog from "@/components/dialogs/CreateDialog";
 import CreateProject from "@/components/dialogs/CreateLPO";
 import debounce from "lodash.debounce";
 import { useSelector } from "react-redux";
+import { DateRangePicker } from "react-date-range";
+import "react-date-range/dist/styles.css"; // Main style file
+import "react-date-range/dist/theme/default.css"; // Theme CSS file
+import { addYears, startOfYear, endOfYear, format } from "date-fns";
+import { defaultStaticRanges } from "react-date-range";
 
 function RFQs() {
   const selectedCompany = useSelector(
@@ -57,6 +62,14 @@ function RFQs() {
   const [tab, setTab] = useState("all");
   const [filteredRFQs, setFilteredRFQs] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [dateRange, setDateRange] = useState([
+    {
+      startDate: null,
+      endDate: null,
+      key: "selection",
+    },
+  ]);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [page, setPage] = useState(1);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCreateRFQDialogOpen, setIsCreateRFQDialogOpen] = useState(false);
@@ -72,6 +85,24 @@ function RFQs() {
   const [createRFQApi] = useCreateRFQMutation();
   const [deleteRFQApi] = useDeleteRfqMutation();
 
+
+   const formatDateRange = () => {
+    const { startDate, endDate } = dateRange[0];
+    if (!startDate || !endDate) return "Select Date Range";
+    if (
+      startDate.getFullYear() === endDate.getFullYear() &&
+      startDate.getDate() === 1 &&
+      startDate.getMonth() === 0 &&
+      endDate.getDate() === 31 &&
+      endDate.getMonth() === 11
+    ) {
+      return startDate.getFullYear().toString();
+    }
+    return `${format(startDate, "MMM d, yyyy")} - ${format(
+      endDate,
+      "MMM d, yyyy"
+    )}`;
+  };
   const getRFQs = async (status: string = tab) => {
     if (!selectedCompany?._id) {
       toast.error("No company selected", {
@@ -83,7 +114,15 @@ function RFQs() {
     }
     try {
       setIsLoading(true);
-      const res = await rfqsApi({ page, companyId: selectedCompany._id, status: status === "all" ? "" : status }).unwrap();
+      const params = {
+        page,
+        companyId: selectedCompany._id,
+        status: status === "all" ? "" : status,
+        search: searchQuery,
+        startDate: dateRange[0].startDate ? dateRange[0].startDate.toISOString() : undefined,
+        endDate: dateRange[0].endDate ? dateRange[0].endDate.toISOString() : undefined,
+      };
+      const res = await rfqsApi(params).unwrap();
       console.log(`RFQs API Response (status: ${status}):`, JSON.stringify(res, null, 2));
       if (res?.data) {
         setRFQs(res.data);
@@ -107,41 +146,34 @@ function RFQs() {
 
   useEffect(() => {
     getRFQs();
-  }, [tab, page, selectedCompany]);
+  }, [tab, page, selectedCompany, searchQuery, dateRange]);
 
   const handleSearch = useCallback(
     debounce(async (query: string) => {
       console.log("Search Input:", query);
       setSearchQuery(query);
       setPage(1);
-      try {
-        setIsLoading(true);
-        if (query === "") {
-          await getRFQs();
-        } else {
-          const res = await rfqsApi({ search: query, page, companyId: selectedCompany._id, status: tab === "all" ? "" : tab }).unwrap();
-          console.log("Search RFQs API Response:", JSON.stringify(res, null, 2));
-          if (res?.data) {
-            setFilteredRFQs(res.data);
-            console.log("Search Results:", res.data);
-          } else {
-            console.log("Search Results: No RFQs found");
-            toast.warning("No RFQs found for the search query.");
-            setFilteredRFQs([]);
-          }
-        }
-      } catch (err: any) {
-        console.error("Search RFQs Error:", JSON.stringify(err, null, 2));
-        toast.error(`Failed to search RFQs: ${err?.data?.message || err.message || "Unknown error"}`, {
-          style: { backgroundColor: "#fcebbb" },
-        });
-        setFilteredRFQs([]);
-      } finally {
-        setIsLoading(false);
-      }
     }, 500),
-    [rfqsApi, page, tab, selectedCompany]
+    []
   );
+
+  const handleDateRangeSelect = (ranges: any) => {
+    setDateRange([ranges.selection]);
+    setPage(1);
+    setShowDatePicker(false);
+  };
+
+  const handleYearSelect = (year: number) => {
+    setDateRange([
+      {
+        startDate: startOfYear(new Date(year, 0, 1)),
+        endDate: endOfYear(new Date(year, 0, 1)),
+        key: "selection",
+      },
+    ]);
+    setPage(1);
+    setShowDatePicker(false);
+  };
 
   const handleSubmit = async (data: any) => {
     try {
@@ -226,13 +258,51 @@ function RFQs() {
                 >
                   Approved
                 </TabsTrigger>
-                {/* <TabsTrigger
-                  value="rejected"
-                  className="text-sm text-gray-800 data-[state=active]:bg-white data-[state=active]:text-blue-600 rounded-md"
-                >
-                  Rejected
-                </TabsTrigger> */}
               </TabsList>
+                <div className="relative">
+                  <Button
+                    size="sm"
+                    className="h-8 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded-lg"
+                    onClick={() => setShowDatePicker(!showDatePicker)}
+                  >
+                    {formatDateRange()}
+                  </Button>
+                  {showDatePicker && (
+                    <div className="absolute z-10 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg">
+                      <DateRangePicker
+                        ranges={dateRange}
+                        onChange={handleDateRangeSelect}
+                        showSelectionPreview={true}
+                        moveRangeOnFirstSelection={false}
+                        months={2}
+                        direction="horizontal"
+                        staticRanges={[
+                          ...defaultStaticRanges,
+                          {
+                            label: "This Year",
+                            range: () => ({
+                              startDate: startOfYear(new Date()),
+                              endDate: endOfYear(new Date()),
+                            }),
+                            isSelected: (range) =>
+                              range.startDate?.getFullYear() === new Date().getFullYear() &&
+                              range.endDate?.getFullYear() === new Date().getFullYear(),
+                          },
+                          {
+                            label: "Last Year",
+                            range: () => ({
+                              startDate: startOfYear(addYears(new Date(), -1)),
+                              endDate: endOfYear(addYears(new Date(), -1)),
+                            }),
+                            isSelected: (range) =>
+                              range.startDate?.getFullYear() === addYears(new Date(), -1).getFullYear() &&
+                              range.endDate?.getFullYear() === addYears(new Date(), -1).getFullYear(),
+                          },
+                        ]}
+                      />
+                    </div>
+                  )}
+                </div>
               <div className="ml-auto flex items-center gap-2">
                 <div className="relative w-full sm:w-64">
                   <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
@@ -244,6 +314,7 @@ function RFQs() {
                     onChange={(e) => handleSearch(e.target.value)}
                   />
                 </div>
+              
                 <Button
                   size="sm"
                   className="h-8 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg"
