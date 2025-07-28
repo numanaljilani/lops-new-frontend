@@ -5,6 +5,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -24,15 +25,47 @@ import {
   usePatchEmployeeMutation,
 } from "@/redux/query/employee";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Controller, useForm, UseFormReturn } from "react-hook-form";
 import { toast, Toaster } from "sonner";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {Check, Search } from "lucide-react";
+import { Check, MoreHorizontal, PlusCircle, Search } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import ErrorMessage from "@/components/errors/ErrorMessage";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useSelector } from "react-redux";
+import {
+  useDeleteTimesheetMutation,
+  useTimesheetMutation,
+} from "@/redux/query/timesheet";
+import debounce from "lodash.debounce";
+import { addYears, endOfYear, format, startOfYear } from "date-fns";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { date, timeFormat } from "@/lib/dateFormat";
+import { defaultStaticRanges } from "react-date-range";
+import { DateRangePicker } from "react-date-range";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import Link from "next/link";
+import { PaginationComponent } from "@/components/PaginationComponent";
+import "react-date-range/dist/styles.css"; // Main style file
+import "react-date-range/dist/theme/default.css"; 
 
 const employeeSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -80,16 +113,46 @@ function EmployeePage() {
     status: false,
   });
 
-  const [employeeApi, { data, isSuccess, isLoading: isEmployeeLoading, error: employeeError, isError: isEmployeeError }] =
-    useEmployeeDetailsMutation();
-  const [patchEmployeeApi, { isSuccess: patchIsSuccess, isLoading: isPatchLoading, error: patchError, isError: patchIsError }] =
-    usePatchEmployeeMutation();
-  const [companiesApi, { data: companiesData, isSuccess: companiesIsSuccess, isLoading: isCompaniesLoading, error: companiesError, isError: companiesIsError }] =
-    useComponiesMutation();
+  const [
+    employeeApi,
+    {
+      data,
+      isSuccess,
+      isLoading: isEmployeeLoading,
+      error: employeeError,
+      isError: isEmployeeError,
+    },
+  ] = useEmployeeDetailsMutation();
+  const [
+    patchEmployeeApi,
+    {
+      isSuccess: patchIsSuccess,
+      isLoading: isPatchLoading,
+      error: patchError,
+      isError: patchIsError,
+    },
+  ] = usePatchEmployeeMutation();
+  const [
+    companiesApi,
+    {
+      data: companiesData,
+      isSuccess: companiesIsSuccess,
+      isLoading: isCompaniesLoading,
+      error: companiesError,
+      isError: companiesIsError,
+    },
+  ] = useComponiesMutation();
 
   const [companies, setCompanies] = useState([]);
 
-  const { register, handleSubmit, control, setValue, watch, formState: { errors } }: any = useForm({
+  const {
+    register,
+    handleSubmit,
+    control,
+    setValue,
+    watch,
+    formState: { errors },
+  }: any = useForm({
     resolver: zodResolver(employeeSchema),
     defaultValues: {
       name: "",
@@ -190,7 +253,14 @@ function EmployeePage() {
       setValue("location", emp.location || "");
       setValue("contact", emp.contact || "");
       setValue("description", emp.description || "");
-      setValue("company", Array.isArray(emp.company) ? emp.company.map((c: any) => c._id || c) : emp.company?._id ? [emp.company._id] : []);
+      setValue(
+        "company",
+        Array.isArray(emp.company)
+          ? emp.company.map((c: any) => c._id || c)
+          : emp.company?._id
+          ? [emp.company._id]
+          : []
+      );
       setValue("position", emp.position || "");
       setValue("salary", emp.salary || 0);
       setValue("Currency", emp.Currency || "AED");
@@ -216,6 +286,137 @@ function EmployeePage() {
   const filteredCompanies = companies.filter((company: { name: string }) =>
     company.name.toLowerCase().includes(companySearch.toLowerCase())
   );
+
+  const selectedCompany = useSelector(
+    (state: any) => state?.user?.selectedCompany || null
+  );
+  const [timesheet, setTimeSheet] = useState([]);
+  const [page, setPage] = useState(1);
+  const [itemToDelete, setItemToDelete] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [dateRange, setDateRange] = useState([
+    {
+      startDate: null,
+      endDate: null,
+      key: "selection",
+    },
+  ]);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const [
+    timeSheetApi,
+    {
+      data: timeSheetData,
+      isSuccess: isTimeSheetSuccess,
+      error,
+      isError,
+      isLoading: isTimeSheetLoading,
+    },
+  ] = useTimesheetMutation();
+  const [deleteTimeSheetApi] = useDeleteTimesheetMutation();
+
+  const getTimeSheetData = async () => {
+    if (!selectedCompany?._id) {
+      console.error("No company selected");
+      setTimeSheet([]);
+      return;
+    }
+    try {
+      const params = {
+        page,
+        userId : id,
+        companyId: selectedCompany._id,
+        search: searchQuery,
+        startDate: dateRange[0].startDate
+          ? dateRange[0].startDate.toISOString()
+          : undefined,
+        endDate: dateRange[0].endDate
+          ? dateRange[0].endDate.toISOString()
+          : undefined,
+      };
+      const res = await timeSheetApi(params).unwrap();
+      console.log("Timesheet API Response:", JSON.stringify(res, null, 2));
+      setTimeSheet(res?.data || []);
+    } catch (err: any) {
+      console.error("Timesheet Fetch Error:", JSON.stringify(err, null, 2));
+      setTimeSheet([]);
+    }
+  };
+
+  const handleSearch = useCallback(
+    debounce(async (query: string) => {
+      console.log("Search Input:", query);
+      setSearchQuery(query);
+      setPage(1);
+    }, 500),
+    []
+  );
+
+  const handleDateRangeSelect = (ranges: any) => {
+    setDateRange([ranges.selection]);
+    setPage(1);
+    setShowDatePicker(false);
+  };
+
+  const handleYearSelect = (year: number) => {
+    setDateRange([
+      {
+        startDate: startOfYear(new Date(year, 0, 1)),
+        endDate: endOfYear(new Date(year, 0, 1)),
+        key: "selection",
+      },
+    ]);
+    setPage(1);
+    setShowDatePicker(false);
+  };
+
+  const deleteTimeSheet = async () => {
+    if (!itemToDelete?._id) return;
+    try {
+      console.log("Delete Timesheet ID:", itemToDelete._id);
+      await deleteTimeSheetApi({ id: itemToDelete._id }).unwrap();
+      setIsDialogOpen(false);
+      getTimeSheetData();
+    } catch (err: any) {
+      console.error("Delete Timesheet Error:", JSON.stringify(err, null, 2));
+    }
+  };
+
+  const update = async (url: string) => {
+    console.log("Update Timesheet ID:", url);
+    router.push(`/timesheet/${url}`);
+  };
+
+  useEffect(() => {
+    getTimeSheetData();
+  }, [page, selectedCompany, searchQuery, dateRange]);
+
+  useEffect(() => {
+    if (isTimeSheetSuccess && timeSheetData) {
+      console.log(
+        "Timesheet Data from Server:",
+        JSON.stringify(timeSheetData, null, 2)
+      );
+      setTimeSheet(timeSheetData?.data || []);
+    }
+  }, [isTimeSheetSuccess, timeSheetData]);
+  const formatDateRange = () => {
+    const { startDate, endDate } = dateRange[0];
+    if (!startDate || !endDate) return "Select Date Range";
+    if (
+      startDate.getFullYear() === endDate.getFullYear() &&
+      startDate.getDate() === 1 &&
+      startDate.getMonth() === 0 &&
+      endDate.getDate() === 31 &&
+      endDate.getMonth() === 11
+    ) {
+      return startDate.getFullYear().toString();
+    }
+    return `${format(startDate, "MMM d, yyyy")} - ${format(
+      endDate,
+      "MMM d, yyyy"
+    )}`;
+  };
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-gray-50 overflow-y-auto">
@@ -268,7 +469,10 @@ function EmployeePage() {
                   </CardHeader>
                   <CardContent className="p-4 grid gap-4 sm:grid-cols-2">
                     <div className="grid gap-2">
-                      <Label htmlFor="name" className="text-sm font-medium text-gray-700">
+                      <Label
+                        htmlFor="name"
+                        className="text-sm font-medium text-gray-700"
+                      >
                         Name
                       </Label>
                       {isLoading ? (
@@ -282,12 +486,17 @@ function EmployeePage() {
                             placeholder="Hamdan Al Maktoom"
                             {...register("name")}
                           />
-                          {errors.name && <ErrorMessage message={errors.name.message} />}
+                          {errors.name && (
+                            <ErrorMessage message={errors.name.message} />
+                          )}
                         </div>
                       )}
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                      <Label
+                        htmlFor="email"
+                        className="text-sm font-medium text-gray-700"
+                      >
                         Email
                       </Label>
                       {isLoading ? (
@@ -301,12 +510,17 @@ function EmployeePage() {
                             placeholder="example@gmail.com"
                             {...register("email")}
                           />
-                          {errors.email && <ErrorMessage message={errors.email.message} />}
+                          {errors.email && (
+                            <ErrorMessage message={errors.email.message} />
+                          )}
                         </div>
                       )}
                     </div>
                     <div className="grid gap-2 sm:col-span-2">
-                      <Label htmlFor="access" className="text-sm font-medium text-gray-700">
+                      <Label
+                        htmlFor="access"
+                        className="text-sm font-medium text-gray-700"
+                      >
                         Access Levels
                       </Label>
                       {isLoading ? (
@@ -318,19 +532,27 @@ function EmployeePage() {
                           render={({ field }) => (
                             <div className="flex flex-wrap gap-4">
                               {accessLevels.map((level) => (
-                                <div key={level.id} className="flex items-center gap-2">
+                                <div
+                                  key={level.id}
+                                  className="flex items-center gap-2"
+                                >
                                   <Checkbox
                                     id={level.id}
                                     checked={field.value?.includes(level.id)}
                                     onCheckedChange={(checked) => {
                                       const newAccess = checked
                                         ? [...(field.value || []), level.id]
-                                        : field.value?.filter((v: any) => v !== level.id);
+                                        : field.value?.filter(
+                                            (v: any) => v !== level.id
+                                          );
                                       field.onChange(newAccess);
                                     }}
                                     className="border-gray-300 focus:ring-2 focus:ring-blue-500"
                                   />
-                                  <Label htmlFor={level.id} className="text-sm text-gray-800">
+                                  <Label
+                                    htmlFor={level.id}
+                                    className="text-sm text-gray-800"
+                                  >
                                     {level.label}
                                   </Label>
                                 </div>
@@ -339,10 +561,15 @@ function EmployeePage() {
                           )}
                         />
                       )}
-                      {errors.access && <ErrorMessage message={errors.access.message} />}
+                      {errors.access && (
+                        <ErrorMessage message={errors.access.message} />
+                      )}
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="location" className="text-sm font-medium text-gray-700">
+                      <Label
+                        htmlFor="location"
+                        className="text-sm font-medium text-gray-700"
+                      >
                         Location
                       </Label>
                       {isLoading ? (
@@ -356,12 +583,17 @@ function EmployeePage() {
                             placeholder="Dubai, Abu Dhabi, Sharjah"
                             {...register("location")}
                           />
-                          {errors.location && <ErrorMessage message={errors.location.message} />}
+                          {errors.location && (
+                            <ErrorMessage message={errors.location.message} />
+                          )}
                         </div>
                       )}
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="contact" className="text-sm font-medium text-gray-700">
+                      <Label
+                        htmlFor="contact"
+                        className="text-sm font-medium text-gray-700"
+                      >
                         Contact
                       </Label>
                       {isLoading ? (
@@ -375,12 +607,17 @@ function EmployeePage() {
                             placeholder="+971 999999999"
                             {...register("contact")}
                           />
-                          {errors.contact && <ErrorMessage message={errors.contact.message} />}
+                          {errors.contact && (
+                            <ErrorMessage message={errors.contact.message} />
+                          )}
                         </div>
                       )}
                     </div>
                     <div className="grid gap-2 sm:col-span-2">
-                      <Label htmlFor="description" className="text-sm font-medium text-gray-700">
+                      <Label
+                        htmlFor="description"
+                        className="text-sm font-medium text-gray-700"
+                      >
                         Description
                       </Label>
                       {isLoading ? (
@@ -393,7 +630,11 @@ function EmployeePage() {
                             placeholder="Enter employee description"
                             {...register("description")}
                           />
-                          {errors.description && <ErrorMessage message={errors.description.message} />}
+                          {errors.description && (
+                            <ErrorMessage
+                              message={errors.description.message}
+                            />
+                          )}
                         </div>
                       )}
                     </div>
@@ -407,7 +648,10 @@ function EmployeePage() {
                   </CardHeader>
                   <CardContent className="p-4 grid gap-4 sm:grid-cols-2">
                     <div className="grid gap-2">
-                      <Label htmlFor="company" className="text-sm font-medium text-gray-700">
+                      <Label
+                        htmlFor="company"
+                        className="text-sm font-medium text-gray-700"
+                      >
                         Companies
                       </Label>
                       {isCompaniesLoading ? (
@@ -420,11 +664,17 @@ function EmployeePage() {
                             <div className="relative">
                               <div
                                 className="w-full rounded-lg border border-gray-300 bg-white text-sm text-gray-800 focus:ring-2 focus:ring-blue-500 cursor-pointer p-2 flex flex-wrap gap-1 min-h-[38px]"
-                                onClick={() => setIsCompanyDropdownOpen(!isCompanyDropdownOpen)}
+                                onClick={() =>
+                                  setIsCompanyDropdownOpen(
+                                    !isCompanyDropdownOpen
+                                  )
+                                }
                               >
                                 {field.value?.length > 0 ? (
                                   field.value.map((companyId: string) => {
-                                    const company = companies.find((c: any) => c._id === companyId);
+                                    const company = companies.find(
+                                      (c: any) => c._id === companyId
+                                    );
                                     return (
                                       <span
                                         key={companyId}
@@ -436,8 +686,17 @@ function EmployeePage() {
                                           className="ml-1 text-gray-500 hover:text-gray-700"
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            field.onChange(field.value.filter((id: string) => id !== companyId));
-                                            console.log("Selected Companies:", field.value.filter((id: string) => id !== companyId));
+                                            field.onChange(
+                                              field.value.filter(
+                                                (id: string) => id !== companyId
+                                              )
+                                            );
+                                            console.log(
+                                              "Selected Companies:",
+                                              field.value.filter(
+                                                (id: string) => id !== companyId
+                                              )
+                                            );
                                           }}
                                         >
                                           ×
@@ -446,7 +705,9 @@ function EmployeePage() {
                                     );
                                   })
                                 ) : (
-                                  <span className="text-gray-500">Select companies</span>
+                                  <span className="text-gray-500">
+                                    Select companies
+                                  </span>
                                 )}
                               </div>
                               {isCompanyDropdownOpen && (
@@ -459,38 +720,61 @@ function EmployeePage() {
                                         placeholder="Search companies..."
                                         className="w-full pl-8 rounded-lg border-gray-300 text-sm text-gray-800 focus:ring-2 focus:ring-blue-500"
                                         value={companySearch}
-                                        onChange={(e) => setCompanySearch(e.target.value)}
+                                        onChange={(e) =>
+                                          setCompanySearch(e.target.value)
+                                        }
                                         onClick={(e) => e.stopPropagation()}
                                       />
                                     </div>
                                   </div>
                                   {isCompaniesLoading ? (
                                     <div className="p-2">
-                                      {Array.from({ length: 3 }).map((_, index) => (
-                                        <Skeleton key={index} className="h-8 w-full rounded-lg mb-1" />
-                                      ))}
+                                      {Array.from({ length: 3 }).map(
+                                        (_, index) => (
+                                          <Skeleton
+                                            key={index}
+                                            className="h-8 w-full rounded-lg mb-1"
+                                          />
+                                        )
+                                      )}
                                     </div>
                                   ) : filteredCompanies.length === 0 ? (
-                                    <div className="p-2 text-sm text-gray-600">No companies found</div>
+                                    <div className="p-2 text-sm text-gray-600">
+                                      No companies found
+                                    </div>
                                   ) : (
-                                    filteredCompanies.map((company: { _id: string; name: string }) => (
-                                      <div
-                                        key={company._id}
-                                        className={`p-2 text-sm text-gray-800 hover:bg-gray-100 cursor-pointer ${
-                                          field.value.includes(company._id) ? "bg-blue-50" : ""
-                                        }`}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          const newValue = field.value.includes(company._id)
-                                            ? field.value.filter((id: string) => id !== company._id)
-                                            : [...field.value, company._id];
-                                          field.onChange(newValue);
-                                          console.log("Selected Companies:", newValue);
-                                        }}
-                                      >
-                                        {company.name}
-                                      </div>
-                                    ))
+                                    filteredCompanies.map(
+                                      (company: {
+                                        _id: string;
+                                        name: string;
+                                      }) => (
+                                        <div
+                                          key={company._id}
+                                          className={`p-2 text-sm text-gray-800 hover:bg-gray-100 cursor-pointer ${
+                                            field.value.includes(company._id)
+                                              ? "bg-blue-50"
+                                              : ""
+                                          }`}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const newValue =
+                                              field.value.includes(company._id)
+                                                ? field.value.filter(
+                                                    (id: string) =>
+                                                      id !== company._id
+                                                  )
+                                                : [...field.value, company._id];
+                                            field.onChange(newValue);
+                                            console.log(
+                                              "Selected Companies:",
+                                              newValue
+                                            );
+                                          }}
+                                        >
+                                          {company.name}
+                                        </div>
+                                      )
+                                    )
                                   )}
                                 </div>
                               )}
@@ -498,10 +782,15 @@ function EmployeePage() {
                           )}
                         />
                       )}
-                      {errors.company && <ErrorMessage message={errors.company.message} />}
+                      {errors.company && (
+                        <ErrorMessage message={errors.company.message} />
+                      )}
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="position" className="text-sm font-medium text-gray-700">
+                      <Label
+                        htmlFor="position"
+                        className="text-sm font-medium text-gray-700"
+                      >
                         Designation
                       </Label>
                       {isLoading ? (
@@ -523,21 +812,36 @@ function EmployeePage() {
                                   <SelectValue placeholder="Select designation" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="Sales Member">Sales Member</SelectItem>
-                                  <SelectItem value="Team Leads">Team Leads</SelectItem>
-                                  <SelectItem value="Team Members">Team Members</SelectItem>
-                                  <SelectItem value="Sub-Contractors">Sub-Contractors</SelectItem>
-                                  <SelectItem value="Accountant Members">Accountant Members</SelectItem>
+                                  <SelectItem value="Sales Member">
+                                    Sales Member
+                                  </SelectItem>
+                                  <SelectItem value="Team Leads">
+                                    Team Leads
+                                  </SelectItem>
+                                  <SelectItem value="Team Members">
+                                    Team Members
+                                  </SelectItem>
+                                  <SelectItem value="Sub-Contractors">
+                                    Sub-Contractors
+                                  </SelectItem>
+                                  <SelectItem value="Accountant Members">
+                                    Accountant Members
+                                  </SelectItem>
                                 </SelectContent>
                               </Select>
                             )}
                           />
-                          {errors.position && <ErrorMessage message={errors.position.message} />}
+                          {errors.position && (
+                            <ErrorMessage message={errors.position.message} />
+                          )}
                         </div>
                       )}
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="salary" className="text-sm font-medium text-gray-700">
+                      <Label
+                        htmlFor="salary"
+                        className="text-sm font-medium text-gray-700"
+                      >
                         Salary (AED)
                       </Label>
                       {isLoading ? (
@@ -551,12 +855,17 @@ function EmployeePage() {
                             placeholder="5000"
                             {...register("salary", { valueAsNumber: true })}
                           />
-                          {errors.salary && <ErrorMessage message={errors.salary.message} />}
+                          {errors.salary && (
+                            <ErrorMessage message={errors.salary.message} />
+                          )}
                         </div>
                       )}
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="currency" className="text-sm font-medium text-gray-700">
+                      <Label
+                        htmlFor="currency"
+                        className="text-sm font-medium text-gray-700"
+                      >
                         Currency
                       </Label>
                       {isLoading ? (
@@ -583,12 +892,17 @@ function EmployeePage() {
                               </Select>
                             )}
                           />
-                          {errors.Currency && <ErrorMessage message={errors.Currency.message} />}
+                          {errors.Currency && (
+                            <ErrorMessage message={errors.Currency.message} />
+                          )}
                         </div>
                       )}
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="costPerHour" className="text-sm font-medium text-gray-700">
+                      <Label
+                        htmlFor="costPerHour"
+                        className="text-sm font-medium text-gray-700"
+                      >
                         Hourly Rate (AED)
                       </Label>
                       {isLoading ? (
@@ -603,7 +917,11 @@ function EmployeePage() {
                             value={costPerHour}
                             readOnly
                           />
-                          {errors.costPerHour && <ErrorMessage message={errors.costPerHour.message} />}
+                          {errors.costPerHour && (
+                            <ErrorMessage
+                              message={errors.costPerHour.message}
+                            />
+                          )}
                         </div>
                       )}
                     </div>
@@ -632,9 +950,7 @@ function EmployeePage() {
         ) : (
           <main className="grid gap-3 md:gap-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-              <h1 className="text-xl font-semibold text-gray-800">
-                Employee
-              </h1>
+              <h1 className="text-xl font-semibold text-gray-800">Employee</h1>
               <div className="flex gap-2 ml-auto sm:flex-row flex-col">
                 <Button
                   size="sm"
@@ -664,7 +980,10 @@ function EmployeePage() {
                 </CardHeader>
                 <CardContent className="p-4 grid gap-4 sm:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label htmlFor="name" className="text-sm font-medium text-gray-700">
+                    <Label
+                      htmlFor="name"
+                      className="text-sm font-medium text-gray-700"
+                    >
                       Name
                     </Label>
                     {isLoading ? (
@@ -676,7 +995,10 @@ function EmployeePage() {
                     )}
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                    <Label
+                      htmlFor="email"
+                      className="text-sm font-medium text-gray-700"
+                    >
                       Email
                     </Label>
                     {isLoading ? (
@@ -688,7 +1010,10 @@ function EmployeePage() {
                     )}
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="location" className="text-sm font-medium text-gray-700">
+                    <Label
+                      htmlFor="location"
+                      className="text-sm font-medium text-gray-700"
+                    >
                       Location
                     </Label>
                     {isLoading ? (
@@ -700,7 +1025,10 @@ function EmployeePage() {
                     )}
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="contact" className="text-sm font-medium text-gray-700">
+                    <Label
+                      htmlFor="contact"
+                      className="text-sm font-medium text-gray-700"
+                    >
                       Contact
                     </Label>
                     {isLoading ? (
@@ -712,7 +1040,10 @@ function EmployeePage() {
                     )}
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="status" className="text-sm font-medium text-gray-700">
+                    <Label
+                      htmlFor="status"
+                      className="text-sm font-medium text-gray-700"
+                    >
                       Status
                     </Label>
                     {isLoading ? (
@@ -721,7 +1052,9 @@ function EmployeePage() {
                       <div className="flex items-center gap-2">
                         <span
                           className={`h-3 w-3 rounded-full ${
-                            employeeDetails?.status ? "bg-green-500" : "bg-red-500"
+                            employeeDetails?.status
+                              ? "bg-green-500"
+                              : "bg-red-500"
                           }`}
                         />
                         <p className="text-sm font-semibold text-gray-800">
@@ -731,7 +1064,10 @@ function EmployeePage() {
                     )}
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="access" className="text-sm font-medium text-gray-700">
+                    <Label
+                      htmlFor="access"
+                      className="text-sm font-medium text-gray-700"
+                    >
                       Access
                     </Label>
                     {isLoading ? (
@@ -739,14 +1075,16 @@ function EmployeePage() {
                     ) : (
                       <div className="flex flex-wrap gap-1">
                         {employeeDetails?.userId?.access?.length > 0 ? (
-                          employeeDetails.userId.access.map((name: string, index: number) => (
-                            <span
-                              key={index}
-                              className="inline-flex items-center bg-gray-100 text-gray-800 text-xs font-medium px-2 py-1 rounded-md"
-                            >
-                              {name}
-                            </span>
-                          ))
+                          employeeDetails.userId.access.map(
+                            (name: string, index: number) => (
+                              <span
+                                key={index}
+                                className="inline-flex items-center bg-gray-100 text-gray-800 text-xs font-medium px-2 py-1 rounded-md"
+                              >
+                                {name}
+                              </span>
+                            )
+                          )
                         ) : (
                           <p className="text-sm text-gray-600">-</p>
                         )}
@@ -754,7 +1092,10 @@ function EmployeePage() {
                     )}
                   </div>
                   <div className="grid gap-2 sm:col-span-2">
-                    <Label htmlFor="description" className="text-sm font-medium text-gray-700">
+                    <Label
+                      htmlFor="description"
+                      className="text-sm font-medium text-gray-700"
+                    >
                       Description
                     </Label>
                     {isLoading ? (
@@ -775,22 +1116,28 @@ function EmployeePage() {
                 </CardHeader>
                 <CardContent className="p-4 grid gap-4 sm:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label htmlFor="company" className="text-sm font-medium text-gray-700">
+                    <Label
+                      htmlFor="company"
+                      className="text-sm font-medium text-gray-700"
+                    >
                       Companies
                     </Label>
                     {isLoading ? (
                       <Skeleton className="h-6 w-3/4 rounded-lg" />
                     ) : (
                       <div className="flex flex-wrap gap-1">
-                        {Array.isArray(employeeDetails?.company) && employeeDetails.company.length > 0 ? (
-                          employeeDetails.company.map((company: any, index: number) => (
-                            <span
-                              key={index}
-                              className="inline-flex items-center bg-gray-100 text-gray-800 text-xs font-medium px-2 py-1 rounded-md"
-                            >
-                              {company?.name || company?._id || "-"}
-                            </span>
-                          ))
+                        {Array.isArray(employeeDetails?.company) &&
+                        employeeDetails.company.length > 0 ? (
+                          employeeDetails.company.map(
+                            (company: any, index: number) => (
+                              <span
+                                key={index}
+                                className="inline-flex items-center bg-gray-100 text-gray-800 text-xs font-medium px-2 py-1 rounded-md"
+                              >
+                                {company?.name || company?._id || "-"}
+                              </span>
+                            )
+                          )
                         ) : (
                           <p className="text-sm text-gray-600">-</p>
                         )}
@@ -798,7 +1145,10 @@ function EmployeePage() {
                     )}
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="position" className="text-sm font-medium text-gray-700">
+                    <Label
+                      htmlFor="position"
+                      className="text-sm font-medium text-gray-700"
+                    >
                       Designation
                     </Label>
                     {isLoading ? (
@@ -810,7 +1160,10 @@ function EmployeePage() {
                     )}
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="salary" className="text-sm font-medium text-gray-700">
+                    <Label
+                      htmlFor="salary"
+                      className="text-sm font-medium text-gray-700"
+                    >
                       Salary (AED)
                     </Label>
                     {isLoading ? (
@@ -822,7 +1175,10 @@ function EmployeePage() {
                     )}
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="currency" className="text-sm font-medium text-gray-700">
+                    <Label
+                      htmlFor="currency"
+                      className="text-sm font-medium text-gray-700"
+                    >
                       Currency
                     </Label>
                     {isLoading ? (
@@ -834,7 +1190,10 @@ function EmployeePage() {
                     )}
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="costPerHour" className="text-sm font-medium text-gray-700">
+                    <Label
+                      htmlFor="costPerHour"
+                      className="text-sm font-medium text-gray-700"
+                    >
                       Hourly Rate (AED)
                     </Label>
                     {isLoading ? (
@@ -855,6 +1214,260 @@ function EmployeePage() {
           setIsDialogOpen={setIsDialogOpen}
           itemToDelete={employeeDetails}
         />
+
+        <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
+          <Tabs defaultValue="all">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full">
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
+                  <Input
+                    type="search"
+                    placeholder="Search by remarks..."
+                    className="w-full rounded-lg border-gray-300 pl-8 text-sm focus:ring-2 focus:ring-blue-500"
+                    value={searchQuery}
+                    onChange={(e) => handleSearch(e.target.value)}
+                  />
+                </div>
+                <div className="relative w-full sm:w-auto">
+                  <Button
+                    size="sm"
+                    className="w-full sm:w-auto h-7 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg px-3 py-1 text-sm"
+                    onClick={() => setShowDatePicker(!showDatePicker)}
+                  >
+                    {formatDateRange()}
+                  </Button>
+                  {showDatePicker && (
+                    <div className="absolute z-10 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg w-full sm:w-[600px] max-w-[90vw]">
+                      <DateRangePicker
+                        ranges={dateRange}
+                        onChange={handleDateRangeSelect}
+                        showSelectionPreview={true}
+                        moveRangeOnFirstSelection={false}
+                        months={1}
+                        direction="vertical"
+                        className="w-full"
+                        staticRanges={[
+                          ...defaultStaticRanges,
+                          {
+                            label: "This Year",
+                            range: () => ({
+                              startDate: startOfYear(new Date()),
+                              endDate: endOfYear(new Date()),
+                            }),
+                            isSelected: (range) =>
+                              range.startDate?.getFullYear() ===
+                                new Date().getFullYear() &&
+                              range.endDate?.getFullYear() ===
+                                new Date().getFullYear(),
+                          },
+                          {
+                            label: "Last Year",
+                            range: () => ({
+                              startDate: startOfYear(addYears(new Date(), -1)),
+                              endDate: endOfYear(addYears(new Date(), -1)),
+                            }),
+                            isSelected: (range) =>
+                              range.startDate?.getFullYear() ===
+                                addYears(new Date(), -1).getFullYear() &&
+                              range.endDate?.getFullYear() ===
+                                addYears(new Date(), -1).getFullYear(),
+                          },
+                        ]}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="ml-auto flex items-center gap-2">
+
+                {/* <Link href="/timesheet/create-timesheet">
+                  <Button size="sm" className="h-7 gap-1">
+                    <PlusCircle className="h-3.5 w-3.5" />
+                    <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                      Add
+                    </span>
+                  </Button>
+                </Link> */}
+              </div>
+            </div>
+            <TabsContent value="all">
+              <Card x-chunk="dashboard-06-chunk-0">
+                <CardHeader>
+                  <CardTitle>Time & Logs</CardTitle>
+                  <CardDescription>
+                    Manage your Times and logs and view performance.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Start</TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          End
+                        </TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          Hours Logged
+                        </TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          Amount
+                        </TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          Remark
+                        </TableHead>
+                        <TableHead>
+                          <span className="sr-only">Actions</span>
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {isLoading ? (
+                        Array.from({ length: 5 }).map((_, index) => (
+                          <TableRow key={index}>
+                            <TableCell>
+                              <Skeleton className="h-4 w-full rounded-lg" />
+                            </TableCell>
+                            <TableCell>
+                              <Skeleton className="h-4 w-full rounded-lg" />
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              <Skeleton className="h-4 w-full rounded-lg" />
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              <Skeleton className="h-4 w-full rounded-lg" />
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              <Skeleton className="h-4 w-full rounded-lg" />
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              <Skeleton className="h-4 w-full rounded-lg" />
+                            </TableCell>
+                            <TableCell>
+                              <Skeleton className="h-4 w-full rounded-lg" />
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : timesheet?.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-8">
+                            <p className="text-sm text-gray-600">
+                              No data available.
+                            </p>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        timesheet?.map(
+                          (
+                            data: {
+                              _id: string;
+                              created_at: string;
+                              startTime: string;
+                              endTime: string;
+                              date_logged: string;
+                              added_date: string;
+                              hours_logged: string;
+                              remarks: string;
+                              total_amount: string;
+                              url: string;
+                            },
+                            index: number
+                          ) => (
+                            <TableRow key={index} className="cursor-pointer">
+                              <TableCell
+                                className="font-medium"
+                                onClick={() =>
+                                  router.push(`/timesheet/${data._id}`)
+                                }
+                              >
+                                {data?.created_at ? date(data.created_at) : "-"}
+                              </TableCell>
+                              <TableCell
+                                onClick={() =>
+                                  router.push(`/timesheet/${data._id}`)
+                                }
+                              >
+                                {data?.startTime
+                                  ? timeFormat(data.startTime)
+                                  : "-"}
+                              </TableCell>
+                              <TableCell
+                                className="hidden md:table-cell"
+                                onClick={() =>
+                                  router.push(`/timesheet/${data._id}`)
+                                }
+                              >
+                                {data?.endTime ? timeFormat(data.endTime) : "-"}
+                              </TableCell>
+                              <TableCell
+                                className="hidden md:table-cell"
+                                onClick={() =>
+                                  router.push(`/timesheet/${data._id}`)
+                                }
+                              >
+                                {data.hours_logged || "-"}
+                              </TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                {data?.total_amount
+                                  ? Number(data.total_amount).toFixed(2)
+                                  : "-"}
+                              </TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                {data.remarks || "-"}
+                              </TableCell>
+                              <TableCell>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      aria-haspopup="true"
+                                      size="icon"
+                                      variant="ghost"
+                                    >
+                                      <MoreHorizontal className="h-4 w-4" />
+                                      <span className="sr-only">
+                                        Toggle menu
+                                      </span>
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>
+                                      Actions
+                                    </DropdownMenuLabel>
+                                    <DropdownMenuItem
+                                      onClick={() => update(data._id)}
+                                    >
+                                      Edit
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        setItemToDelete(data);
+                                        setIsDialogOpen(true);
+                                      }}
+                                    >
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        )
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+                <CardFooter>
+                  <PaginationComponent
+                    setPage={setPage}
+                    totalPages={timeSheetData?.totalPages || 1}
+                    page={timeSheetData?.page || 1}
+                  />
+                </CardFooter>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </main>
       </div>
     </div>
   );

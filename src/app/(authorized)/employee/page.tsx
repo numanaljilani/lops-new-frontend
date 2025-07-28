@@ -194,7 +194,7 @@ function Employees() {
                         <TableHead className="text-sm font-medium text-gray-700">Status</TableHead>
                         <TableHead className="text-sm font-medium text-gray-700">Salary</TableHead>
                         <TableHead className="hidden md:table-cell text-sm font-medium text-gray-700">
-                          Total Sales
+                          Timesheet
                         </TableHead>
                         <TableHead className="hidden md:table-cell text-sm font-medium text-gray-700">
                           Created at
@@ -272,7 +272,7 @@ function Employees() {
                                 </Badge>
                               </TableCell>
                               <TableCell className="text-sm text-gray-800">
-                                {data?.salary || "-"}
+                                {data?.salary + " AED" || "-"}
                               </TableCell>
                               <TableCell className="hidden md:table-cell text-sm text-gray-800">
                                 0
